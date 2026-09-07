@@ -1,0 +1,538 @@
+# ============================================================
+
+# Cloud Algorithmic Trading Engine
+
+# Root Git Ignore
+
+# ============================================================
+
+# ------------------------------------------------------------
+
+# Operating System Files
+
+# ------------------------------------------------------------
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ------------------------------------------------------------
+
+# Editor / IDE Files
+
+# ------------------------------------------------------------
+
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+.idea/
+*.iml
+*.ipr
+*.iws
+
+*.swp
+*.swo
+*~
+.#*
+#*#
+
+# ------------------------------------------------------------
+
+# Environment / Secrets
+
+# ------------------------------------------------------------
+
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+secrets/
+credentials/
+.local/
+
+# ------------------------------------------------------------
+
+# General Build Artifacts
+
+# ------------------------------------------------------------
+
+build/
+Build/
+dist/
+out/
+target/
+bin/
+obj/
+Obj/
+
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+
+# ------------------------------------------------------------
+
+# C / C++ / CMake
+
+# ------------------------------------------------------------
+
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+Makefile.cmake
+
+*.gcno
+*.gcda
+*.gcov
+
+*.dSYM/
+*.stackdump
+
+# ------------------------------------------------------------
+
+# C++ Engine Specific
+
+# ------------------------------------------------------------
+
+engine-cpp/build/
+engine-cpp/bin/
+engine-cpp/obj/
+
+engine-cpp/CMakeFiles/
+engine-cpp/CMakeCache.txt
+engine-cpp/cmake_install.cmake
+
+engine-cpp/*.o
+engine-cpp/*.a
+engine-cpp/*.so
+engine-cpp/*.out
+
+# ------------------------------------------------------------
+
+# Python
+
+# ------------------------------------------------------------
+
+**pycache**/
+*.py[cod]
+*$py.class
+
+*.pyd
+*.so
+
+.python-version
+.pyenv/
+.venv/
+venv/
+env/
+ENV/
+virtualenv/
+
+pip-wheel-metadata/
+*.egg-info/
+.eggs/
+wheels/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.hypothesis/
+
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+coverage.json
+pytestdebug.log
+
+.tox/
+.nox/
+
+# Python packaging
+
+build/
+dist/
+
+# Jupyter
+
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ------------------------------------------------------------
+
+# Analytics Python Service
+
+# ------------------------------------------------------------
+
+analytics-py/.venv/
+analytics-py/venv/
+analytics-py/**pycache**/
+analytics-py/**/**pycache**/
+analytics-py/.pytest_cache/
+analytics-py/.mypy_cache/
+analytics-py/.ruff_cache/
+analytics-py/*.egg-info/
+analytics-py/build/
+analytics-py/dist/
+
+# ------------------------------------------------------------
+
+# Node.js / TypeScript
+
+# ------------------------------------------------------------
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.npm/
+.yarn/
+.pnpm-store/
+
+*.tsbuildinfo
+
+# TypeScript compiled output
+
+*.js.map
+*.d.ts.map
+
+# ------------------------------------------------------------
+
+# Gateway Node Service
+
+# ------------------------------------------------------------
+
+gateway-node/node_modules/
+gateway-node/dist/
+gateway-node/build/
+gateway-node/.cache/
+
+gateway-node/.env
+gateway-node/.env.*
+!gateway-node/.env.example
+
+gateway-node/coverage/
+
+# ------------------------------------------------------------
+
+# React / Vite Dashboard
+
+# ------------------------------------------------------------
+
+dashboard-react/node_modules/
+dashboard-react/dist/
+dashboard-react/build/
+dashboard-react/.vite/
+dashboard-react/.cache/
+
+dashboard-react/.env
+dashboard-react/.env.*
+!dashboard-react/.env.example
+
+dashboard-react/coverage/
+
+# ------------------------------------------------------------
+
+# React / Frontend Generated Files
+
+# ------------------------------------------------------------
+
+.vite/
+.parcel-cache/
+.next/
+.nuxt/
+.svelte-kit/
+
+storybook-static/
+
+# ------------------------------------------------------------
+
+# Test / Coverage Artifacts
+
+# ------------------------------------------------------------
+
+coverage/
+.coverage/
+test-results/
+test-results.xml
+junit.xml
+
+playwright-report/
+blob-report/
+playwright/.cache/
+
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/
+
+# ------------------------------------------------------------
+
+# Performance / Benchmark Results
+
+# ------------------------------------------------------------
+
+benchmarks/results/
+benchmark-results/
+performance-results/
+
+*.bench
+*.benchmark
+*.prof
+*.profraw
+*.profdata
+
+# ------------------------------------------------------------
+
+# Trading Engine Runtime Data
+
+# ------------------------------------------------------------
+
+runtime/
+run/
+tmp/
+temp/
+
+*.pid
+*.pid.lock
+*.sock
+
+*.snapshot
+*.dump
+
+# ------------------------------------------------------------
+
+# Logs
+
+# ------------------------------------------------------------
+
+logs/*
+!logs/.gitkeep
+
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Keep important example/log documentation if explicitly tracked
+
+!docs/**/*.log.example
+
+# ------------------------------------------------------------
+
+# Docker
+
+# ------------------------------------------------------------
+
+docker-compose.override.yml
+
+.docker/
+docker-data/
+docker-volumes/
+
+*.tar
+*.tar.gz
+*.tgz
+
+# ------------------------------------------------------------
+
+# Database / Local Data
+
+# ------------------------------------------------------------
+
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+data/
+local-data/
+
+# Keep shared fixtures/examples
+
+!**/tests/fixtures/
+!shared/examples/
+
+# ------------------------------------------------------------
+
+# Monitoring / Observability Generated Data
+
+# ------------------------------------------------------------
+
+prometheus-data/
+grafana-data/
+grafana-storage/
+
+infrastructure/monitoring/data/
+infrastructure/monitoring/grafana/data/
+
+# ------------------------------------------------------------
+
+# Generated API / Schema Artifacts
+
+# ------------------------------------------------------------
+
+generated/
+generated-code/
+codegen/
+openapi-generated/
+
+# Protocol Buffer generated files
+
+*.pb.cc
+*.pb.h
+*.grpc.pb.cc
+*.grpc.pb.h
+
+# ------------------------------------------------------------
+
+# Temporary Scripts / Generated Files
+
+# ------------------------------------------------------------
+
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+*.rej
+
+*.generated
+*.generated.*
+
+# Patch files
+
+*.patch
+*.diff
+
+# ------------------------------------------------------------
+
+# Security / Scanning Reports
+
+# ------------------------------------------------------------
+
+security-reports/
+dependency-check-report.*
+trivy-report.*
+grype-report.*
+gitleaks-report.*
+
+# ------------------------------------------------------------
+
+# Local Configuration
+
+# ------------------------------------------------------------
+
+config/local/
+config/*/local/
+
+*.local.yaml
+*.local.yml
+*.local.json
+
+# ------------------------------------------------------------
+
+# Strategy / Trading Research Outputs
+
+# ------------------------------------------------------------
+
+research-output/
+backtest-results/
+backtests/results/
+strategy-results/
+
+*.parquet
+*.feather
+*.pickle
+*.pkl
+
+# Keep source fixtures and examples
+
+!tests/**/fixtures/**
+!shared/examples/**
+
+# ------------------------------------------------------------
+
+# Jupyter Generated Data
+
+# ------------------------------------------------------------
+
+notebooks/.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+*.html
+*.nbconvert.ipynb
+
+# ------------------------------------------------------------
+
+# Documentation Generated Output
+
+# ------------------------------------------------------------
+
+docs/build/
+docs/site/
+docs/_build/
+
+*.pdf
+*.html
+
+# Keep committed documentation diagrams
+
+!docs/diagrams/*.png
+
+# ------------------------------------------------------------
+
+# OS / Archive Files
+
+# ------------------------------------------------------------
+
+*.zip
+*.7z
+*.rar
+*.gz
+
+# ------------------------------------------------------------
+
+# Local Tool State
+
+# ------------------------------------------------------------
+
+.direnv/
+.envrc
+
+.terraform/
+.terraform.lock.hcl
+
+# ------------------------------------------------------------
+
+# End
+
+# ------------------------------------------------------------
