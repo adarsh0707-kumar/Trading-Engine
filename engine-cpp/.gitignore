@@ -2,3 +2,6 @@ build-asan/
 
 # CMake sanitizer build artifacts
 build-sanitize/
+
+# CMake release build artifacts
+build-release/
