@@ -1,0 +1,40 @@
+#pragma once
+
+#include "orderbook/Order.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <deque>
+#include <memory>
+
+namespace engine
+{
+
+    class PriceLevel
+    {
+    public:
+        explicit PriceLevel(double price);
+
+        double price() const noexcept;
+
+        std::int64_t total_quantity() const noexcept;
+
+        std::size_t order_count() const noexcept;
+
+        bool empty() const noexcept;
+
+        void add_order(const std::shared_ptr<Order> &order);
+
+        std::shared_ptr<Order> &front();
+
+        const std::shared_ptr<Order> &front() const;
+
+        void remove_front();
+
+    private:
+        double price_;
+        std::int64_t total_quantity_;
+        std::deque<std::shared_ptr<Order>> orders_;
+    };
+
+} // namespace engine
