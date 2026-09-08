@@ -43,8 +43,10 @@ add_library(
     src/orderbook/PriceLevel.cpp
     src/orderbook/OrderBook.cpp
     src/orderbook/Trade.cpp
+    src/orderbook/BookSnapshot.cpp
 
     src/matching/MatchingEngine.cpp
+
 )
 
 # ============================================================
@@ -131,4 +133,24 @@ target_link_libraries(
 add_test(
     NAME test_matching_engine
     COMMAND test_matching_engine
+)
+
+# -------------------------
+# Book snapshot tests
+# -------------------------
+
+add_executable(
+    test_book_snapshot
+    tests/unit/test_book_snapshot.cpp
+)
+
+target_link_libraries(
+    test_book_snapshot
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_book_snapshot
+    COMMAND test_book_snapshot
 )
