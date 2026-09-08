@@ -3,9 +3,10 @@
 A production-style, polyglot trading simulation platform designed to demonstrate how modern algorithmic trading infrastructure can be structured across high-performance systems, analytics, APIs, real-time communication, and visualization.
 
 > **Project status:** Active development
-> **Primary goal:** Build a realistic, modular trading-engine simulation for learning, experimentation, benchmarking, and portfolio demonstration.
-
+> **Primary goal:** Build a realistic, modular trading-engine simulation for learning, experimentation, benchmarking, and portfolio demonstration. <br>
+If this project was useful to you, consider [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee\&logoColor=white)](https://buymeacoffee.com/adarsh12kumar)
 ---
+
 
 ## Table of Contents
 
@@ -1603,3 +1604,6 @@ The architecture intentionally starts with technologies and protocols that are e
 ---
 
 **Built as a systems-engineering portfolio project demonstrating C++, Python, TypeScript, React, distributed services, networking, real-time systems, quantitative analytics, testing, Docker, and software architecture.**
+
+---
+If this project was useful to you, consider [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee\&logoColor=white)](https://buymeacoffee.com/adarsh12kumar)
