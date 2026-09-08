@@ -77,19 +77,19 @@ namespace engine
 
         if (order->side() == Side::BUY)
         {
-            auto [level_it, inserted] = bids_.try_emplace(
+            auto result = bids_.try_emplace(
                 order->price(),
                 order->price());
 
-            level_it->second.add_order(order);
+            result.first->second.add_order(order);
         }
         else if (order->side() == Side::SELL)
         {
-            auto [level_it, inserted] = asks_.try_emplace(
+            auto result = asks_.try_emplace(
                 order->price(),
                 order->price());
 
-            level_it->second.add_order(order);
+            result.first->second.add_order(order);
         }
         else
         {
@@ -108,6 +108,12 @@ namespace engine
                 "cannot get best bid from empty bid book");
         }
 
+        /*
+         * bids_ uses std::greater<double>.
+         *
+         * Therefore begin() always points to the
+         * highest BUY price.
+         */
         return bids_.begin()->first;
     }
 
@@ -119,6 +125,12 @@ namespace engine
                 "cannot get best ask from empty ask book");
         }
 
+        /*
+         * asks_ uses std::less<double>.
+         *
+         * Therefore begin() always points to the
+         * lowest SELL price.
+         */
         return asks_.begin()->first;
     }
 

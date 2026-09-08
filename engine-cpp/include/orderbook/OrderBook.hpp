@@ -4,10 +4,10 @@
 #include "orderbook/PriceLevel.hpp"
 
 #include <cstddef>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace engine
 {
@@ -27,19 +27,50 @@ namespace engine
 
         void add_order(const std::shared_ptr<Order> &order);
 
+        /*
+         * Best bid:
+         * Highest available BUY price.
+         */
         double best_bid() const;
+
+        /*
+         * Best ask:
+         * Lowest available SELL price.
+         */
         double best_ask() const;
 
         const PriceLevel &best_bid_level() const;
         const PriceLevel &best_ask_level() const;
 
-        const std::map<double, PriceLevel, std::greater<double>> &bids() const noexcept;
-        const std::map<double, PriceLevel, std::less<double>> &asks() const noexcept;
+        const std::map<double, PriceLevel, std::greater<double>> &
+        bids() const noexcept;
+
+        const std::map<double, PriceLevel, std::less<double>> &
+        asks() const noexcept;
 
     private:
         std::string symbol_;
 
+        /*
+         * BUY prices are ordered from highest to lowest.
+         *
+         * Example:
+         *
+         * 105.00
+         * 103.00
+         * 101.00
+         */
         std::map<double, PriceLevel, std::greater<double>> bids_;
+
+        /*
+         * SELL prices are ordered from lowest to highest.
+         *
+         * Example:
+         *
+         * 106.00
+         * 108.00
+         * 110.00
+         */
         std::map<double, PriceLevel, std::less<double>> asks_;
 
         std::size_t order_count_;
