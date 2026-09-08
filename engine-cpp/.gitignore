@@ -1,1 +1,4 @@
 build-asan/
+
+# CMake sanitizer build artifacts
+build-sanitize/
