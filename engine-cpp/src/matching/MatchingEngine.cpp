@@ -38,167 +38,150 @@ namespace engine
         if (incoming_order->type() != OrderType::LIMIT)
         {
             throw std::invalid_argument(
-                "only LIMIT orders are supported by Step 1.5");
+                "only LIMIT orders are supported");
         }
 
         MatchResult result;
 
-        // ========================================================
-        // Incoming BUY
-        // ========================================================
-
-        if (incoming_order->side() == Side::BUY)
+        while (incoming_order->remaining_quantity() > 0)
         {
-            if (order_book.asks().empty())
+            if (incoming_order->side() == Side::BUY)
             {
-                return result;
-            }
+                if (order_book.asks().empty())
+                {
+                    break;
+                }
 
-            const double best_ask_price =
-                order_book.asks().begin()->first;
+                const double best_ask_price =
+                    order_book.asks().begin()->first;
 
-            // BUY crosses ASK when BUY price >= ASK price.
-            if (incoming_order->price() < best_ask_price)
-            {
-                return result;
-            }
+                if (incoming_order->price() < best_ask_price)
+                {
+                    break;
+                }
 
-            PriceLevel &resting_level =
-                order_book.best_ask_level();
-
-            if (resting_level.empty())
-            {
-                return result;
-            }
-
-            const std::shared_ptr<Order> &resting_order =
-                resting_level.front();
-
-            const std::int64_t trade_quantity =
-                std::min(
-                    incoming_order->remaining_quantity(),
-                    resting_order->remaining_quantity());
-
-            const double trade_price =
-                resting_order->price();
-
-            const std::string trade_id =
-                "trade-" +
-                incoming_order->order_id() +
-                "-" +
-                resting_order->order_id();
-
-            auto trade = std::make_shared<Trade>(
-                trade_id,
-                order_book.symbol(),
-                incoming_order->order_id(),
-                resting_order->order_id(),
-                trade_price,
-                trade_quantity);
-
-            // Apply fills.
-            incoming_order->fill(trade_quantity);
-            resting_order->fill(trade_quantity);
-
-            // Keep aggregate price-level quantity synchronized.
-            resting_level.reduce_quantity(trade_quantity);
-
-            // Remove fully consumed resting order.
-            if (resting_order->is_fully_filled())
-            {
-                resting_level.remove_front();
+                PriceLevel &resting_level =
+                    order_book.best_ask_level();
 
                 if (resting_level.empty())
                 {
-                    order_book.remove_best_ask_level();
+                    break;
                 }
+
+                const std::shared_ptr<Order> &resting_order =
+                    resting_level.front();
+
+                const std::int64_t trade_quantity =
+                    std::min(
+                        incoming_order->remaining_quantity(),
+                        resting_order->remaining_quantity());
+
+                const double trade_price =
+                    resting_order->price();
+
+                const std::string trade_id =
+                    "trade-" +
+                    incoming_order->order_id() +
+                    "-" +
+                    resting_order->order_id();
+
+                auto trade = std::make_shared<Trade>(
+                    trade_id,
+                    order_book.symbol(),
+                    incoming_order->order_id(),
+                    resting_order->order_id(),
+                    trade_price,
+                    trade_quantity);
+
+                incoming_order->fill(trade_quantity);
+                resting_order->fill(trade_quantity);
+
+                result.matched = true;
+                result.trades.push_back(trade);
+
+                if (resting_order->is_fully_filled())
+                {
+                    order_book.remove_filled_best_ask_order();
+                }
+                else
+                {
+                    resting_level.reduce_quantity(trade_quantity);
+                }
+
+                continue;
             }
 
-            result.matched = true;
-            result.trades.push_back(trade);
-
-            return result;
-        }
-
-        // ========================================================
-        // Incoming SELL
-        // ========================================================
-
-        if (incoming_order->side() == Side::SELL)
-        {
-            if (order_book.bids().empty())
+            if (incoming_order->side() == Side::SELL)
             {
-                return result;
-            }
+                if (order_book.bids().empty())
+                {
+                    break;
+                }
 
-            const double best_bid_price =
-                order_book.bids().begin()->first;
+                const double best_bid_price =
+                    order_book.bids().begin()->first;
 
-            // SELL crosses BID when SELL price <= BID price.
-            if (incoming_order->price() > best_bid_price)
-            {
-                return result;
-            }
+                if (incoming_order->price() > best_bid_price)
+                {
+                    break;
+                }
 
-            PriceLevel &resting_level =
-                order_book.best_bid_level();
-
-            if (resting_level.empty())
-            {
-                return result;
-            }
-
-            const std::shared_ptr<Order> &resting_order =
-                resting_level.front();
-
-            const std::int64_t trade_quantity =
-                std::min(
-                    incoming_order->remaining_quantity(),
-                    resting_order->remaining_quantity());
-
-            const double trade_price =
-                resting_order->price();
-
-            const std::string trade_id =
-                "trade-" +
-                incoming_order->order_id() +
-                "-" +
-                resting_order->order_id();
-
-            auto trade = std::make_shared<Trade>(
-                trade_id,
-                order_book.symbol(),
-                incoming_order->order_id(),
-                resting_order->order_id(),
-                trade_price,
-                trade_quantity);
-
-            // Apply fills.
-            incoming_order->fill(trade_quantity);
-            resting_order->fill(trade_quantity);
-
-            // Keep aggregate price-level quantity synchronized.
-            resting_level.reduce_quantity(trade_quantity);
-
-            // Remove fully consumed resting order.
-            if (resting_order->is_fully_filled())
-            {
-                resting_level.remove_front();
+                PriceLevel &resting_level =
+                    order_book.best_bid_level();
 
                 if (resting_level.empty())
                 {
-                    order_book.remove_best_bid_level();
+                    break;
                 }
+
+                const std::shared_ptr<Order> &resting_order =
+                    resting_level.front();
+
+                const std::int64_t trade_quantity =
+                    std::min(
+                        incoming_order->remaining_quantity(),
+                        resting_order->remaining_quantity());
+
+                const double trade_price =
+                    resting_order->price();
+
+                const std::string trade_id =
+                    "trade-" +
+                    incoming_order->order_id() +
+                    "-" +
+                    resting_order->order_id();
+
+                auto trade = std::make_shared<Trade>(
+                    trade_id,
+                    order_book.symbol(),
+                    incoming_order->order_id(),
+                    resting_order->order_id(),
+                    trade_price,
+                    trade_quantity);
+
+                incoming_order->fill(trade_quantity);
+                resting_order->fill(trade_quantity);
+
+                result.matched = true;
+                result.trades.push_back(trade);
+
+                if (resting_order->is_fully_filled())
+                {
+                    order_book.remove_filled_best_bid_order();
+                }
+                else
+                {
+                    resting_level.reduce_quantity(trade_quantity);
+                }
+
+                continue;
             }
 
-            result.matched = true;
-            result.trades.push_back(trade);
-
-            return result;
+            throw std::invalid_argument(
+                "unsupported incoming order side");
         }
 
-        throw std::invalid_argument(
-            "unsupported incoming order side");
+        return result;
     }
 
 } // namespace engine
