@@ -4,11 +4,14 @@ project(engine-cpp LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_compile_options(-Wall -Wextra -Wpedantic)
+add_compile_options(
+    -Wall
+    -Wextra
+    -Wpedantic
+)
 
-# Usage:
-# cmake -S . -B build -DENABLE_SANITIZERS=ON
 option(
     ENABLE_SANITIZERS
     "Build with AddressSanitizer/UndefinedBehaviorSanitizer"
@@ -29,25 +32,37 @@ endif()
 
 include_directories(include)
 
-# Core library: pure business logic, no networking, no I/O.
-add_library(engine_core
+# ============================================================
+# Core Library
+# ============================================================
+
+add_library(
+    engine_core
+
     src/orderbook/Order.cpp
     src/orderbook/PriceLevel.cpp
+    src/orderbook/OrderBook.cpp
 )
 
-# ------------------------------------------------------------
+# ============================================================
 # Testing
-# ------------------------------------------------------------
+# ============================================================
 
 enable_testing()
 
+# -------------------------
 # Order tests
-add_executable(test_order
+# -------------------------
+
+add_executable(
+    test_order
     tests/unit/test_order.cpp
 )
 
-target_link_libraries(test_order
-    PRIVATE engine_core
+target_link_libraries(
+    test_order
+    PRIVATE
+    engine_core
 )
 
 add_test(
@@ -55,16 +70,42 @@ add_test(
     COMMAND test_order
 )
 
-# Price level tests
-add_executable(test_price_level
+# -------------------------
+# PriceLevel tests
+# -------------------------
+
+add_executable(
+    test_price_level
     tests/unit/test_price_level.cpp
 )
 
-target_link_libraries(test_price_level
-    PRIVATE engine_core
+target_link_libraries(
+    test_price_level
+    PRIVATE
+    engine_core
 )
 
 add_test(
     NAME test_price_level
     COMMAND test_price_level
+)
+
+# -------------------------
+# OrderBook tests
+# -------------------------
+
+add_executable(
+    test_orderbook
+    tests/unit/test_orderbook.cpp
+)
+
+target_link_libraries(
+    test_orderbook
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_orderbook
+    COMMAND test_orderbook
 )
