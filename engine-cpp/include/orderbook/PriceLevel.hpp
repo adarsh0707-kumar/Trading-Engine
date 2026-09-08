@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <string>
 
 namespace engine
 {
@@ -32,6 +33,8 @@ namespace engine
         const std::shared_ptr<Order> &front() const;
 
         void remove_front();
+
+        bool cancel_order(const std::string &order_id);
 
     private:
         double price_;

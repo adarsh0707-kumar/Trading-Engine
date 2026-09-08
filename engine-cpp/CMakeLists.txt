@@ -47,6 +47,11 @@ add_library(
 
     src/matching/MatchingEngine.cpp
 
+
+    src/market/Tick.cpp
+    src/market/MarketData.cpp
+    src/market/MockMarketGenerator.cpp
+
 )
 
 # ============================================================
@@ -136,6 +141,7 @@ add_test(
 )
 
 # -------------------------
+
 # Book snapshot tests
 # -------------------------
 
@@ -146,11 +152,69 @@ add_executable(
 
 target_link_libraries(
     test_book_snapshot
+=======
+# Order cancellation tests
+# -------------------------
+
+add_executable(
+    test_order_cancellation
+    tests/unit/test_order_cancellation.cpp
+)
+
+target_link_libraries(
+    test_order_cancellation
+
     PRIVATE
     engine_core
 )
 
 add_test(
+
     NAME test_book_snapshot
     COMMAND test_book_snapshot
 )
+=======
+    NAME test_order_cancellation
+    COMMAND test_order_cancellation
+)
+
+# -------------------------
+# OrderBook cancellation tests
+# -------------------------
+
+add_executable(
+    test_orderbook_cancellation
+    tests/unit/test_orderbook_cancellation.cpp
+)
+
+target_link_libraries(
+    test_orderbook_cancellation
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_orderbook_cancellation
+    COMMAND test_orderbook_cancellation
+)
+
+# -------------------------
+# Market generator tests
+# -------------------------
+
+add_executable(
+    test_market_generator
+    tests/unit/test_market_generator.cpp
+)
+
+target_link_libraries(
+    test_market_generator
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_market_generator
+    COMMAND test_market_generator
+)
+

@@ -58,6 +58,8 @@ namespace engine
         const std::map<double, PriceLevel, std::less<double>> &
         asks() const noexcept;
 
+        bool cancel_order(const std::string &order_id);
+
     private:
         std::string symbol_;
 
