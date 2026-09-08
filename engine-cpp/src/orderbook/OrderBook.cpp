@@ -220,6 +220,82 @@ namespace engine
         --order_count_;
     }
 
+    void OrderBook::remove_filled_best_ask_order()
+    {
+        if (asks_.empty())
+        {
+            throw std::out_of_range(
+                "cannot remove filled ask order from empty book");
+        }
+
+        PriceLevel &level = asks_.begin()->second;
+
+        if (level.empty())
+        {
+            throw std::logic_error(
+                "cannot remove filled ask order from empty price level");
+        }
+
+        if (!level.front()->is_fully_filled())
+        {
+            throw std::logic_error(
+                "cannot remove partially filled ask order");
+        }
+
+        level.remove_front();
+
+        if (order_count_ == 0)
+        {
+            throw std::logic_error(
+                "order count underflow while removing ask order");
+        }
+
+        --order_count_;
+
+        if (level.empty())
+        {
+            asks_.erase(asks_.begin());
+        }
+    }
+
+    void OrderBook::remove_filled_best_bid_order()
+    {
+        if (bids_.empty())
+        {
+            throw std::out_of_range(
+                "cannot remove filled bid order from empty book");
+        }
+
+        PriceLevel &level = bids_.begin()->second;
+
+        if (level.empty())
+        {
+            throw std::logic_error(
+                "cannot remove filled bid order from empty price level");
+        }
+
+        if (!level.front()->is_fully_filled())
+        {
+            throw std::logic_error(
+                "cannot remove partially filled bid order");
+        }
+
+        level.remove_front();
+
+        if (order_count_ == 0)
+        {
+            throw std::logic_error(
+                "order count underflow while removing bid order");
+        }
+
+        --order_count_;
+
+        if (level.empty())
+        {
+            bids_.erase(bids_.begin());
+        }
+    }
+
     const std::map<double, PriceLevel, std::greater<double>> &
     OrderBook::bids() const noexcept
     {

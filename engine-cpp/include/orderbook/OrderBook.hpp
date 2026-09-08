@@ -46,6 +46,9 @@ namespace engine
 
         void remove_best_ask_level();
 
+        void remove_filled_best_ask_order();
+        void remove_filled_best_bid_order();
+
         const std::map<double, PriceLevel, std::greater<double>> &
         bids() const noexcept;
 
