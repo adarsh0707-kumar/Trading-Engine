@@ -517,15 +517,32 @@ void test_buy_stops_at_non_crossing_ask_level()
     assert(result.trades[1]->price() == 101.0);
     assert(result.trades[1]->quantity() == 20);
 
+    // Incoming order has 10 remaining and cannot cross 102.
     assert(incoming_buy->remaining_quantity() == 10);
+    assert(incoming_buy->status() ==
+           engine::OrderStatus::PARTIALLY_FILLED);
 
+    // S1 and S2 were completely filled.
     assert(ask_100->remaining_quantity() == 0);
     assert(ask_101->remaining_quantity() == 0);
+
+    // S3 remains because 101 cannot cross 102.
     assert(ask_102->remaining_quantity() == 20);
 
+    // Incoming BUY is automatically rested.
+    assert(book.order_count() == 2);
+    assert(book.bid_level_count() == 1);
     assert(book.ask_level_count() == 1);
-    assert(book.order_count() == 1);
+
+    assert(book.best_bid() == 101.0);
     assert(book.best_ask() == 102.0);
+
+    assert(book.best_bid_level().order_count() == 1);
+    assert(book.best_bid_level().total_quantity() == 10);
+    assert(book.best_bid_level().front() == incoming_buy);
+
+    assert(book.best_ask_level().order_count() == 1);
+    assert(book.best_ask_level().total_quantity() == 20);
     assert(book.best_ask_level().front() == ask_102);
 }
 
@@ -570,7 +587,7 @@ void test_sell_stops_at_non_crossing_bid_level()
     assert(bid_100->remaining_quantity() == 20);
 
     assert(book.bid_level_count() == 1);
-    assert(book.order_count() == 1);
+    assert(book.order_count() == 2);
     assert(book.best_bid() == 100.0);
     assert(book.best_bid_level().front() == bid_100);
 }
@@ -627,6 +644,246 @@ void test_buy_preserves_fifo_across_multiple_orders()
     assert(book.best_ask_level().front() == third);
 }
 
+void test_unmatched_buy_is_automatically_rested()
+{
+    OrderBook book("BTC-USD");
+
+    auto incoming_buy =
+        make_order("B1", Side::BUY, 100.0, 10, 1);
+
+    MatchingEngine matcher;
+
+    MatchResult result =
+        matcher.match(book, incoming_buy);
+
+    assert(!result.matched);
+    assert(result.trades.empty());
+
+    assert(incoming_buy->remaining_quantity() == 10);
+    assert(incoming_buy->status() == engine::OrderStatus::NEW);
+
+    assert(book.order_count() == 1);
+    assert(book.bid_level_count() == 1);
+    assert(book.best_bid() == 100.0);
+    assert(book.best_bid_level().total_quantity() == 10);
+    assert(book.best_bid_level().front() == incoming_buy);
+}
+
+void test_unmatched_sell_is_automatically_rested()
+{
+    OrderBook book("BTC-USD");
+
+    auto incoming_sell =
+        make_order("S1", Side::SELL, 100.0, 10, 1);
+
+    MatchingEngine matcher;
+
+    MatchResult result =
+        matcher.match(book, incoming_sell);
+
+    assert(!result.matched);
+    assert(result.trades.empty());
+
+    assert(incoming_sell->remaining_quantity() == 10);
+    assert(incoming_sell->status() == engine::OrderStatus::NEW);
+
+    assert(book.order_count() == 1);
+    assert(book.ask_level_count() == 1);
+    assert(book.best_ask() == 100.0);
+    assert(book.best_ask_level().total_quantity() == 10);
+    assert(book.best_ask_level().front() == incoming_sell);
+}
+
+void test_partially_filled_buy_is_automatically_rested()
+{
+    OrderBook book("BTC-USD");
+
+    auto resting_sell =
+        make_order("S1", Side::SELL, 100.0, 10, 1);
+
+    auto incoming_buy =
+        make_order("B1", Side::BUY, 101.0, 20, 2);
+
+    book.add_order(resting_sell);
+
+    MatchingEngine matcher;
+
+    MatchResult result =
+        matcher.match(book, incoming_buy);
+
+    assert(result.matched);
+    assert(result.trades.size() == 1);
+
+    assert(result.trades.front()->quantity() == 10);
+    assert(result.trades.front()->price() == 100.0);
+
+    assert(incoming_buy->remaining_quantity() == 10);
+    assert(
+        incoming_buy->status() ==
+        engine::OrderStatus::PARTIALLY_FILLED);
+
+    assert(book.order_count() == 1);
+    assert(book.ask_level_count() == 0);
+
+    assert(book.bid_level_count() == 1);
+    assert(book.best_bid() == 101.0);
+    assert(book.best_bid_level().total_quantity() == 10);
+    assert(book.best_bid_level().front() == incoming_buy);
+}
+
+void test_partially_filled_sell_is_automatically_rested()
+{
+    OrderBook book("BTC-USD");
+
+    auto resting_buy =
+        make_order("B1", Side::BUY, 100.0, 10, 1);
+
+    auto incoming_sell =
+        make_order("S1", Side::SELL, 99.0, 20, 2);
+
+    book.add_order(resting_buy);
+
+    MatchingEngine matcher;
+
+    MatchResult result =
+        matcher.match(book, incoming_sell);
+
+    assert(result.matched);
+    assert(result.trades.size() == 1);
+
+    assert(result.trades.front()->quantity() == 10);
+    assert(result.trades.front()->price() == 100.0);
+
+    assert(incoming_sell->remaining_quantity() == 10);
+    assert(
+        incoming_sell->status() ==
+        engine::OrderStatus::PARTIALLY_FILLED);
+
+    assert(book.order_count() == 1);
+    assert(book.bid_level_count() == 0);
+
+    assert(book.ask_level_count() == 1);
+    assert(book.best_ask() == 99.0);
+    assert(book.best_ask_level().total_quantity() == 10);
+    assert(book.best_ask_level().front() == incoming_sell);
+}
+
+void test_fully_filled_incoming_order_is_not_rested()
+{
+    OrderBook book("BTC-USD");
+
+    auto resting_sell =
+        make_order("S1", Side::SELL, 100.0, 10, 1);
+
+    auto incoming_buy =
+        make_order("B1", Side::BUY, 101.0, 10, 2);
+
+    book.add_order(resting_sell);
+
+    MatchingEngine matcher;
+
+    MatchResult result =
+        matcher.match(book, incoming_buy);
+
+    assert(result.matched);
+    assert(result.trades.size() == 1);
+
+    assert(incoming_buy->remaining_quantity() == 0);
+    assert(incoming_buy->is_fully_filled());
+    assert(
+        incoming_buy->status() ==
+        engine::OrderStatus::FILLED);
+
+    assert(book.order_count() == 0);
+    assert(book.bid_level_count() == 0);
+    assert(book.ask_level_count() == 0);
+}
+
+void test_rested_order_preserves_fifo()
+{
+    OrderBook book("BTC-USD");
+
+    auto existing_bid =
+        make_order("B1", Side::BUY, 101.0, 10, 1);
+
+    auto resting_sell =
+        make_order("S1", Side::SELL, 100.0, 5, 2);
+
+    auto incoming_buy =
+        make_order("B2", Side::BUY, 101.0, 10, 3);
+
+    book.add_order(existing_bid);
+    book.add_order(resting_sell);
+
+    MatchingEngine matcher;
+
+    MatchResult result =
+        matcher.match(book, incoming_buy);
+
+    assert(result.matched);
+    assert(result.trades.size() == 1);
+
+    assert(result.trades.front()->maker_order_id() == "S1");
+    assert(result.trades.front()->quantity() == 5);
+    assert(result.trades.front()->price() == 100.0);
+
+    assert(incoming_buy->remaining_quantity() == 5);
+    assert(incoming_buy->status() ==
+           engine::OrderStatus::PARTIALLY_FILLED);
+
+    // Incoming BUY is automatically rested at 101.
+    assert(book.bid_level_count() == 1);
+    assert(book.best_bid() == 101.0);
+
+    // Existing B1 must remain ahead of newly rested B2.
+    assert(book.best_bid_level().order_count() == 2);
+    assert(book.best_bid_level().total_quantity() == 15);
+
+    assert(book.best_bid_level().front() == existing_bid);
+}
+void test_partially_filled_order_rests_after_existing_orders()
+{
+    OrderBook book("BTC-USD");
+
+    auto resting_sell =
+        make_order("S1", Side::SELL, 100.0, 5, 1);
+
+    auto existing_bid =
+        make_order("B1", Side::BUY, 99.0, 10, 2);
+
+    auto incoming_buy =
+        make_order("B2", Side::BUY, 100.0, 10, 3);
+
+    book.add_order(resting_sell);
+    book.add_order(existing_bid);
+
+    MatchingEngine matcher;
+
+    MatchResult result =
+        matcher.match(book, incoming_buy);
+
+    assert(result.matched);
+    assert(result.trades.size() == 1);
+
+    assert(result.trades.front()->quantity() == 5);
+
+    assert(incoming_buy->remaining_quantity() == 5);
+    assert(
+        incoming_buy->status() ==
+        engine::OrderStatus::PARTIALLY_FILLED);
+
+    /*
+     * Incoming order rests at 100, which is a better price
+     * than the existing 99 bid, so it becomes the best bid.
+     */
+    assert(book.bid_level_count() == 2);
+    assert(book.order_count() == 2);
+
+    assert(book.best_bid() == 100.0);
+    assert(book.best_bid_level().front() == incoming_buy);
+    assert(book.best_bid_level().total_quantity() == 5);
+}
+
 int main()
 {
     test_buy_matches_best_ask();
@@ -654,8 +911,16 @@ int main()
     test_sell_stops_at_non_crossing_bid_level();
     test_buy_preserves_fifo_across_multiple_orders();
 
+    test_unmatched_buy_is_automatically_rested();
+    test_unmatched_sell_is_automatically_rested();
+    test_partially_filled_buy_is_automatically_rested();
+    test_partially_filled_sell_is_automatically_rested();
+    test_fully_filled_incoming_order_is_not_rested();
+    test_rested_order_preserves_fifo();
+    test_partially_filled_order_rests_after_existing_orders();
+
     std::cout
-        << "All MatchingEngine Phase 1.11 tests passed (18/18)"
+        << "All MatchingEngine Phase 1.12 tests passed (25/25)"
         << std::endl;
 
     return 0;

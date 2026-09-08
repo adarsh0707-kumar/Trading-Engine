@@ -181,6 +181,23 @@ namespace engine
                 "unsupported incoming order side");
         }
 
+        /*
+         * Phase 1.12:
+         *
+         * Automatically rest any unfilled GTC LIMIT order.
+         *
+         * A fully filled order has remaining quantity == 0 and
+         * therefore is never inserted into the order book.
+         *
+         * IOC is intentionally not rested because IOC semantics
+         * are reserved for a future phase.
+         */
+        if (incoming_order->remaining_quantity() > 0 &&
+            incoming_order->time_in_force() == TimeInForce::GTC)
+        {
+            order_book.add_order(incoming_order);
+        }
+
         return result;
     }
 
