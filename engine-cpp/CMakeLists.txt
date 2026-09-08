@@ -19,6 +19,7 @@ option(
 )
 
 if(ENABLE_SANITIZERS)
+
     add_compile_options(
         -fsanitize=address,undefined
         -g
@@ -28,6 +29,7 @@ if(ENABLE_SANITIZERS)
     add_link_options(
         -fsanitize=address,undefined
     )
+
 endif()
 
 include_directories(include)
@@ -47,11 +49,9 @@ add_library(
 
     src/matching/MatchingEngine.cpp
 
-
     src/market/Tick.cpp
     src/market/MarketData.cpp
     src/market/MockMarketGenerator.cpp
-
 )
 
 # ============================================================
@@ -141,7 +141,6 @@ add_test(
 )
 
 # -------------------------
-
 # Book snapshot tests
 # -------------------------
 
@@ -152,7 +151,16 @@ add_executable(
 
 target_link_libraries(
     test_book_snapshot
-=======
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_book_snapshot
+    COMMAND test_book_snapshot
+)
+
+# -------------------------
 # Order cancellation tests
 # -------------------------
 
@@ -163,17 +171,11 @@ add_executable(
 
 target_link_libraries(
     test_order_cancellation
-
     PRIVATE
     engine_core
 )
 
 add_test(
-
-    NAME test_book_snapshot
-    COMMAND test_book_snapshot
-)
-=======
     NAME test_order_cancellation
     COMMAND test_order_cancellation
 )
@@ -218,3 +220,22 @@ add_test(
     COMMAND test_market_generator
 )
 
+# -------------------------
+# Market pipeline integration tests
+# -------------------------
+
+add_executable(
+    test_market_pipeline
+    tests/integration/test_market_pipeline.cpp
+)
+
+target_link_libraries(
+    test_market_pipeline
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_market_pipeline
+    COMMAND test_market_pipeline
+)
