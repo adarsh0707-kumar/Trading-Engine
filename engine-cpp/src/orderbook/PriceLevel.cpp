@@ -68,6 +68,23 @@ namespace engine
         total_quantity_ += order->remaining_quantity();
     }
 
+    void PriceLevel::reduce_quantity(std::int64_t quantity)
+    {
+        if (quantity <= 0)
+        {
+            throw std::invalid_argument(
+                "quantity reduction must be positive");
+        }
+
+        if (quantity > total_quantity_)
+        {
+            throw std::invalid_argument(
+                "quantity reduction exceeds price level quantity");
+        }
+
+        total_quantity_ -= quantity;
+    }
+
     std::shared_ptr<Order> &PriceLevel::front()
     {
         if (orders_.empty())
@@ -98,7 +115,12 @@ namespace engine
                 "cannot remove from empty price level");
         }
 
-        total_quantity_ -= orders_.front()->remaining_quantity();
+        if (!orders_.front()->is_fully_filled())
+        {
+            throw std::logic_error(
+                "cannot remove partially filled order from price level");
+        }
+
         orders_.pop_front();
     }
 
