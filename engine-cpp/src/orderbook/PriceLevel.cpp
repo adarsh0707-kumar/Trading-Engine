@@ -124,4 +124,48 @@ namespace engine
         orders_.pop_front();
     }
 
+    bool PriceLevel::cancel_order(const std::string &order_id)
+    {
+        if (order_id.empty())
+        {
+            throw std::invalid_argument(
+                "cannot cancel order with empty order id");
+        }
+
+        for (auto it = orders_.begin(); it != orders_.end(); ++it)
+        {
+            const auto &order = *it;
+
+            if (!order || order->order_id() != order_id)
+            {
+                continue;
+            }
+
+            if (!order->is_active())
+            {
+                throw std::logic_error(
+                    "cannot cancel inactive order");
+            }
+
+            const std::int64_t remaining_quantity =
+                order->remaining_quantity();
+
+            order->cancel();
+
+            if (remaining_quantity > total_quantity_)
+            {
+                throw std::logic_error(
+                    "price level quantity underflow during cancellation");
+            }
+
+            total_quantity_ -= remaining_quantity;
+
+            orders_.erase(it);
+
+            return true;
+        }
+
+        return false;
+    }
+
 } // namespace engine

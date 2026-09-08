@@ -296,6 +296,67 @@ namespace engine
         }
     }
 
+    bool OrderBook::cancel_order(const std::string &order_id)
+    {
+        if (order_id.empty())
+        {
+            throw std::invalid_argument(
+                "cannot cancel order with empty order id");
+        }
+
+        for (auto level_it = bids_.begin();
+             level_it != bids_.end();
+             ++level_it)
+        {
+            PriceLevel &level = level_it->second;
+
+            if (level.cancel_order(order_id))
+            {
+                if (order_count_ == 0)
+                {
+                    throw std::logic_error(
+                        "order count underflow during bid cancellation");
+                }
+
+                --order_count_;
+
+                if (level.empty())
+                {
+                    bids_.erase(level_it);
+                }
+
+                return true;
+            }
+        }
+
+        for (auto level_it = asks_.begin();
+             level_it != asks_.end();
+             ++level_it)
+        {
+            PriceLevel &level = level_it->second;
+
+            if (level.cancel_order(order_id))
+            {
+                if (order_count_ == 0)
+                {
+                    throw std::logic_error(
+                        "order count underflow during ask cancellation");
+                }
+
+                --order_count_;
+
+                if (level.empty())
+                {
+                    asks_.erase(level_it);
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     const std::map<double, PriceLevel, std::greater<double>> &
     OrderBook::bids() const noexcept
     {
@@ -307,5 +368,7 @@ namespace engine
     {
         return asks_;
     }
+
+
 
 } // namespace engine

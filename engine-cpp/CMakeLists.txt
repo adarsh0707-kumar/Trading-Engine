@@ -132,3 +132,43 @@ add_test(
     NAME test_matching_engine
     COMMAND test_matching_engine
 )
+
+# -------------------------
+# Order cancellation tests
+# -------------------------
+
+add_executable(
+    test_order_cancellation
+    tests/unit/test_order_cancellation.cpp
+)
+
+target_link_libraries(
+    test_order_cancellation
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_order_cancellation
+    COMMAND test_order_cancellation
+)
+
+# -------------------------
+# OrderBook cancellation tests
+# -------------------------
+
+add_executable(
+    test_orderbook_cancellation
+    tests/unit/test_orderbook_cancellation.cpp
+)
+
+target_link_libraries(
+    test_orderbook_cancellation
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_orderbook_cancellation
+    COMMAND test_orderbook_cancellation
+)

@@ -121,10 +121,12 @@ namespace engine
 
     void Order::cancel()
     {
-        if (status_ == OrderStatus::FILLED)
+        if (!is_active())
         {
-            throw std::logic_error("cannot cancel a fully filled order");
+            throw std::logic_error(
+                "cannot cancel inactive order");
         }
+
         status_ = OrderStatus::CANCELLED;
     }
 
