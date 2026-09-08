@@ -45,6 +45,10 @@ add_library(
     src/orderbook/Trade.cpp
 
     src/matching/MatchingEngine.cpp
+
+    src/market/Tick.cpp
+    src/market/MarketData.cpp
+    src/market/MockMarketGenerator.cpp
 )
 
 # ============================================================
@@ -171,4 +175,24 @@ target_link_libraries(
 add_test(
     NAME test_orderbook_cancellation
     COMMAND test_orderbook_cancellation
+)
+
+# -------------------------
+# Market generator tests
+# -------------------------
+
+add_executable(
+    test_market_generator
+    tests/unit/test_market_generator.cpp
+)
+
+target_link_libraries(
+    test_market_generator
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_market_generator
+    COMMAND test_market_generator
 )
