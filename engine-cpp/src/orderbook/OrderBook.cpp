@@ -108,12 +108,6 @@ namespace engine
                 "cannot get best bid from empty bid book");
         }
 
-        /*
-         * bids_ uses std::greater<double>.
-         *
-         * Therefore begin() always points to the
-         * highest BUY price.
-         */
         return bids_.begin()->first;
     }
 
@@ -125,13 +119,20 @@ namespace engine
                 "cannot get best ask from empty ask book");
         }
 
-        /*
-         * asks_ uses std::less<double>.
-         *
-         * Therefore begin() always points to the
-         * lowest SELL price.
-         */
         return asks_.begin()->first;
+    }
+
+    
+
+    PriceLevel &OrderBook::best_bid_level()
+    {
+        if (bids_.empty())
+        {
+            throw std::out_of_range(
+                "cannot get best bid level from empty bid book");
+        }
+
+        return bids_.begin()->second;
     }
 
     const PriceLevel &OrderBook::best_bid_level() const
@@ -145,6 +146,19 @@ namespace engine
         return bids_.begin()->second;
     }
 
+    
+
+    PriceLevel &OrderBook::best_ask_level()
+    {
+        if (asks_.empty())
+        {
+            throw std::out_of_range(
+                "cannot get best ask level from empty ask book");
+        }
+
+        return asks_.begin()->second;
+    }
+
     const PriceLevel &OrderBook::best_ask_level() const
     {
         if (asks_.empty())
@@ -154,6 +168,56 @@ namespace engine
         }
 
         return asks_.begin()->second;
+    }
+
+    void OrderBook::remove_best_bid_level()
+    {
+        if (bids_.empty())
+        {
+            throw std::out_of_range(
+                "cannot remove best bid level from empty bid book");
+        }
+
+        if (!bids_.begin()->second.empty())
+        {
+            throw std::logic_error(
+                "cannot remove non-empty best bid level");
+        }
+
+        bids_.erase(bids_.begin());
+
+        if (order_count_ == 0)
+        {
+            throw std::logic_error(
+                "order count invariant violated");
+        }
+
+        --order_count_;
+    }
+
+    void OrderBook::remove_best_ask_level()
+    {
+        if (asks_.empty())
+        {
+            throw std::out_of_range(
+                "cannot remove best ask level from empty ask book");
+        }
+
+        if (!asks_.begin()->second.empty())
+        {
+            throw std::logic_error(
+                "cannot remove non-empty best ask level");
+        }
+
+        asks_.erase(asks_.begin());
+
+        if (order_count_ == 0)
+        {
+            throw std::logic_error(
+                "order count invariant violated");
+        }
+
+        --order_count_;
     }
 
     const std::map<double, PriceLevel, std::greater<double>> &

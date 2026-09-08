@@ -81,21 +81,46 @@ static void test_multiple_orders_preserve_fifo()
     assert(level.order_count() == 3);
     assert(level.total_quantity() == 175);
 
+    // FIFO: first order must be at the front.
     assert(level.front() == first);
 
-    level.remove_front();
+    // Fully fill first order before removing it.
+    first->fill(100);
+    level.reduce_quantity(100);
 
-    assert(level.front() == second);
+    assert(first->is_fully_filled());
     assert(level.total_quantity() == 75);
 
     level.remove_front();
 
-    assert(level.front() == third);
+    assert(level.order_count() == 2);
+    assert(level.front() == second);
+    assert(level.total_quantity() == 75);
+
+    // Fully fill second order.
+    second->fill(50);
+    level.reduce_quantity(50);
+
+    assert(second->is_fully_filled());
     assert(level.total_quantity() == 25);
 
     level.remove_front();
 
+    assert(level.order_count() == 1);
+    assert(level.front() == third);
+    assert(level.total_quantity() == 25);
+
+    // Fully fill third order.
+    third->fill(25);
+    level.reduce_quantity(25);
+
+    assert(third->is_fully_filled());
+    assert(level.total_quantity() == 0);
+
+    level.remove_front();
+
     assert(level.empty());
+    assert(level.order_count() == 0);
     assert(level.total_quantity() == 0);
 }
 
@@ -221,15 +246,87 @@ static void test_partial_fill_quantity_consistency()
     /*
      * The order now has 60 remaining.
      *
-     * The price level total is intentionally not automatically
-     * changed here because PriceLevel currently owns queue
-     * membership, while matching logic owns fills.
-     *
-     * MatchingEngine will update the level aggregate when
-     * the matching implementation is introduced.
+     * PriceLevel does not automatically observe Order::fill().
+     * MatchingEngine is responsible for keeping the aggregate
+     * price-level quantity synchronized during matching.
      */
+
     assert(order->remaining_quantity() == 60);
     assert(level.order_count() == 1);
+
+    // The level aggregate is still 100 until matching logic
+    // explicitly reduces it.
+    assert(level.total_quantity() == 100);
+}
+
+static void test_partial_order_cannot_be_removed()
+{
+    PriceLevel level(100.0);
+
+    auto order = make_order(
+        "ord-1",
+        100.0,
+        100,
+        1);
+
+    level.add_order(order);
+
+    // Partially fill the order.
+    order->fill(40);
+    level.reduce_quantity(40);
+
+    assert(order->remaining_quantity() == 60);
+    assert(!order->is_fully_filled());
+    assert(level.total_quantity() == 60);
+    assert(level.order_count() == 1);
+
+    bool threw = false;
+
+    try
+    {
+        level.remove_front();
+    }
+    catch (const std::logic_error &)
+    {
+        threw = true;
+    }
+
+    assert(threw);
+
+    // Order must remain in the queue.
+    assert(!level.empty());
+    assert(level.order_count() == 1);
+    assert(level.front() == order);
+    assert(level.total_quantity() == 60);
+}
+
+static void test_remove_fully_filled_order()
+{
+    PriceLevel level(100.0);
+
+    auto order = make_order(
+        "ord-1",
+        100.0,
+        100,
+        1);
+
+    level.add_order(order);
+
+    assert(level.order_count() == 1);
+    assert(level.total_quantity() == 100);
+
+    // Fully fill the order.
+    order->fill(100);
+    level.reduce_quantity(100);
+
+    assert(order->is_fully_filled());
+    assert(level.total_quantity() == 0);
+
+    level.remove_front();
+
+    assert(level.empty());
+    assert(level.order_count() == 0);
+    assert(level.total_quantity() == 0);
 }
 
 int main()
@@ -243,9 +340,11 @@ int main()
     test_empty_front_throws();
     test_empty_remove_throws();
     test_partial_fill_quantity_consistency();
+    test_partial_order_cannot_be_removed();
+    test_remove_fully_filled_order();
 
     std::cout
-        << "All PriceLevel tests passed (9/9).\n";
+        << "All PriceLevel tests passed (11/11).\n";
 
     return 0;
 }

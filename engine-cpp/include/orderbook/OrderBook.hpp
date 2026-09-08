@@ -20,27 +20,31 @@ namespace engine
         const std::string &symbol() const noexcept;
 
         std::size_t order_count() const noexcept;
+
         std::size_t bid_level_count() const noexcept;
+
         std::size_t ask_level_count() const noexcept;
 
         bool empty() const noexcept;
 
-        void add_order(const std::shared_ptr<Order> &order);
+        void add_order(
+            const std::shared_ptr<Order> &order);
 
-        /*
-         * Best bid:
-         * Highest available BUY price.
-         */
         double best_bid() const;
 
-        /*
-         * Best ask:
-         * Lowest available SELL price.
-         */
         double best_ask() const;
 
+        PriceLevel &best_bid_level();
+
         const PriceLevel &best_bid_level() const;
+
+        PriceLevel &best_ask_level();
+
         const PriceLevel &best_ask_level() const;
+
+        void remove_best_bid_level();
+
+        void remove_best_ask_level();
 
         const std::map<double, PriceLevel, std::greater<double>> &
         bids() const noexcept;
