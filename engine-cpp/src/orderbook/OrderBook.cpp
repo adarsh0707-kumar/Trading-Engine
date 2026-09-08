@@ -321,6 +321,7 @@ namespace engine
         }
 
         return snapshot;
+    }
 
     bool OrderBook::cancel_order(const std::string &order_id)
     {
