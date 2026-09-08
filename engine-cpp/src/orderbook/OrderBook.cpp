@@ -296,6 +296,32 @@ namespace engine
         }
     }
 
+
+    BookSnapshot OrderBook::snapshot() const
+    {
+        BookSnapshot snapshot;
+
+        snapshot.bids.reserve(bids_.size());
+        snapshot.asks.reserve(asks_.size());
+
+        for (const auto &[price, level] : bids_)
+        {
+            snapshot.bids.push_back(
+                PriceLevelSnapshot{
+                    price,
+                    level.total_quantity()});
+        }
+
+        for (const auto &[price, level] : asks_)
+        {
+            snapshot.asks.push_back(
+                PriceLevelSnapshot{
+                    price,
+                    level.total_quantity()});
+        }
+
+        return snapshot;
+
     bool OrderBook::cancel_order(const std::string &order_id)
     {
         if (order_id.empty())
@@ -355,6 +381,7 @@ namespace engine
         }
 
         return false;
+
     }
 
     const std::map<double, PriceLevel, std::greater<double>> &

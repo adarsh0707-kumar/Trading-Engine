@@ -43,12 +43,15 @@ add_library(
     src/orderbook/PriceLevel.cpp
     src/orderbook/OrderBook.cpp
     src/orderbook/Trade.cpp
+    src/orderbook/BookSnapshot.cpp
 
     src/matching/MatchingEngine.cpp
+
 
     src/market/Tick.cpp
     src/market/MarketData.cpp
     src/market/MockMarketGenerator.cpp
+
 )
 
 # ============================================================
@@ -138,6 +141,18 @@ add_test(
 )
 
 # -------------------------
+
+# Book snapshot tests
+# -------------------------
+
+add_executable(
+    test_book_snapshot
+    tests/unit/test_book_snapshot.cpp
+)
+
+target_link_libraries(
+    test_book_snapshot
+=======
 # Order cancellation tests
 # -------------------------
 
@@ -148,11 +163,17 @@ add_executable(
 
 target_link_libraries(
     test_order_cancellation
+
     PRIVATE
     engine_core
 )
 
 add_test(
+
+    NAME test_book_snapshot
+    COMMAND test_book_snapshot
+)
+=======
     NAME test_order_cancellation
     COMMAND test_order_cancellation
 )
@@ -196,3 +217,4 @@ add_test(
     NAME test_market_generator
     COMMAND test_market_generator
 )
+

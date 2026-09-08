@@ -1,6 +1,7 @@
 #pragma once
 
 #include "orderbook/Order.hpp"
+#include "orderbook/BookSnapshot.hpp"
 #include "orderbook/PriceLevel.hpp"
 
 #include <cstddef>
@@ -26,6 +27,8 @@ namespace engine
         std::size_t ask_level_count() const noexcept;
 
         bool empty() const noexcept;
+
+        BookSnapshot snapshot() const;
 
         void add_order(
             const std::shared_ptr<Order> &order);
