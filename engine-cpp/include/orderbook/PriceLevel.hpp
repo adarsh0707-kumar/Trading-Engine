@@ -25,6 +25,8 @@ namespace engine
 
         void add_order(const std::shared_ptr<Order> &order);
 
+        void reduce_quantity(std::int64_t quantity);
+
         std::shared_ptr<Order> &front();
 
         const std::shared_ptr<Order> &front() const;
@@ -33,7 +35,9 @@ namespace engine
 
     private:
         double price_;
+
         std::int64_t total_quantity_;
+
         std::deque<std::shared_ptr<Order>> orders_;
     };
 

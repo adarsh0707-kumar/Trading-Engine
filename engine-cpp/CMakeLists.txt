@@ -42,6 +42,9 @@ add_library(
     src/orderbook/Order.cpp
     src/orderbook/PriceLevel.cpp
     src/orderbook/OrderBook.cpp
+    src/orderbook/Trade.cpp
+
+    src/matching/MatchingEngine.cpp
 )
 
 # ============================================================
@@ -108,4 +111,24 @@ target_link_libraries(
 add_test(
     NAME test_orderbook
     COMMAND test_orderbook
+)
+
+# -------------------------
+# Matching engine tests
+# -------------------------
+
+add_executable(
+    test_matching_engine
+    tests/unit/test_matching_engine.cpp
+)
+
+target_link_libraries(
+    test_matching_engine
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_matching_engine
+    COMMAND test_matching_engine
 )
