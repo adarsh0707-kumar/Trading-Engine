@@ -239,3 +239,13 @@ add_test(
     NAME test_market_pipeline
     COMMAND test_market_pipeline
 )
+
+
+# Phase 1.15 - Performance Benchmark
+add_executable(benchmark_matching_engine
+    tests/performance/benchmark_matching_engine.cpp
+)
+
+target_link_libraries(benchmark_matching_engine
+    PRIVATE engine_core
+)
