@@ -52,6 +52,13 @@ add_library(
     src/market/Tick.cpp
     src/market/MarketData.cpp
     src/market/MockMarketGenerator.cpp
+
+    src/network/Protocol.cpp
+    src/network/ClientConnection.cpp
+    src/network/SocketServer.cpp
+
+    src/serialization/Message.cpp
+    src/serialization/JsonSerializer.cpp
 )
 
 # ============================================================
@@ -248,4 +255,44 @@ add_executable(benchmark_matching_engine
 
 target_link_libraries(benchmark_matching_engine
     PRIVATE engine_core
+)
+
+# -------------------------
+# Serialization unit tests (Phase 2.1)
+# -------------------------
+
+add_executable(
+    test_serialization
+    tests/unit/test_serialization.cpp
+)
+
+target_link_libraries(
+    test_serialization
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_serialization
+    COMMAND test_serialization
+)
+
+# -------------------------
+# Engine network integration tests (Phase 2.1)
+# -------------------------
+
+add_executable(
+    test_engine_network
+    tests/integration/test_engine_network.cpp
+)
+
+target_link_libraries(
+    test_engine_network
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_engine_network
+    COMMAND test_engine_network
 )
