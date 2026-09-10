@@ -3,12 +3,12 @@
 #include "serialization/Message.hpp"
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace trading
@@ -54,6 +54,15 @@ public:
 
     bool isRunning() const;
 
+    // Heartbeat tracking
+    void markHeartbeatAck();
+
+    bool isHeartbeatTimeout(
+        std::chrono::seconds timeout) const;
+
+    std::chrono::system_clock::time_point
+    lastHeartbeatAckTime() const;
+
 private:
     void receiveLoop();
 
@@ -73,6 +82,11 @@ private:
 
     MessageHandler messageHandler_;
     DisconnectHandler disconnectHandler_;
+
+    // Heartbeat tracking
+    mutable std::mutex heartbeatMutex_;
+    std::chrono::system_clock::time_point
+        lastHeartbeatAckTime_;
 };
 
 } // namespace network
