@@ -1,9 +1,11 @@
 #include "network/SocketServer.hpp"
 
 #include <cerrno>
+#include <chrono>
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -16,8 +18,12 @@ namespace network
 {
 
 SocketServer::SocketServer(
-    std::uint16_t port)
-    : requestedPort_(port)
+    std::uint16_t port,
+    std::uint64_t heartbeat_interval_ms,
+    std::uint64_t heartbeat_timeout_sec)
+    : requestedPort_(port),
+      heartbeatIntervalMs_(heartbeat_interval_ms),
+      heartbeatTimeoutSec_(heartbeat_timeout_sec)
 {
 }
 
@@ -41,6 +47,11 @@ bool SocketServer::start()
         acceptThread_ =
             std::thread(
                 &SocketServer::acceptLoop,
+                this);
+
+        heartbeatThread_ =
+            std::thread(
+                &SocketServer::heartbeatLoop,
                 this);
 
         return true;
@@ -82,10 +93,12 @@ void SocketServer::stop()
         acceptThread_.join();
     }
 
-    std::unordered_map<
-        std::uint64_t,
-        std::shared_ptr<ClientConnection>>
-        clients;
+    if (heartbeatThread_.joinable())
+    {
+        heartbeatThread_.join();
+    }
+
+    std::unordered_map<std::uint64_t, std::shared_ptr<ClientConnection>> clients;
 
     {
         std::lock_guard<std::mutex> lock(
@@ -212,6 +225,65 @@ void SocketServer::acceptLoop()
             "Trading Engine transport connected";
 
         client->sendMessage(hello);
+
+        client->markHeartbeatAck();
+    }
+}
+
+void SocketServer::heartbeatLoop()
+{
+    while (running_)
+    {
+        std::this_thread::sleep_for(
+            std::chrono::milliseconds(
+                heartbeatIntervalMs_));
+
+        if (!running_)
+        {
+            break;
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(
+                clientsMutex_);
+
+            serialization::Message heartbeat;
+
+            heartbeat.type =
+                serialization::MessageType::HEARTBEAT;
+
+            heartbeat.payload = "PING";
+
+            for (auto &[id, client] : clients_)
+            {
+                (void)id;
+
+                client->sendMessage(heartbeat);
+            }
+        }
+
+        {
+            std::lock_guard<std::mutex> lock(
+                clientsMutex_);
+
+            std::vector<std::uint64_t> timedout;
+
+            for (auto &[id, client] : clients_)
+            {
+                if (client->isHeartbeatTimeout(
+                        std::chrono::seconds(
+                            heartbeatTimeoutSec_)))
+                {
+                    timedout.push_back(id);
+                }
+            }
+
+            for (std::uint64_t id : timedout)
+            {
+                clients_[id]->stop();
+                clients_.erase(id);
+            }
+        }
     }
 }
 
@@ -237,19 +309,14 @@ void SocketServer::handleMessage(
         response.payload =
             "OK";
 
+        client->markHeartbeatAck();
+
         client->sendMessage(response);
 
         break;
     }
 
     default:
-        /*
-         * Phase 2.1 transport intentionally keeps
-         * business processing outside the socket layer.
-         *
-         * Later phases will connect this path to
-         * the matching engine/order flow.
-         */
         break;
     }
 }

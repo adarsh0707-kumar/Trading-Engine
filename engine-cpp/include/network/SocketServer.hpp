@@ -4,6 +4,7 @@
 #include "serialization/Message.hpp"
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -20,7 +21,9 @@ class SocketServer
 {
 public:
     explicit SocketServer(
-        std::uint16_t port = 9000);
+        std::uint16_t port = 9000,
+        std::uint64_t heartbeat_interval_ms = 10000,
+        std::uint64_t heartbeat_timeout_sec = 30);
 
     ~SocketServer();
 
@@ -44,6 +47,8 @@ public:
 private:
     void acceptLoop();
 
+    void heartbeatLoop();
+
     void handleMessage(
         std::shared_ptr<ClientConnection> client,
         const serialization::Message &message);
@@ -62,6 +67,7 @@ private:
     std::atomic<bool> running_{false};
 
     std::thread acceptThread_;
+    std::thread heartbeatThread_;
 
     mutable std::mutex clientsMutex_;
 
@@ -71,6 +77,9 @@ private:
         clients_;
 
     std::atomic<std::uint64_t> nextConnectionId_{1};
+
+    std::uint64_t heartbeatIntervalMs_;
+    std::uint64_t heartbeatTimeoutSec_;
 };
 
 } // namespace network

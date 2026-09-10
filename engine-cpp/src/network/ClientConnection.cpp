@@ -6,6 +6,7 @@
 #include <cerrno>
 #include <cstring>
 #include <iostream>
+#include <thread>
 
 #include <sys/socket.h>
 #include <unistd.h>
@@ -19,7 +20,9 @@ ClientConnection::ClientConnection(
     int socketFd,
     std::uint64_t connectionId)
     : socketFd_(socketFd),
-      connectionId_(connectionId)
+      connectionId_(connectionId),
+      lastHeartbeatAckTime_(
+          std::chrono::system_clock::now())
 {
 }
 
@@ -99,6 +102,39 @@ bool ClientConnection::isRunning() const
     return running_.load();
 }
 
+void ClientConnection::markHeartbeatAck()
+{
+    std::lock_guard<std::mutex> lock(
+        heartbeatMutex_);
+
+    lastHeartbeatAckTime_ =
+        std::chrono::system_clock::now();
+}
+
+bool ClientConnection::isHeartbeatTimeout(
+    std::chrono::seconds timeout) const
+{
+    std::lock_guard<std::mutex> lock(
+        heartbeatMutex_);
+
+    const auto now =
+        std::chrono::system_clock::now();
+
+    const auto elapsed =
+        now - lastHeartbeatAckTime_;
+
+    return elapsed > timeout;
+}
+
+std::chrono::system_clock::time_point
+ClientConnection::lastHeartbeatAckTime() const
+{
+    std::lock_guard<std::mutex> lock(
+        heartbeatMutex_);
+
+    return lastHeartbeatAckTime_;
+}
+
 void ClientConnection::receiveLoop()
 {
     while (running_)
@@ -137,6 +173,12 @@ void ClientConnection::receiveLoop()
                 const serialization::Message message =
                     serialization::JsonSerializer::deserialize(
                         payload);
+
+                if (message.type ==
+                    serialization::MessageType::HEARTBEAT)
+                {
+                    markHeartbeatAck();
+                }
 
                 if (messageHandler_)
                 {

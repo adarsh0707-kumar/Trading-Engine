@@ -337,3 +337,20 @@ add_test(
     COMMAND test_engine_event_publishing
 )
 
+
+add_executable(
+    test_connection_heartbeat
+    tests/integration/test_connection_heartbeat.cpp
+)
+
+target_link_libraries(
+    test_connection_heartbeat
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_connection_heartbeat
+    COMMAND test_connection_heartbeat
+)
+
