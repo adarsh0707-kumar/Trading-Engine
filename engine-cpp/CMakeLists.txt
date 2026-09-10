@@ -296,3 +296,44 @@ add_test(
     NAME test_engine_network
     COMMAND test_engine_network
 )
+
+# ============================================================
+# Phase 2.2 - Engine Runtime and Event Publishing
+# ============================================================
+
+target_sources(engine_core PRIVATE
+    src/utils/Time.cpp
+    src/logging/Logger.cpp
+    src/engine/EngineConfig.cpp
+    src/engine/EngineState.cpp
+    src/engine/Engine.cpp
+)
+
+add_executable(
+    engine
+    src/main.cpp
+)
+
+target_link_libraries(
+    engine
+    PRIVATE
+    engine_core
+)
+
+
+add_executable(
+    test_engine_event_publishing
+    tests/integration/test_engine_event_publishing.cpp
+)
+
+target_link_libraries(
+    test_engine_event_publishing
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_engine_event_publishing
+    COMMAND test_engine_event_publishing
+)
+
