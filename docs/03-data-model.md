@@ -341,7 +341,7 @@ Backward-incompatible changes require a new major version.
 JSON rules:
 
 - UTF-8.
-- One event per line for socket streams.
+- Length-prefixed JSON frames for socket streams: a 4-byte big-endian payload length followed by the JSON payload.
 - No comments.
 - Numeric fields must remain numeric.
 - Timestamps use ISO-8601 UTC.

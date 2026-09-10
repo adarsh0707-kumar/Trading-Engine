@@ -354,3 +354,40 @@ add_test(
     COMMAND test_connection_heartbeat
 )
 
+# -------------------------
+# Client reconnection integration tests
+# -------------------------
+add_executable(
+    test_client_reconnects
+    tests/integration/test_client_reconnects.cpp
+)
+
+target_link_libraries(
+    test_client_reconnects
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_client_reconnects
+    COMMAND test_client_reconnects
+)
+
+# -------------------------
+# Graceful shutdown integration tests
+# -------------------------
+add_executable(
+    test_graceful_shutdown
+    tests/integration/test_graceful_shutdown.cpp
+)
+
+target_link_libraries(
+    test_graceful_shutdown
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_graceful_shutdown
+    COMMAND test_graceful_shutdown
+)
