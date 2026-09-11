@@ -15,6 +15,75 @@ This document records the development progress, completed milestones, implementa
 
 # Latest Commit Summary
 
+## 2026-09-11 — Unique Trade Identifiers
+
+**Status:** ✅ Complete
+
+`MatchingEngine` derived `trade_id` from the taker and maker order identifiers alone, so the same identifier was emitted whenever a taker matched the same counterparty again or an engine restart reissued order identifiers. Downstream analytics key trades by `trade_id`, so those executions collapsed into one.
+
+### What Changed
+
+* Added a per-engine monotonic trade sequence to `MatchingEngine`
+* Changed the trade identifier format to `trade-<sequence>-<taker>-<maker>`
+* Added a unit test asserting identifiers stay unique across repeated matches
+
+### Key Files
+
+```text
+Modified:
+engine-cpp/include/matching/MatchingEngine.hpp
+engine-cpp/src/matching/MatchingEngine.cpp
+engine-cpp/tests/unit/test_matching_engine.cpp
+```
+
+### Validation
+
+```text
+ctest (Release)  PASS — 15/15
+ctest (Debug)    PASS — 15/15
+```
+
+---
+
+## 2026-09-11 — Engine Shutdown and Robustness Fixes
+
+**Status:** ✅ Complete
+
+Three defects found while reviewing the C++ engine (PR #21, PR #23) plus the first working CI pipeline (PR #24).
+
+### What Changed
+
+* Made the C++ test suite assert under `NDEBUG` via `tests/TestCheck.hpp`, which unmasked 5 failing Release tests
+* Stopped closing socket descriptors while the receive and accept threads could still be using them
+* Replaced the heartbeat `sleep_for` with a condition variable so shutdown no longer waits a full heartbeat interval
+* Wrapped the `MatchingEngine::match` call in `Engine::run_loop`, so a rejected order is logged instead of terminating the process
+* Added `.github/workflows/test.yml`: ctest in Debug and Release, plus the Python analytics suite
+
+### Key Files
+
+```text
+Modified:
+.github/workflows/test.yml
+engine-cpp/include/network/SocketServer.hpp
+engine-cpp/src/engine/Engine.cpp
+engine-cpp/src/network/ClientConnection.cpp
+engine-cpp/src/network/SocketServer.cpp
+
+Added:
+engine-cpp/tests/TestCheck.hpp
+```
+
+### Validation
+
+```text
+ctest (Release)     PASS — 15/15
+ctest (Debug)       PASS — 15/15
+Python test suite   PASS — 66 passed
+GitHub Actions CI   PASS — 7/7 checks
+```
+
+---
+
 ## 2026-09-10 — Phase 3.4 Socket Ingestion
 
 **Status:** ✅ Complete
