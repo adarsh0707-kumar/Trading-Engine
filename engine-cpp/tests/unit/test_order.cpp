@@ -6,7 +6,8 @@
 
 #include "orderbook/Order.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <iostream>
 #include <stdexcept>
 
@@ -15,61 +16,61 @@ using namespace engine;
 static void test_valid_order_is_new()
 {
     Order o("ord-1", "SIM", Side::BUY, OrderType::LIMIT, 101.25, 100, 1);
-    assert(o.is_valid());
-    assert(o.status() == OrderStatus::NEW);
-    assert(o.remaining_quantity() == 100);
-    assert(o.is_active());
+    CHECK(o.is_valid());
+    CHECK(o.status() == OrderStatus::NEW);
+    CHECK(o.remaining_quantity() == 100);
+    CHECK(o.is_active());
 }
 
 static void test_negative_price_is_rejected()
 {
     Order o("ord-2", "SIM", Side::SELL, OrderType::LIMIT, -5.0, 10, 2);
-    assert(!o.is_valid());
-    assert(o.status() == OrderStatus::REJECTED);
-    assert(!o.is_active());
+    CHECK(!o.is_valid());
+    CHECK(o.status() == OrderStatus::REJECTED);
+    CHECK(!o.is_active());
 }
 
 static void test_zero_price_is_rejected()
 {
     Order o("ord-3", "SIM", Side::SELL, OrderType::LIMIT, 0.0, 10, 3);
-    assert(o.status() == OrderStatus::REJECTED);
+    CHECK(o.status() == OrderStatus::REJECTED);
 }
 
 static void test_zero_quantity_is_rejected()
 {
     Order o("ord-4", "SIM", Side::BUY, OrderType::LIMIT, 100.0, 0, 4);
-    assert(o.status() == OrderStatus::REJECTED);
+    CHECK(o.status() == OrderStatus::REJECTED);
 }
 
 static void test_negative_quantity_is_rejected()
 {
     Order o("ord-5", "SIM", Side::BUY, OrderType::LIMIT, 100.0, -10, 5);
-    assert(o.status() == OrderStatus::REJECTED);
+    CHECK(o.status() == OrderStatus::REJECTED);
 }
 
 static void test_missing_symbol_is_rejected()
 {
     Order o("ord-6", "", Side::BUY, OrderType::LIMIT, 100.0, 10, 6);
-    assert(o.status() == OrderStatus::REJECTED);
+    CHECK(o.status() == OrderStatus::REJECTED);
 }
 
 static void test_partial_fill_updates_status_and_remaining()
 {
     Order o("ord-7", "SIM", Side::BUY, OrderType::LIMIT, 101.0, 100, 7);
     o.fill(40);
-    assert(o.remaining_quantity() == 60);
-    assert(o.status() == OrderStatus::PARTIALLY_FILLED);
-    assert(!o.is_fully_filled());
+    CHECK(o.remaining_quantity() == 60);
+    CHECK(o.status() == OrderStatus::PARTIALLY_FILLED);
+    CHECK(!o.is_fully_filled());
 }
 
 static void test_full_fill_sets_filled_status()
 {
     Order o("ord-8", "SIM", Side::SELL, OrderType::LIMIT, 101.0, 40, 8);
     o.fill(40);
-    assert(o.remaining_quantity() == 0);
-    assert(o.status() == OrderStatus::FILLED);
-    assert(o.is_fully_filled());
-    assert(!o.is_active());
+    CHECK(o.remaining_quantity() == 0);
+    CHECK(o.status() == OrderStatus::FILLED);
+    CHECK(o.is_fully_filled());
+    CHECK(!o.is_active());
 }
 
 static void test_overfill_throws()
@@ -84,15 +85,15 @@ static void test_overfill_throws()
     {
         threw = true;
     }
-    assert(threw);
+    CHECK(threw);
 }
 
 static void test_cancel_active_order()
 {
     Order o("ord-10", "SIM", Side::BUY, OrderType::LIMIT, 101.0, 10, 10);
     o.cancel();
-    assert(o.status() == OrderStatus::CANCELLED);
-    assert(!o.is_active());
+    CHECK(o.status() == OrderStatus::CANCELLED);
+    CHECK(!o.is_active());
 }
 
 static void test_cancel_filled_order_throws()
@@ -108,7 +109,7 @@ static void test_cancel_filled_order_throws()
     {
         threw = true;
     }
-    assert(threw);
+    CHECK(threw);
 }
 
 static void test_fill_on_cancelled_order_throws()
@@ -124,16 +125,16 @@ static void test_fill_on_cancelled_order_throws()
     {
         threw = true;
     }
-    assert(threw);
+    CHECK(threw);
 }
 
 static void test_to_string_helpers()
 {
-    assert(to_string(Side::BUY) == "BUY");
-    assert(to_string(Side::SELL) == "SELL");
-    assert(to_string(OrderType::LIMIT) == "LIMIT");
-    assert(to_string(TimeInForce::GTC) == "GTC");
-    assert(to_string(OrderStatus::NEW) == "NEW");
+    CHECK(to_string(Side::BUY) == "BUY");
+    CHECK(to_string(Side::SELL) == "SELL");
+    CHECK(to_string(OrderType::LIMIT) == "LIMIT");
+    CHECK(to_string(TimeInForce::GTC) == "GTC");
+    CHECK(to_string(OrderStatus::NEW) == "NEW");
 }
 
 int main()

@@ -2,7 +2,8 @@
 #include "serialization/JsonSerializer.hpp"
 #include "serialization/Message.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -32,7 +33,7 @@ static void test_message_round_trip()
     const Message restored =
         JsonSerializer::deserialize(json);
 
-    assert(restored == original);
+    CHECK(restored == original);
 }
 
 static void test_protocol_frame()
@@ -48,13 +49,13 @@ static void test_protocol_frame()
 
     std::string restored;
 
-    assert(
+    CHECK(
         Protocol::extractFrame(
             buffer,
             restored));
 
-    assert(restored == payload);
-    assert(buffer.empty());
+    CHECK(restored == payload);
+    CHECK(buffer.empty());
 }
 
 static void test_partial_frame()
@@ -71,7 +72,7 @@ static void test_partial_frame()
 
     std::string restored;
 
-    assert(
+    CHECK(
         !Protocol::extractFrame(
             buffer,
             restored));
@@ -81,12 +82,12 @@ static void test_partial_frame()
         frame.begin() + 3,
         frame.end());
 
-    assert(
+    CHECK(
         Protocol::extractFrame(
             buffer,
             restored));
 
-    assert(restored == payload);
+    CHECK(restored == payload);
 }
 
 static void test_multiple_frames()
@@ -111,21 +112,21 @@ static void test_multiple_frames()
 
     std::string payload;
 
-    assert(
+    CHECK(
         Protocol::extractFrame(
             buffer,
             payload));
 
-    assert(payload == "first");
+    CHECK(payload == "first");
 
-    assert(
+    CHECK(
         Protocol::extractFrame(
             buffer,
             payload));
 
-    assert(payload == "second");
+    CHECK(payload == "second");
 
-    assert(buffer.empty());
+    CHECK(buffer.empty());
 }
 
 int main()

@@ -4,7 +4,8 @@
 #include "orderbook/OrderBook.hpp"
 #include "orderbook/Trade.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -42,12 +43,12 @@ namespace
 
         const engine::Tick tick = generator.next();
 
-        assert(tick.sequence == 1);
-        assert(tick.order_id == "SIM-00000001");
-        assert(tick.symbol == "SIM");
-        assert(tick.price == 100.0);
-        assert(tick.quantity == 10);
-        assert(tick.is_valid());
+        CHECK(tick.sequence == 1);
+        CHECK(tick.order_id == "SIM-00000001");
+        CHECK(tick.symbol == "SIM");
+        CHECK(tick.price == 100.0);
+        CHECK(tick.quantity == 10);
+        CHECK(tick.is_valid());
 
         engine::OrderBook order_book("SIM");
 
@@ -66,17 +67,17 @@ namespace
             1,
             engine::TimeInForce::GTC);
 
-        assert(resting_order->is_valid());
+        CHECK(resting_order->is_valid());
 
         order_book.add_order(resting_order);
 
-        assert(order_book.order_count() == 1);
+        CHECK(order_book.order_count() == 1);
 
         auto incoming_order = order_from_tick(tick);
 
-        assert(incoming_order->is_valid());
-        assert(incoming_order->status() == engine::OrderStatus::NEW);
-        assert(incoming_order->remaining_quantity() == 10);
+        CHECK(incoming_order->is_valid());
+        CHECK(incoming_order->status() == engine::OrderStatus::NEW);
+        CHECK(incoming_order->remaining_quantity() == 10);
 
         engine::MatchingEngine matching_engine;
 
@@ -85,30 +86,30 @@ namespace
                 order_book,
                 incoming_order);
 
-        assert(result.matched);
-        assert(result.trades.size() == 1);
+        CHECK(result.matched);
+        CHECK(result.trades.size() == 1);
 
         const auto &trade = result.trades.front();
 
-        assert(trade);
-        assert(trade->symbol() == "SIM");
-        assert(trade->taker_order_id() == tick.order_id);
-        assert(trade->maker_order_id() == "RESTING-1");
-        assert(std::abs(trade->price() - 100.0) < 1e-9);
-        assert(trade->quantity() == 10);
+        CHECK(trade);
+        CHECK(trade->symbol() == "SIM");
+        CHECK(trade->taker_order_id() == tick.order_id);
+        CHECK(trade->maker_order_id() == "RESTING-1");
+        CHECK(std::abs(trade->price() - 100.0) < 1e-9);
+        CHECK(trade->quantity() == 10);
 
-        assert(
+        CHECK(
             incoming_order->status() ==
             engine::OrderStatus::FILLED);
 
-        assert(incoming_order->remaining_quantity() == 0);
+        CHECK(incoming_order->remaining_quantity() == 0);
 
-        assert(
+        CHECK(
             resting_order->status() ==
             engine::OrderStatus::FILLED);
 
-        assert(order_book.empty());
-        assert(order_book.order_count() == 0);
+        CHECK(order_book.empty());
+        CHECK(order_book.order_count() == 0);
     }
 
     void test_deterministic_reset_replays_same_tick()
@@ -132,23 +133,23 @@ namespace
         const engine::Tick replay_first = generator.next();
         const engine::Tick replay_second = generator.next();
 
-        assert(first.sequence == replay_first.sequence);
-        assert(first.order_id == replay_first.order_id);
-        assert(first.symbol == replay_first.symbol);
-        assert(first.side == replay_first.side);
-        assert(first.order_type == replay_first.order_type);
-        assert(first.price == replay_first.price);
-        assert(first.quantity == replay_first.quantity);
-        assert(first.time_in_force == replay_first.time_in_force);
+        CHECK(first.sequence == replay_first.sequence);
+        CHECK(first.order_id == replay_first.order_id);
+        CHECK(first.symbol == replay_first.symbol);
+        CHECK(first.side == replay_first.side);
+        CHECK(first.order_type == replay_first.order_type);
+        CHECK(first.price == replay_first.price);
+        CHECK(first.quantity == replay_first.quantity);
+        CHECK(first.time_in_force == replay_first.time_in_force);
 
-        assert(second.sequence == replay_second.sequence);
-        assert(second.order_id == replay_second.order_id);
-        assert(second.symbol == replay_second.symbol);
-        assert(second.side == replay_second.side);
-        assert(second.order_type == replay_second.order_type);
-        assert(second.price == replay_second.price);
-        assert(second.quantity == replay_second.quantity);
-        assert(second.time_in_force == replay_second.time_in_force);
+        CHECK(second.sequence == replay_second.sequence);
+        CHECK(second.order_id == replay_second.order_id);
+        CHECK(second.symbol == replay_second.symbol);
+        CHECK(second.side == replay_second.side);
+        CHECK(second.order_type == replay_second.order_type);
+        CHECK(second.price == replay_second.price);
+        CHECK(second.quantity == replay_second.quantity);
+        CHECK(second.time_in_force == replay_second.time_in_force);
     }
 
     void test_generated_tick_can_become_resting_order()
@@ -166,30 +167,30 @@ namespace
 
         const engine::Tick tick = generator.next();
 
-        assert(tick.is_valid());
+        CHECK(tick.is_valid());
 
         auto order = order_from_tick(tick);
 
-        assert(order->is_valid());
-        assert(order->status() == engine::OrderStatus::NEW);
+        CHECK(order->is_valid());
+        CHECK(order->status() == engine::OrderStatus::NEW);
 
         engine::OrderBook order_book("SIM");
 
         order_book.add_order(order);
 
-        assert(order_book.order_count() == 1);
+        CHECK(order_book.order_count() == 1);
 
         if (tick.side == engine::Side::BUY)
         {
-            assert(order_book.bid_level_count() == 1);
-            assert(
+            CHECK(order_book.bid_level_count() == 1);
+            CHECK(
                 std::abs(order_book.best_bid() - 101.0) <
                 1e-9);
         }
         else
         {
-            assert(order_book.ask_level_count() == 1);
-            assert(
+            CHECK(order_book.ask_level_count() == 1);
+            CHECK(
                 std::abs(order_book.best_ask() - 101.0) <
                 1e-9);
         }
