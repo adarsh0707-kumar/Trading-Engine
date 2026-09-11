@@ -11,12 +11,14 @@ namespace engine
         std::string symbol,
         std::string taker_order_id,
         std::string maker_order_id,
+        Side taker_side,
         double price,
         std::int64_t quantity)
         : trade_id_(std::move(trade_id)),
           symbol_(std::move(symbol)),
           taker_order_id_(std::move(taker_order_id)),
           maker_order_id_(std::move(maker_order_id)),
+          taker_side_(taker_side),
           price_(price),
           quantity_(quantity)
     {
@@ -75,6 +77,25 @@ namespace engine
     const std::string &Trade::maker_order_id() const noexcept
     {
         return maker_order_id_;
+    }
+
+    Side Trade::taker_side() const noexcept
+    {
+        return taker_side_;
+    }
+
+    const std::string &Trade::buy_order_id() const noexcept
+    {
+        return taker_side_ == Side::BUY
+                   ? taker_order_id_
+                   : maker_order_id_;
+    }
+
+    const std::string &Trade::sell_order_id() const noexcept
+    {
+        return taker_side_ == Side::BUY
+                   ? maker_order_id_
+                   : taker_order_id_;
     }
 
     double Trade::price() const noexcept

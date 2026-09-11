@@ -173,6 +173,15 @@ void Engine::run_loop()
                 << "\","
                 << "\"maker_order_id\":\""
                 << trade->maker_order_id()
+                << "\","
+                << "\"taker_side\":\""
+                << ::engine::to_string(trade->taker_side())
+                << "\","
+                << "\"buy_order_id\":\""
+                << trade->buy_order_id()
+                << "\","
+                << "\"sell_order_id\":\""
+                << trade->sell_order_id()
                 << "\""
                 << "}";
 

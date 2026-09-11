@@ -1232,6 +1232,46 @@ void test_book_integrity_after_multi_level_partial_match()
     CHECK(book.best_ask_level().front() == ask_102);
 }
 
+void test_trade_records_buyer_and_seller_for_buy_taker()
+{
+    OrderBook book("BTC-USD");
+
+    book.add_order(
+        make_order("S1", Side::SELL, 100.0, 4, 1));
+
+    MatchingEngine matcher;
+    MatchResult result =
+        matcher.match(
+            book,
+            make_order("B1", Side::BUY, 101.0, 4, 2));
+
+    const auto &trade = result.trades.front();
+
+    CHECK(trade->taker_side() == Side::BUY);
+    CHECK(trade->buy_order_id() == "B1");
+    CHECK(trade->sell_order_id() == "S1");
+}
+
+void test_trade_records_buyer_and_seller_for_sell_taker()
+{
+    OrderBook book("BTC-USD");
+
+    book.add_order(
+        make_order("B1", Side::BUY, 100.0, 4, 1));
+
+    MatchingEngine matcher;
+    MatchResult result =
+        matcher.match(
+            book,
+            make_order("S1", Side::SELL, 99.0, 4, 2));
+
+    const auto &trade = result.trades.front();
+
+    CHECK(trade->taker_side() == Side::SELL);
+    CHECK(trade->buy_order_id() == "B1");
+    CHECK(trade->sell_order_id() == "S1");
+}
+
 void test_trade_ids_are_unique_across_matches()
 {
     MatchingEngine matcher;
@@ -1320,8 +1360,11 @@ int main()
 
     test_trade_ids_are_unique_across_matches();
 
+    test_trade_records_buyer_and_seller_for_buy_taker();
+    test_trade_records_buyer_and_seller_for_sell_taker();
+
     std::cout
-        << "All MatchingEngine Phase 1.13 tests passed (35/35)"
+        << "All MatchingEngine Phase 1.13 tests passed (37/37)"
         << std::endl;
 
     return 0;
