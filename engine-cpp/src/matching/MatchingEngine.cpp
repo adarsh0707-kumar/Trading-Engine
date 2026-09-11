@@ -117,6 +117,7 @@ namespace engine
                     order_book.symbol(),
                     incoming_order->order_id(),
                     resting_order->order_id(),
+                    incoming_order->side(),
                     trade_price,
                     trade_quantity);
 
@@ -182,6 +183,7 @@ namespace engine
                     order_book.symbol(),
                     incoming_order->order_id(),
                     resting_order->order_id(),
+                    incoming_order->side(),
                     trade_price,
                     trade_quantity);
 

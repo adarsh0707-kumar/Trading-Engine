@@ -15,6 +15,46 @@ This document records the development progress, completed milestones, implementa
 
 # Latest Commit Summary
 
+## 2026-09-11 — Trade Events Carry the Taker Side
+
+**Status:** ✅ Complete
+
+The TRADE message carried only `taker_order_id` and `maker_order_id`. Taker and maker identify who crossed the spread, not the direction of the fill, so `MessageParser` mislabelled every sell-initiated execution: it mapped the taker to `buy_order_id` and the maker to `sell_order_id`. The missing direction also forced `StreamingProcessor` to report position, PnL, and drawdown as zero placeholders, blocking Phase 3.6.
+
+### What Changed
+
+* `engine::Trade` stores the taker side and exposes `buy_order_id()` / `sell_order_id()` derived from it
+* The TRADE payload emits `taker_side`, `buy_order_id`, and `sell_order_id` alongside the existing taker/maker identifiers
+* `MessageParser` requires `taker_side`, rejects unknown values, and derives the buy/sell identifiers from it
+* The Python `Trade` model gained `taker_side` (required) plus `taker_order_id` / `maker_order_id`
+* `docs/02-architecture.md` and `docs/03-data-model.md` document the new field and the mapping rule
+
+### Key Files
+
+```text
+Modified:
+engine-cpp/include/orderbook/Trade.hpp
+engine-cpp/src/orderbook/Trade.cpp
+engine-cpp/src/matching/MatchingEngine.cpp
+engine-cpp/src/engine/Engine.cpp
+engine-cpp/tests/unit/test_matching_engine.cpp
+analytics-py/src/analytics/models/trade.py
+analytics-py/src/analytics/ingestion/message_parser.py
+analytics-py/src/analytics/pipeline/processor.py
+docs/02-architecture.md
+docs/03-data-model.md
+docs/05-roadmap-and-phases.md
+```
+
+### Validation
+
+```text
+ctest (Release)  PASS — 15/15
+pytest           PASS — 89 passed
+```
+
+---
+
 ## 2026-09-11 — Unique Trade Identifiers
 
 **Status:** ✅ Complete

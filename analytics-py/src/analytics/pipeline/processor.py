@@ -1,14 +1,9 @@
 """Streaming processor that turns Trade events into AnalyticsResult snapshots.
 
 Position, PnL, drawdown, and equity are reported as zero placeholders in
-Phase 3.5. The TRADE wire message (engine-cpp/include/orderbook/Trade.hpp)
-carries only taker_order_id/maker_order_id and no BUY/SELL side. Taker vs.
-maker identifies which order crossed the spread, not which side of the
-book it came from -- the taker's own order can itself be BUY or SELL
-(see MatchingEngine::match) -- so a directional fill cannot be derived
-from the current wire message. Real position/PnL tracking is deferred
-until the protocol carries an explicit side field (planned ahead of
-Phase 3.6).
+Phase 3.5. The TRADE message now carries ``taker_side``, so the direction
+of each fill is available; consuming it to maintain position and PnL is
+Phase 3.6 work.
 
 Volatility is intentionally not calculated here: AnalyticsResult has no
 volatility field yet, so there is nowhere to put it.

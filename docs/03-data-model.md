@@ -169,10 +169,23 @@ Example:
   "symbol": "SIM",
   "price": "101.25",
   "quantity": 40,
+  "taker_order_id": "ord-000010",
+  "maker_order_id": "ord-000009",
+  "taker_side": "BUY",
   "buy_order_id": "ord-000010",
   "sell_order_id": "ord-000009",
   "timestamp": "2026-09-07T12:00:01.000Z"
 }
+```
+
+`taker_side` is the side of the order that crossed the spread. Taker and maker
+identify who initiated the execution, not the direction of the fill, so
+`buy_order_id` and `sell_order_id` are only well defined together with
+`taker_side`:
+
+```text
+taker_side = BUY   ->  buy_order_id = taker, sell_order_id = maker
+taker_side = SELL  ->  buy_order_id = maker, sell_order_id = taker
 ```
 
 The trade event is authoritative for downstream analytics.
@@ -193,6 +206,7 @@ symbol
 price
 quantity
 timestamp
+taker_side
 ```
 
 Optional fields:
@@ -200,6 +214,8 @@ Optional fields:
 ```text
 buy_order_id
 sell_order_id
+taker_order_id
+maker_order_id
 ```
 
 The Python model validates that:
@@ -210,6 +226,10 @@ The Python model validates that:
 * `symbol` is not empty.
 * `price` is positive.
 * `quantity` is positive.
+* `taker_side` is `BUY` or `SELL`.
+
+The parser derives `buy_order_id` and `sell_order_id` from `taker_side`;
+a TRADE payload without `taker_side` is rejected.
 
 Financial prices are represented internally using `Decimal`.
 

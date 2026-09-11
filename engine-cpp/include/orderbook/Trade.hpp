@@ -1,5 +1,7 @@
 #pragma once
 
+#include "orderbook/Order.hpp"
+
 #include <cstdint>
 #include <string>
 
@@ -14,6 +16,7 @@ namespace engine
             std::string symbol,
             std::string taker_order_id,
             std::string maker_order_id,
+            Side taker_side,
             double price,
             std::int64_t quantity);
 
@@ -24,6 +27,12 @@ namespace engine
         const std::string &taker_order_id() const noexcept;
 
         const std::string &maker_order_id() const noexcept;
+
+        Side taker_side() const noexcept;
+
+        const std::string &buy_order_id() const noexcept;
+
+        const std::string &sell_order_id() const noexcept;
 
         double price() const noexcept;
 
@@ -36,6 +45,7 @@ namespace engine
         std::string symbol_;
         std::string taker_order_id_;
         std::string maker_order_id_;
+        Side taker_side_;
 
         double price_;
         std::int64_t quantity_;
