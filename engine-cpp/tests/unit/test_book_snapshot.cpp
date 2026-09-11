@@ -2,7 +2,8 @@
 #include "orderbook/Order.hpp"
 #include "orderbook/OrderBook.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -37,11 +38,11 @@ void test_empty_book()
 
     const BookSnapshot snapshot = book.snapshot();
 
-    assert(snapshot.empty());
-    assert(snapshot.bids.empty());
-    assert(snapshot.asks.empty());
-    assert(snapshot.total_bid_quantity() == 0);
-    assert(snapshot.total_ask_quantity() == 0);
+    CHECK(snapshot.empty());
+    CHECK(snapshot.bids.empty());
+    CHECK(snapshot.asks.empty());
+    CHECK(snapshot.total_bid_quantity() == 0);
+    CHECK(snapshot.total_ask_quantity() == 0);
 }
 
 void test_bid_snapshot()
@@ -58,15 +59,15 @@ void test_bid_snapshot()
 
     const BookSnapshot snapshot = book.snapshot();
 
-    assert(snapshot.bids.size() == 2);
+    CHECK(snapshot.bids.size() == 2);
 
-    assert(snapshot.bids[0].price == 105.0);
-    assert(snapshot.bids[0].quantity == 300);
+    CHECK(snapshot.bids[0].price == 105.0);
+    CHECK(snapshot.bids[0].quantity == 300);
 
-    assert(snapshot.bids[1].price == 103.0);
-    assert(snapshot.bids[1].quantity == 150);
+    CHECK(snapshot.bids[1].price == 103.0);
+    CHECK(snapshot.bids[1].quantity == 150);
 
-    assert(snapshot.total_bid_quantity() == 450);
+    CHECK(snapshot.total_bid_quantity() == 450);
 }
 
 void test_ask_snapshot()
@@ -83,15 +84,15 @@ void test_ask_snapshot()
 
     const BookSnapshot snapshot = book.snapshot();
 
-    assert(snapshot.asks.size() == 2);
+    CHECK(snapshot.asks.size() == 2);
 
-    assert(snapshot.asks[0].price == 106.0);
-    assert(snapshot.asks[0].quantity == 200);
+    CHECK(snapshot.asks[0].price == 106.0);
+    CHECK(snapshot.asks[0].quantity == 200);
 
-    assert(snapshot.asks[1].price == 108.0);
-    assert(snapshot.asks[1].quantity == 350);
+    CHECK(snapshot.asks[1].price == 108.0);
+    CHECK(snapshot.asks[1].quantity == 350);
 
-    assert(snapshot.total_ask_quantity() == 550);
+    CHECK(snapshot.total_ask_quantity() == 550);
 }
 
 void test_multiple_orders_same_price_are_aggregated()
@@ -108,9 +109,9 @@ void test_multiple_orders_same_price_are_aggregated()
 
     const BookSnapshot snapshot = book.snapshot();
 
-    assert(snapshot.bids.size() == 1);
-    assert(snapshot.bids[0].price == 105.0);
-    assert(snapshot.bids[0].quantity == 300);
+    CHECK(snapshot.bids.size() == 1);
+    CHECK(snapshot.bids[0].price == 105.0);
+    CHECK(snapshot.bids[0].quantity == 300);
 }
 
 void test_price_ordering()
@@ -143,13 +144,13 @@ void test_price_ordering()
 
     const BookSnapshot snapshot = book.snapshot();
 
-    assert(snapshot.bids[0].price == 105.0);
-    assert(snapshot.bids[1].price == 103.0);
-    assert(snapshot.bids[2].price == 101.0);
+    CHECK(snapshot.bids[0].price == 105.0);
+    CHECK(snapshot.bids[1].price == 103.0);
+    CHECK(snapshot.bids[2].price == 101.0);
 
-    assert(snapshot.asks[0].price == 106.0);
-    assert(snapshot.asks[1].price == 108.0);
-    assert(snapshot.asks[2].price == 110.0);
+    CHECK(snapshot.asks[0].price == 106.0);
+    CHECK(snapshot.asks[1].price == 108.0);
+    CHECK(snapshot.asks[2].price == 110.0);
 }
 
 void test_snapshot_is_independent()
@@ -166,7 +167,7 @@ void test_snapshot_is_independent()
 
     const BookSnapshot second_snapshot = book.snapshot();
 
-    assert(second_snapshot.bids[0].quantity == 100);
+    CHECK(second_snapshot.bids[0].quantity == 100);
 }
 
 } // namespace

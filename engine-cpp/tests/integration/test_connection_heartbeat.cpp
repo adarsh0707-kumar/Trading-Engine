@@ -3,7 +3,8 @@
 #include "serialization/JsonSerializer.hpp"
 #include "serialization/Message.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <chrono>
 #include <cstring>
 #include <iostream>
@@ -64,7 +65,7 @@ static int connectToServer(
             SOCK_STREAM,
             0);
 
-    assert(fd >= 0);
+    CHECK(fd >= 0);
 
     sockaddr_in address{};
 
@@ -83,7 +84,7 @@ static int connectToServer(
             reinterpret_cast<sockaddr *>(&address),
             sizeof(address));
 
-    assert(result == 0);
+    CHECK(result == 0);
 
     return fd;
 }
@@ -95,7 +96,7 @@ static void test_heartbeat_sent_and_acked()
         500,
         2);
 
-    assert(server.start());
+    CHECK(server.start());
 
     const int clientFd =
         connectToServer(server.port());
@@ -103,30 +104,30 @@ static void test_heartbeat_sent_and_acked()
     const std::string hello =
         receiveMessage(clientFd, 100);
 
-    assert(!hello.empty());
+    CHECK(!hello.empty());
 
     const serialization::Message helloMsg =
         serialization::JsonSerializer::deserialize(
             hello);
 
-    assert(
+    CHECK(
         helloMsg.type ==
         serialization::MessageType::HELLO);
 
     const std::string heartbeat =
         receiveMessage(clientFd, 1000);
 
-    assert(!heartbeat.empty());
+    CHECK(!heartbeat.empty());
 
     const serialization::Message hbMsg =
         serialization::JsonSerializer::deserialize(
             heartbeat);
 
-    assert(
+    CHECK(
         hbMsg.type ==
         serialization::MessageType::HEARTBEAT);
 
-    assert(hbMsg.payload == "PING");
+    CHECK(hbMsg.payload == "PING");
 
     serialization::Message response;
 
@@ -148,12 +149,12 @@ static void test_heartbeat_sent_and_acked()
         frame.size(),
         MSG_NOSIGNAL);
 
-    assert(sent > 0);
+    CHECK(sent > 0);
 
     std::this_thread::sleep_for(
         std::chrono::milliseconds(100));
 
-    assert(server.clientCount() == 1);
+    CHECK(server.clientCount() == 1);
 
     ::close(clientFd);
 
@@ -167,7 +168,7 @@ static void test_heartbeat_timeout_disconnects()
         200,
         1);
 
-    assert(server.start());
+    CHECK(server.start());
 
     const int clientFd =
         connectToServer(server.port());
@@ -175,9 +176,9 @@ static void test_heartbeat_timeout_disconnects()
     const std::string hello =
         receiveMessage(clientFd, 100);
 
-    assert(!hello.empty());
+    CHECK(!hello.empty());
 
-    assert(server.clientCount() == 1);
+    CHECK(server.clientCount() == 1);
 
     std::this_thread::sleep_for(
         std::chrono::milliseconds(400));
@@ -185,12 +186,12 @@ static void test_heartbeat_timeout_disconnects()
     const std::string heartbeat =
         receiveMessage(clientFd, 500);
 
-    assert(!heartbeat.empty());
+    CHECK(!heartbeat.empty());
 
     std::this_thread::sleep_for(
         std::chrono::milliseconds(1500));
 
-    assert(server.clientCount() == 0);
+    CHECK(server.clientCount() == 0);
 
     ::close(clientFd);
 

@@ -1,7 +1,8 @@
 #include "orderbook/Order.hpp"
 #include "orderbook/PriceLevel.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -28,10 +29,10 @@ static void test_empty_price_level()
 {
     PriceLevel level(100.0);
 
-    assert(level.price() == 100.0);
-    assert(level.total_quantity() == 0);
-    assert(level.order_count() == 0);
-    assert(level.empty());
+    CHECK(level.price() == 100.0);
+    CHECK(level.total_quantity() == 0);
+    CHECK(level.order_count() == 0);
+    CHECK(level.empty());
 }
 
 static void test_add_single_order()
@@ -46,10 +47,10 @@ static void test_add_single_order()
 
     level.add_order(order);
 
-    assert(!level.empty());
-    assert(level.order_count() == 1);
-    assert(level.total_quantity() == 100);
-    assert(level.front() == order);
+    CHECK(!level.empty());
+    CHECK(level.order_count() == 1);
+    CHECK(level.total_quantity() == 100);
+    CHECK(level.front() == order);
 }
 
 static void test_multiple_orders_preserve_fifo()
@@ -78,50 +79,50 @@ static void test_multiple_orders_preserve_fifo()
     level.add_order(second);
     level.add_order(third);
 
-    assert(level.order_count() == 3);
-    assert(level.total_quantity() == 175);
+    CHECK(level.order_count() == 3);
+    CHECK(level.total_quantity() == 175);
 
     // FIFO: first order must be at the front.
-    assert(level.front() == first);
+    CHECK(level.front() == first);
 
     // Fully fill first order before removing it.
     first->fill(100);
     level.reduce_quantity(100);
 
-    assert(first->is_fully_filled());
-    assert(level.total_quantity() == 75);
+    CHECK(first->is_fully_filled());
+    CHECK(level.total_quantity() == 75);
 
     level.remove_front();
 
-    assert(level.order_count() == 2);
-    assert(level.front() == second);
-    assert(level.total_quantity() == 75);
+    CHECK(level.order_count() == 2);
+    CHECK(level.front() == second);
+    CHECK(level.total_quantity() == 75);
 
     // Fully fill second order.
     second->fill(50);
     level.reduce_quantity(50);
 
-    assert(second->is_fully_filled());
-    assert(level.total_quantity() == 25);
+    CHECK(second->is_fully_filled());
+    CHECK(level.total_quantity() == 25);
 
     level.remove_front();
 
-    assert(level.order_count() == 1);
-    assert(level.front() == third);
-    assert(level.total_quantity() == 25);
+    CHECK(level.order_count() == 1);
+    CHECK(level.front() == third);
+    CHECK(level.total_quantity() == 25);
 
     // Fully fill third order.
     third->fill(25);
     level.reduce_quantity(25);
 
-    assert(third->is_fully_filled());
-    assert(level.total_quantity() == 0);
+    CHECK(third->is_fully_filled());
+    CHECK(level.total_quantity() == 0);
 
     level.remove_front();
 
-    assert(level.empty());
-    assert(level.order_count() == 0);
-    assert(level.total_quantity() == 0);
+    CHECK(level.empty());
+    CHECK(level.order_count() == 0);
+    CHECK(level.total_quantity() == 0);
 }
 
 static void test_wrong_price_is_rejected()
@@ -145,8 +146,8 @@ static void test_wrong_price_is_rejected()
         threw = true;
     }
 
-    assert(threw);
-    assert(level.empty());
+    CHECK(threw);
+    CHECK(level.empty());
 }
 
 static void test_null_order_is_rejected()
@@ -164,7 +165,7 @@ static void test_null_order_is_rejected()
         threw = true;
     }
 
-    assert(threw);
+    CHECK(threw);
 }
 
 static void test_inactive_order_is_rejected()
@@ -190,7 +191,7 @@ static void test_inactive_order_is_rejected()
         threw = true;
     }
 
-    assert(threw);
+    CHECK(threw);
 }
 
 static void test_empty_front_throws()
@@ -208,7 +209,7 @@ static void test_empty_front_throws()
         threw = true;
     }
 
-    assert(threw);
+    CHECK(threw);
 }
 
 static void test_empty_remove_throws()
@@ -226,7 +227,7 @@ static void test_empty_remove_throws()
         threw = true;
     }
 
-    assert(threw);
+    CHECK(threw);
 }
 
 static void test_partial_fill_quantity_consistency()
@@ -251,12 +252,12 @@ static void test_partial_fill_quantity_consistency()
      * price-level quantity synchronized during matching.
      */
 
-    assert(order->remaining_quantity() == 60);
-    assert(level.order_count() == 1);
+    CHECK(order->remaining_quantity() == 60);
+    CHECK(level.order_count() == 1);
 
     // The level aggregate is still 100 until matching logic
     // explicitly reduces it.
-    assert(level.total_quantity() == 100);
+    CHECK(level.total_quantity() == 100);
 }
 
 static void test_partial_order_cannot_be_removed()
@@ -275,10 +276,10 @@ static void test_partial_order_cannot_be_removed()
     order->fill(40);
     level.reduce_quantity(40);
 
-    assert(order->remaining_quantity() == 60);
-    assert(!order->is_fully_filled());
-    assert(level.total_quantity() == 60);
-    assert(level.order_count() == 1);
+    CHECK(order->remaining_quantity() == 60);
+    CHECK(!order->is_fully_filled());
+    CHECK(level.total_quantity() == 60);
+    CHECK(level.order_count() == 1);
 
     bool threw = false;
 
@@ -291,13 +292,13 @@ static void test_partial_order_cannot_be_removed()
         threw = true;
     }
 
-    assert(threw);
+    CHECK(threw);
 
     // Order must remain in the queue.
-    assert(!level.empty());
-    assert(level.order_count() == 1);
-    assert(level.front() == order);
-    assert(level.total_quantity() == 60);
+    CHECK(!level.empty());
+    CHECK(level.order_count() == 1);
+    CHECK(level.front() == order);
+    CHECK(level.total_quantity() == 60);
 }
 
 static void test_remove_fully_filled_order()
@@ -312,21 +313,21 @@ static void test_remove_fully_filled_order()
 
     level.add_order(order);
 
-    assert(level.order_count() == 1);
-    assert(level.total_quantity() == 100);
+    CHECK(level.order_count() == 1);
+    CHECK(level.total_quantity() == 100);
 
     // Fully fill the order.
     order->fill(100);
     level.reduce_quantity(100);
 
-    assert(order->is_fully_filled());
-    assert(level.total_quantity() == 0);
+    CHECK(order->is_fully_filled());
+    CHECK(level.total_quantity() == 0);
 
     level.remove_front();
 
-    assert(level.empty());
-    assert(level.order_count() == 0);
-    assert(level.total_quantity() == 0);
+    CHECK(level.empty());
+    CHECK(level.order_count() == 0);
+    CHECK(level.total_quantity() == 0);
 }
 
 int main()

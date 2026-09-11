@@ -1,6 +1,7 @@
 #include "matching/MatchingEngine.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -50,13 +51,13 @@ namespace
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_buy);
 
-        assert(result.matched);
-        assert(result.trades.size() == 1);
-        assert(result.trades.front()->price() == 100.0);
-        assert(result.trades.front()->quantity() == 10);
+        CHECK(result.matched);
+        CHECK(result.trades.size() == 1);
+        CHECK(result.trades.front()->price() == 100.0);
+        CHECK(result.trades.front()->quantity() == 10);
 
-        assert(incoming_buy->remaining_quantity() == 0);
-        assert(resting_sell->remaining_quantity() == 0);
+        CHECK(incoming_buy->remaining_quantity() == 0);
+        CHECK(resting_sell->remaining_quantity() == 0);
     }
 
     void test_sell_matches_best_bid()
@@ -74,13 +75,13 @@ namespace
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_sell);
 
-        assert(result.matched);
-        assert(result.trades.size() == 1);
-        assert(result.trades.front()->price() == 100.0);
-        assert(result.trades.front()->quantity() == 10);
+        CHECK(result.matched);
+        CHECK(result.trades.size() == 1);
+        CHECK(result.trades.front()->price() == 100.0);
+        CHECK(result.trades.front()->quantity() == 10);
 
-        assert(incoming_sell->remaining_quantity() == 0);
-        assert(resting_buy->remaining_quantity() == 0);
+        CHECK(incoming_sell->remaining_quantity() == 0);
+        CHECK(resting_buy->remaining_quantity() == 0);
     }
 
     void test_non_crossing_buy_does_not_match()
@@ -98,11 +99,11 @@ namespace
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_buy);
 
-        assert(!result.matched);
-        assert(result.trades.empty());
+        CHECK(!result.matched);
+        CHECK(result.trades.empty());
 
-        assert(incoming_buy->remaining_quantity() == 10);
-        assert(resting_sell->remaining_quantity() == 10);
+        CHECK(incoming_buy->remaining_quantity() == 10);
+        CHECK(resting_sell->remaining_quantity() == 10);
     }
 
     void test_non_crossing_sell_does_not_match()
@@ -120,11 +121,11 @@ namespace
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_sell);
 
-        assert(!result.matched);
-        assert(result.trades.empty());
+        CHECK(!result.matched);
+        CHECK(result.trades.empty());
 
-        assert(incoming_sell->remaining_quantity() == 10);
-        assert(resting_buy->remaining_quantity() == 10);
+        CHECK(incoming_sell->remaining_quantity() == 10);
+        CHECK(resting_buy->remaining_quantity() == 10);
     }
 
     void test_exact_price_match()
@@ -142,10 +143,10 @@ namespace
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_buy);
 
-        assert(result.matched);
-        assert(result.trades.size() == 1);
-        assert(result.trades.front()->price() == 100.0);
-        assert(result.trades.front()->quantity() == 10);
+        CHECK(result.matched);
+        CHECK(result.trades.size() == 1);
+        CHECK(result.trades.front()->price() == 100.0);
+        CHECK(result.trades.front()->quantity() == 10);
     }
 
     void test_partial_fill_buy_against_larger_ask()
@@ -163,23 +164,23 @@ namespace
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_buy);
 
-        assert(result.matched);
-        assert(result.trades.size() == 1);
+        CHECK(result.matched);
+        CHECK(result.trades.size() == 1);
 
-        assert(result.trades.front()->price() == 100.0);
-        assert(result.trades.front()->quantity() == 4);
+        CHECK(result.trades.front()->price() == 100.0);
+        CHECK(result.trades.front()->quantity() == 4);
 
-        assert(incoming_buy->remaining_quantity() == 0);
-        assert(incoming_buy->is_fully_filled());
+        CHECK(incoming_buy->remaining_quantity() == 0);
+        CHECK(incoming_buy->is_fully_filled());
 
-        assert(resting_sell->remaining_quantity() == 6);
-        assert(!resting_sell->is_fully_filled());
+        CHECK(resting_sell->remaining_quantity() == 6);
+        CHECK(!resting_sell->is_fully_filled());
 
-        assert(book.ask_level_count() == 1);
-        assert(book.order_count() == 1);
+        CHECK(book.ask_level_count() == 1);
+        CHECK(book.order_count() == 1);
 
-        assert(book.best_ask_level().total_quantity() == 6);
-        assert(book.best_ask_level().front() == resting_sell);
+        CHECK(book.best_ask_level().total_quantity() == 6);
+        CHECK(book.best_ask_level().front() == resting_sell);
     }
 
     void test_partial_fill_sell_against_larger_bid()
@@ -197,23 +198,23 @@ namespace
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_sell);
 
-        assert(result.matched);
-        assert(result.trades.size() == 1);
+        CHECK(result.matched);
+        CHECK(result.trades.size() == 1);
 
-        assert(result.trades.front()->price() == 100.0);
-        assert(result.trades.front()->quantity() == 4);
+        CHECK(result.trades.front()->price() == 100.0);
+        CHECK(result.trades.front()->quantity() == 4);
 
-        assert(incoming_sell->remaining_quantity() == 0);
-        assert(incoming_sell->is_fully_filled());
+        CHECK(incoming_sell->remaining_quantity() == 0);
+        CHECK(incoming_sell->is_fully_filled());
 
-        assert(resting_buy->remaining_quantity() == 6);
-        assert(!resting_buy->is_fully_filled());
+        CHECK(resting_buy->remaining_quantity() == 6);
+        CHECK(!resting_buy->is_fully_filled());
 
-        assert(book.bid_level_count() == 1);
-        assert(book.order_count() == 1);
+        CHECK(book.bid_level_count() == 1);
+        CHECK(book.order_count() == 1);
 
-        assert(book.best_bid_level().total_quantity() == 6);
-        assert(book.best_bid_level().front() == resting_buy);
+        CHECK(book.best_bid_level().total_quantity() == 6);
+        CHECK(book.best_bid_level().front() == resting_buy);
     }
 
     void test_partial_fill_preserves_fifo()
@@ -232,25 +233,25 @@ namespace
         book.add_order(first);
         book.add_order(second);
 
-        assert(book.order_count() == 2);
-        assert(book.best_ask_level().total_quantity() == 30);
-        assert(book.best_ask_level().front() == first);
+        CHECK(book.order_count() == 2);
+        CHECK(book.best_ask_level().total_quantity() == 30);
+        CHECK(book.best_ask_level().front() == first);
 
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_buy);
 
-        assert(result.matched);
-        assert(result.trades.size() == 1);
-        assert(result.trades.front()->quantity() == 4);
+        CHECK(result.matched);
+        CHECK(result.trades.size() == 1);
+        CHECK(result.trades.front()->quantity() == 4);
 
-        assert(first->remaining_quantity() == 6);
-        assert(second->remaining_quantity() == 20);
+        CHECK(first->remaining_quantity() == 6);
+        CHECK(second->remaining_quantity() == 20);
 
-        assert(book.order_count() == 2);
-        assert(book.ask_level_count() == 1);
+        CHECK(book.order_count() == 2);
+        CHECK(book.ask_level_count() == 1);
 
-        assert(book.best_ask_level().total_quantity() == 26);
-        assert(book.best_ask_level().front() == first);
+        CHECK(book.best_ask_level().total_quantity() == 26);
+        CHECK(book.best_ask_level().front() == first);
     }
 
     void test_partial_fill_does_not_remove_price_level()
@@ -268,14 +269,14 @@ namespace
         MatchingEngine matcher;
         matcher.match(book, incoming_buy);
 
-        assert(book.ask_level_count() == 1);
-        assert(book.order_count() == 1);
+        CHECK(book.ask_level_count() == 1);
+        CHECK(book.order_count() == 1);
 
-        assert(book.best_ask() == 100.0);
-        assert(book.best_ask_level().total_quantity() == 75);
+        CHECK(book.best_ask() == 100.0);
+        CHECK(book.best_ask_level().total_quantity() == 75);
 
-        assert(resting_sell->remaining_quantity() == 75);
-        assert(book.best_ask_level().front() == resting_sell);
+        CHECK(resting_sell->remaining_quantity() == 75);
+        CHECK(book.best_ask_level().front() == resting_sell);
     }
 
     void test_fully_filled_resting_order_removed()
@@ -290,19 +291,19 @@ namespace
 
         book.add_order(resting_sell);
 
-        assert(book.ask_level_count() == 1);
-        assert(book.order_count() == 1);
+        CHECK(book.ask_level_count() == 1);
+        CHECK(book.order_count() == 1);
 
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_buy);
 
-        assert(result.matched);
+        CHECK(result.matched);
 
-        assert(resting_sell->remaining_quantity() == 0);
-        assert(resting_sell->is_fully_filled());
+        CHECK(resting_sell->remaining_quantity() == 0);
+        CHECK(resting_sell->is_fully_filled());
 
-        assert(book.ask_level_count() == 0);
-        assert(book.order_count() == 0);
+        CHECK(book.ask_level_count() == 0);
+        CHECK(book.order_count() == 0);
     }
 
     void test_fully_filled_resting_bid_removed()
@@ -317,19 +318,19 @@ namespace
 
         book.add_order(resting_buy);
 
-        assert(book.bid_level_count() == 1);
-        assert(book.order_count() == 1);
+        CHECK(book.bid_level_count() == 1);
+        CHECK(book.order_count() == 1);
 
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_sell);
 
-        assert(result.matched);
+        CHECK(result.matched);
 
-        assert(resting_buy->remaining_quantity() == 0);
-        assert(resting_buy->is_fully_filled());
+        CHECK(resting_buy->remaining_quantity() == 0);
+        CHECK(resting_buy->is_fully_filled());
 
-        assert(book.bid_level_count() == 0);
-        assert(book.order_count() == 0);
+        CHECK(book.bid_level_count() == 0);
+        CHECK(book.order_count() == 0);
     }
 
     void test_empty_opposite_book_does_not_match()
@@ -342,10 +343,10 @@ namespace
         MatchingEngine matcher;
         MatchResult result = matcher.match(book, incoming_buy);
 
-        assert(!result.matched);
-        assert(result.trades.empty());
+        CHECK(!result.matched);
+        CHECK(result.trades.empty());
 
-        assert(incoming_buy->remaining_quantity() == 10);
+        CHECK(incoming_buy->remaining_quantity() == 10);
     }
 
     void test_symbol_mismatch_is_rejected()
@@ -376,7 +377,7 @@ namespace
             threw = true;
         }
 
-        assert(threw);
+        CHECK(threw);
     }
 }
 
@@ -406,30 +407,30 @@ void test_buy_matches_multiple_ask_levels()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 3);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 3);
 
-    assert(result.trades[0]->price() == 100.0);
-    assert(result.trades[0]->quantity() == 30);
+    CHECK(result.trades[0]->price() == 100.0);
+    CHECK(result.trades[0]->quantity() == 30);
 
-    assert(result.trades[1]->price() == 101.0);
-    assert(result.trades[1]->quantity() == 40);
+    CHECK(result.trades[1]->price() == 101.0);
+    CHECK(result.trades[1]->quantity() == 40);
 
-    assert(result.trades[2]->price() == 102.0);
-    assert(result.trades[2]->quantity() == 30);
+    CHECK(result.trades[2]->price() == 102.0);
+    CHECK(result.trades[2]->quantity() == 30);
 
-    assert(incoming_buy->remaining_quantity() == 0);
-    assert(incoming_buy->is_fully_filled());
+    CHECK(incoming_buy->remaining_quantity() == 0);
+    CHECK(incoming_buy->is_fully_filled());
 
-    assert(ask_100->remaining_quantity() == 0);
-    assert(ask_101->remaining_quantity() == 0);
-    assert(ask_102->remaining_quantity() == 20);
+    CHECK(ask_100->remaining_quantity() == 0);
+    CHECK(ask_101->remaining_quantity() == 0);
+    CHECK(ask_102->remaining_quantity() == 20);
 
-    assert(book.ask_level_count() == 1);
-    assert(book.order_count() == 1);
-    assert(book.best_ask() == 102.0);
-    assert(book.best_ask_level().total_quantity() == 20);
-    assert(book.best_ask_level().front() == ask_102);
+    CHECK(book.ask_level_count() == 1);
+    CHECK(book.order_count() == 1);
+    CHECK(book.best_ask() == 102.0);
+    CHECK(book.best_ask_level().total_quantity() == 20);
+    CHECK(book.best_ask_level().front() == ask_102);
 }
 
 void test_sell_matches_multiple_bid_levels()
@@ -457,30 +458,30 @@ void test_sell_matches_multiple_bid_levels()
     MatchResult result =
         matcher.match(book, incoming_sell);
 
-    assert(result.matched);
-    assert(result.trades.size() == 3);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 3);
 
-    assert(result.trades[0]->price() == 102.0);
-    assert(result.trades[0]->quantity() == 30);
+    CHECK(result.trades[0]->price() == 102.0);
+    CHECK(result.trades[0]->quantity() == 30);
 
-    assert(result.trades[1]->price() == 101.0);
-    assert(result.trades[1]->quantity() == 40);
+    CHECK(result.trades[1]->price() == 101.0);
+    CHECK(result.trades[1]->quantity() == 40);
 
-    assert(result.trades[2]->price() == 100.0);
-    assert(result.trades[2]->quantity() == 30);
+    CHECK(result.trades[2]->price() == 100.0);
+    CHECK(result.trades[2]->quantity() == 30);
 
-    assert(incoming_sell->remaining_quantity() == 0);
-    assert(incoming_sell->is_fully_filled());
+    CHECK(incoming_sell->remaining_quantity() == 0);
+    CHECK(incoming_sell->is_fully_filled());
 
-    assert(bid_102->remaining_quantity() == 0);
-    assert(bid_101->remaining_quantity() == 0);
-    assert(bid_100->remaining_quantity() == 20);
+    CHECK(bid_102->remaining_quantity() == 0);
+    CHECK(bid_101->remaining_quantity() == 0);
+    CHECK(bid_100->remaining_quantity() == 20);
 
-    assert(book.bid_level_count() == 1);
-    assert(book.order_count() == 1);
-    assert(book.best_bid() == 100.0);
-    assert(book.best_bid_level().total_quantity() == 20);
-    assert(book.best_bid_level().front() == bid_100);
+    CHECK(book.bid_level_count() == 1);
+    CHECK(book.order_count() == 1);
+    CHECK(book.best_bid() == 100.0);
+    CHECK(book.best_bid_level().total_quantity() == 20);
+    CHECK(book.best_bid_level().front() == bid_100);
 }
 
 void test_buy_stops_at_non_crossing_ask_level()
@@ -508,42 +509,42 @@ void test_buy_stops_at_non_crossing_ask_level()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 2);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 2);
 
-    assert(result.trades[0]->price() == 100.0);
-    assert(result.trades[0]->quantity() == 20);
+    CHECK(result.trades[0]->price() == 100.0);
+    CHECK(result.trades[0]->quantity() == 20);
 
-    assert(result.trades[1]->price() == 101.0);
-    assert(result.trades[1]->quantity() == 20);
+    CHECK(result.trades[1]->price() == 101.0);
+    CHECK(result.trades[1]->quantity() == 20);
 
     // Incoming order has 10 remaining and cannot cross 102.
-    assert(incoming_buy->remaining_quantity() == 10);
-    assert(incoming_buy->status() ==
+    CHECK(incoming_buy->remaining_quantity() == 10);
+    CHECK(incoming_buy->status() ==
            engine::OrderStatus::PARTIALLY_FILLED);
 
     // S1 and S2 were completely filled.
-    assert(ask_100->remaining_quantity() == 0);
-    assert(ask_101->remaining_quantity() == 0);
+    CHECK(ask_100->remaining_quantity() == 0);
+    CHECK(ask_101->remaining_quantity() == 0);
 
     // S3 remains because 101 cannot cross 102.
-    assert(ask_102->remaining_quantity() == 20);
+    CHECK(ask_102->remaining_quantity() == 20);
 
     // Incoming BUY is automatically rested.
-    assert(book.order_count() == 2);
-    assert(book.bid_level_count() == 1);
-    assert(book.ask_level_count() == 1);
+    CHECK(book.order_count() == 2);
+    CHECK(book.bid_level_count() == 1);
+    CHECK(book.ask_level_count() == 1);
 
-    assert(book.best_bid() == 101.0);
-    assert(book.best_ask() == 102.0);
+    CHECK(book.best_bid() == 101.0);
+    CHECK(book.best_ask() == 102.0);
 
-    assert(book.best_bid_level().order_count() == 1);
-    assert(book.best_bid_level().total_quantity() == 10);
-    assert(book.best_bid_level().front() == incoming_buy);
+    CHECK(book.best_bid_level().order_count() == 1);
+    CHECK(book.best_bid_level().total_quantity() == 10);
+    CHECK(book.best_bid_level().front() == incoming_buy);
 
-    assert(book.best_ask_level().order_count() == 1);
-    assert(book.best_ask_level().total_quantity() == 20);
-    assert(book.best_ask_level().front() == ask_102);
+    CHECK(book.best_ask_level().order_count() == 1);
+    CHECK(book.best_ask_level().total_quantity() == 20);
+    CHECK(book.best_ask_level().front() == ask_102);
 }
 
 void test_sell_stops_at_non_crossing_bid_level()
@@ -571,25 +572,25 @@ void test_sell_stops_at_non_crossing_bid_level()
     MatchResult result =
         matcher.match(book, incoming_sell);
 
-    assert(result.matched);
-    assert(result.trades.size() == 2);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 2);
 
-    assert(result.trades[0]->price() == 102.0);
-    assert(result.trades[0]->quantity() == 20);
+    CHECK(result.trades[0]->price() == 102.0);
+    CHECK(result.trades[0]->quantity() == 20);
 
-    assert(result.trades[1]->price() == 101.0);
-    assert(result.trades[1]->quantity() == 20);
+    CHECK(result.trades[1]->price() == 101.0);
+    CHECK(result.trades[1]->quantity() == 20);
 
-    assert(incoming_sell->remaining_quantity() == 10);
+    CHECK(incoming_sell->remaining_quantity() == 10);
 
-    assert(bid_102->remaining_quantity() == 0);
-    assert(bid_101->remaining_quantity() == 0);
-    assert(bid_100->remaining_quantity() == 20);
+    CHECK(bid_102->remaining_quantity() == 0);
+    CHECK(bid_101->remaining_quantity() == 0);
+    CHECK(bid_100->remaining_quantity() == 20);
 
-    assert(book.bid_level_count() == 1);
-    assert(book.order_count() == 2);
-    assert(book.best_bid() == 100.0);
-    assert(book.best_bid_level().front() == bid_100);
+    CHECK(book.bid_level_count() == 1);
+    CHECK(book.order_count() == 2);
+    CHECK(book.best_bid() == 100.0);
+    CHECK(book.best_bid_level().front() == bid_100);
 }
 
 void test_buy_preserves_fifo_across_multiple_orders()
@@ -617,31 +618,31 @@ void test_buy_preserves_fifo_across_multiple_orders()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 3);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 3);
 
-    assert(result.trades[0]->maker_order_id() == "S1");
-    assert(result.trades[0]->quantity() == 10);
-    assert(result.trades[0]->price() == 100.0);
+    CHECK(result.trades[0]->maker_order_id() == "S1");
+    CHECK(result.trades[0]->quantity() == 10);
+    CHECK(result.trades[0]->price() == 100.0);
 
-    assert(result.trades[1]->maker_order_id() == "S2");
-    assert(result.trades[1]->quantity() == 20);
-    assert(result.trades[1]->price() == 100.0);
+    CHECK(result.trades[1]->maker_order_id() == "S2");
+    CHECK(result.trades[1]->quantity() == 20);
+    CHECK(result.trades[1]->price() == 100.0);
 
-    assert(result.trades[2]->maker_order_id() == "S3");
-    assert(result.trades[2]->quantity() == 5);
-    assert(result.trades[2]->price() == 101.0);
+    CHECK(result.trades[2]->maker_order_id() == "S3");
+    CHECK(result.trades[2]->quantity() == 5);
+    CHECK(result.trades[2]->price() == 101.0);
 
-    assert(incoming_buy->remaining_quantity() == 0);
+    CHECK(incoming_buy->remaining_quantity() == 0);
 
-    assert(first->remaining_quantity() == 0);
-    assert(second->remaining_quantity() == 0);
-    assert(third->remaining_quantity() == 25);
+    CHECK(first->remaining_quantity() == 0);
+    CHECK(second->remaining_quantity() == 0);
+    CHECK(third->remaining_quantity() == 25);
 
-    assert(book.ask_level_count() == 1);
-    assert(book.order_count() == 1);
-    assert(book.best_ask() == 101.0);
-    assert(book.best_ask_level().front() == third);
+    CHECK(book.ask_level_count() == 1);
+    CHECK(book.order_count() == 1);
+    CHECK(book.best_ask() == 101.0);
+    CHECK(book.best_ask_level().front() == third);
 }
 
 void test_unmatched_buy_is_automatically_rested()
@@ -656,17 +657,17 @@ void test_unmatched_buy_is_automatically_rested()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(!result.matched);
-    assert(result.trades.empty());
+    CHECK(!result.matched);
+    CHECK(result.trades.empty());
 
-    assert(incoming_buy->remaining_quantity() == 10);
-    assert(incoming_buy->status() == engine::OrderStatus::NEW);
+    CHECK(incoming_buy->remaining_quantity() == 10);
+    CHECK(incoming_buy->status() == engine::OrderStatus::NEW);
 
-    assert(book.order_count() == 1);
-    assert(book.bid_level_count() == 1);
-    assert(book.best_bid() == 100.0);
-    assert(book.best_bid_level().total_quantity() == 10);
-    assert(book.best_bid_level().front() == incoming_buy);
+    CHECK(book.order_count() == 1);
+    CHECK(book.bid_level_count() == 1);
+    CHECK(book.best_bid() == 100.0);
+    CHECK(book.best_bid_level().total_quantity() == 10);
+    CHECK(book.best_bid_level().front() == incoming_buy);
 }
 
 void test_unmatched_sell_is_automatically_rested()
@@ -681,17 +682,17 @@ void test_unmatched_sell_is_automatically_rested()
     MatchResult result =
         matcher.match(book, incoming_sell);
 
-    assert(!result.matched);
-    assert(result.trades.empty());
+    CHECK(!result.matched);
+    CHECK(result.trades.empty());
 
-    assert(incoming_sell->remaining_quantity() == 10);
-    assert(incoming_sell->status() == engine::OrderStatus::NEW);
+    CHECK(incoming_sell->remaining_quantity() == 10);
+    CHECK(incoming_sell->status() == engine::OrderStatus::NEW);
 
-    assert(book.order_count() == 1);
-    assert(book.ask_level_count() == 1);
-    assert(book.best_ask() == 100.0);
-    assert(book.best_ask_level().total_quantity() == 10);
-    assert(book.best_ask_level().front() == incoming_sell);
+    CHECK(book.order_count() == 1);
+    CHECK(book.ask_level_count() == 1);
+    CHECK(book.best_ask() == 100.0);
+    CHECK(book.best_ask_level().total_quantity() == 10);
+    CHECK(book.best_ask_level().front() == incoming_sell);
 }
 
 void test_partially_filled_buy_is_automatically_rested()
@@ -711,24 +712,24 @@ void test_partially_filled_buy_is_automatically_rested()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 1);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 1);
 
-    assert(result.trades.front()->quantity() == 10);
-    assert(result.trades.front()->price() == 100.0);
+    CHECK(result.trades.front()->quantity() == 10);
+    CHECK(result.trades.front()->price() == 100.0);
 
-    assert(incoming_buy->remaining_quantity() == 10);
-    assert(
+    CHECK(incoming_buy->remaining_quantity() == 10);
+    CHECK(
         incoming_buy->status() ==
         engine::OrderStatus::PARTIALLY_FILLED);
 
-    assert(book.order_count() == 1);
-    assert(book.ask_level_count() == 0);
+    CHECK(book.order_count() == 1);
+    CHECK(book.ask_level_count() == 0);
 
-    assert(book.bid_level_count() == 1);
-    assert(book.best_bid() == 101.0);
-    assert(book.best_bid_level().total_quantity() == 10);
-    assert(book.best_bid_level().front() == incoming_buy);
+    CHECK(book.bid_level_count() == 1);
+    CHECK(book.best_bid() == 101.0);
+    CHECK(book.best_bid_level().total_quantity() == 10);
+    CHECK(book.best_bid_level().front() == incoming_buy);
 }
 
 void test_partially_filled_sell_is_automatically_rested()
@@ -748,24 +749,24 @@ void test_partially_filled_sell_is_automatically_rested()
     MatchResult result =
         matcher.match(book, incoming_sell);
 
-    assert(result.matched);
-    assert(result.trades.size() == 1);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 1);
 
-    assert(result.trades.front()->quantity() == 10);
-    assert(result.trades.front()->price() == 100.0);
+    CHECK(result.trades.front()->quantity() == 10);
+    CHECK(result.trades.front()->price() == 100.0);
 
-    assert(incoming_sell->remaining_quantity() == 10);
-    assert(
+    CHECK(incoming_sell->remaining_quantity() == 10);
+    CHECK(
         incoming_sell->status() ==
         engine::OrderStatus::PARTIALLY_FILLED);
 
-    assert(book.order_count() == 1);
-    assert(book.bid_level_count() == 0);
+    CHECK(book.order_count() == 1);
+    CHECK(book.bid_level_count() == 0);
 
-    assert(book.ask_level_count() == 1);
-    assert(book.best_ask() == 99.0);
-    assert(book.best_ask_level().total_quantity() == 10);
-    assert(book.best_ask_level().front() == incoming_sell);
+    CHECK(book.ask_level_count() == 1);
+    CHECK(book.best_ask() == 99.0);
+    CHECK(book.best_ask_level().total_quantity() == 10);
+    CHECK(book.best_ask_level().front() == incoming_sell);
 }
 
 void test_fully_filled_incoming_order_is_not_rested()
@@ -785,18 +786,18 @@ void test_fully_filled_incoming_order_is_not_rested()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 1);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 1);
 
-    assert(incoming_buy->remaining_quantity() == 0);
-    assert(incoming_buy->is_fully_filled());
-    assert(
+    CHECK(incoming_buy->remaining_quantity() == 0);
+    CHECK(incoming_buy->is_fully_filled());
+    CHECK(
         incoming_buy->status() ==
         engine::OrderStatus::FILLED);
 
-    assert(book.order_count() == 0);
-    assert(book.bid_level_count() == 0);
-    assert(book.ask_level_count() == 0);
+    CHECK(book.order_count() == 0);
+    CHECK(book.bid_level_count() == 0);
+    CHECK(book.ask_level_count() == 0);
 }
 
 void test_rested_order_preserves_fifo()
@@ -820,26 +821,26 @@ void test_rested_order_preserves_fifo()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 1);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 1);
 
-    assert(result.trades.front()->maker_order_id() == "S1");
-    assert(result.trades.front()->quantity() == 5);
-    assert(result.trades.front()->price() == 100.0);
+    CHECK(result.trades.front()->maker_order_id() == "S1");
+    CHECK(result.trades.front()->quantity() == 5);
+    CHECK(result.trades.front()->price() == 100.0);
 
-    assert(incoming_buy->remaining_quantity() == 5);
-    assert(incoming_buy->status() ==
+    CHECK(incoming_buy->remaining_quantity() == 5);
+    CHECK(incoming_buy->status() ==
            engine::OrderStatus::PARTIALLY_FILLED);
 
     // Incoming BUY is automatically rested at 101.
-    assert(book.bid_level_count() == 1);
-    assert(book.best_bid() == 101.0);
+    CHECK(book.bid_level_count() == 1);
+    CHECK(book.best_bid() == 101.0);
 
     // Existing B1 must remain ahead of newly rested B2.
-    assert(book.best_bid_level().order_count() == 2);
-    assert(book.best_bid_level().total_quantity() == 15);
+    CHECK(book.best_bid_level().order_count() == 2);
+    CHECK(book.best_bid_level().total_quantity() == 15);
 
-    assert(book.best_bid_level().front() == existing_bid);
+    CHECK(book.best_bid_level().front() == existing_bid);
 }
 void test_partially_filled_order_rests_after_existing_orders()
 {
@@ -862,13 +863,13 @@ void test_partially_filled_order_rests_after_existing_orders()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 1);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 1);
 
-    assert(result.trades.front()->quantity() == 5);
+    CHECK(result.trades.front()->quantity() == 5);
 
-    assert(incoming_buy->remaining_quantity() == 5);
-    assert(
+    CHECK(incoming_buy->remaining_quantity() == 5);
+    CHECK(
         incoming_buy->status() ==
         engine::OrderStatus::PARTIALLY_FILLED);
 
@@ -876,12 +877,12 @@ void test_partially_filled_order_rests_after_existing_orders()
      * Incoming order rests at 100, which is a better price
      * than the existing 99 bid, so it becomes the best bid.
      */
-    assert(book.bid_level_count() == 2);
-    assert(book.order_count() == 2);
+    CHECK(book.bid_level_count() == 2);
+    CHECK(book.order_count() == 2);
 
-    assert(book.best_bid() == 100.0);
-    assert(book.best_bid_level().front() == incoming_buy);
-    assert(book.best_bid_level().total_quantity() == 5);
+    CHECK(book.best_bid() == 100.0);
+    CHECK(book.best_bid_level().front() == incoming_buy);
+    CHECK(book.best_bid_level().total_quantity() == 5);
 }
 
 void test_buy_fully_consumes_multiple_price_levels()
@@ -903,23 +904,23 @@ void test_buy_fully_consumes_multiple_price_levels()
     MatchingEngine matcher;
     MatchResult result = matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 2);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 2);
 
-    assert(result.trades[0]->maker_order_id() == "S1");
-    assert(result.trades[0]->price() == 100.0);
-    assert(result.trades[0]->quantity() == 10);
+    CHECK(result.trades[0]->maker_order_id() == "S1");
+    CHECK(result.trades[0]->price() == 100.0);
+    CHECK(result.trades[0]->quantity() == 10);
 
-    assert(result.trades[1]->maker_order_id() == "S2");
-    assert(result.trades[1]->price() == 101.0);
-    assert(result.trades[1]->quantity() == 10);
+    CHECK(result.trades[1]->maker_order_id() == "S2");
+    CHECK(result.trades[1]->price() == 101.0);
+    CHECK(result.trades[1]->quantity() == 10);
 
-    assert(incoming_buy->remaining_quantity() == 0);
-    assert(incoming_buy->status() ==
+    CHECK(incoming_buy->remaining_quantity() == 0);
+    CHECK(incoming_buy->status() ==
            engine::OrderStatus::FILLED);
 
-    assert(book.order_count() == 0);
-    assert(book.ask_level_count() == 0);
+    CHECK(book.order_count() == 0);
+    CHECK(book.ask_level_count() == 0);
 }
 
 void test_sell_fully_consumes_multiple_price_levels()
@@ -941,23 +942,23 @@ void test_sell_fully_consumes_multiple_price_levels()
     MatchingEngine matcher;
     MatchResult result = matcher.match(book, incoming_sell);
 
-    assert(result.matched);
-    assert(result.trades.size() == 2);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 2);
 
-    assert(result.trades[0]->maker_order_id() == "B1");
-    assert(result.trades[0]->price() == 102.0);
-    assert(result.trades[0]->quantity() == 10);
+    CHECK(result.trades[0]->maker_order_id() == "B1");
+    CHECK(result.trades[0]->price() == 102.0);
+    CHECK(result.trades[0]->quantity() == 10);
 
-    assert(result.trades[1]->maker_order_id() == "B2");
-    assert(result.trades[1]->price() == 101.0);
-    assert(result.trades[1]->quantity() == 10);
+    CHECK(result.trades[1]->maker_order_id() == "B2");
+    CHECK(result.trades[1]->price() == 101.0);
+    CHECK(result.trades[1]->quantity() == 10);
 
-    assert(incoming_sell->remaining_quantity() == 0);
-    assert(incoming_sell->status() ==
+    CHECK(incoming_sell->remaining_quantity() == 0);
+    CHECK(incoming_sell->status() ==
            engine::OrderStatus::FILLED);
 
-    assert(book.order_count() == 0);
-    assert(book.bid_level_count() == 0);
+    CHECK(book.order_count() == 0);
+    CHECK(book.bid_level_count() == 0);
 }
 
 void test_partially_filled_buy_rests_after_multiple_levels()
@@ -979,26 +980,26 @@ void test_partially_filled_buy_rests_after_multiple_levels()
     MatchingEngine matcher;
     MatchResult result = matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 2);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 2);
 
-    assert(result.trades[0]->quantity() == 10);
-    assert(result.trades[0]->price() == 100.0);
+    CHECK(result.trades[0]->quantity() == 10);
+    CHECK(result.trades[0]->price() == 100.0);
 
-    assert(result.trades[1]->quantity() == 10);
-    assert(result.trades[1]->price() == 101.0);
+    CHECK(result.trades[1]->quantity() == 10);
+    CHECK(result.trades[1]->price() == 101.0);
 
-    assert(incoming_buy->remaining_quantity() == 5);
-    assert(incoming_buy->status() ==
+    CHECK(incoming_buy->remaining_quantity() == 5);
+    CHECK(incoming_buy->status() ==
            engine::OrderStatus::PARTIALLY_FILLED);
 
-    assert(book.order_count() == 1);
-    assert(book.bid_level_count() == 1);
-    assert(book.ask_level_count() == 0);
+    CHECK(book.order_count() == 1);
+    CHECK(book.bid_level_count() == 1);
+    CHECK(book.ask_level_count() == 0);
 
-    assert(book.best_bid() == 101.0);
-    assert(book.best_bid_level().total_quantity() == 5);
-    assert(book.best_bid_level().front() == incoming_buy);
+    CHECK(book.best_bid() == 101.0);
+    CHECK(book.best_bid_level().total_quantity() == 5);
+    CHECK(book.best_bid_level().front() == incoming_buy);
 }
 
 void test_partially_filled_sell_rests_after_multiple_levels()
@@ -1020,26 +1021,26 @@ void test_partially_filled_sell_rests_after_multiple_levels()
     MatchingEngine matcher;
     MatchResult result = matcher.match(book, incoming_sell);
 
-    assert(result.matched);
-    assert(result.trades.size() == 2);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 2);
 
-    assert(result.trades[0]->quantity() == 10);
-    assert(result.trades[0]->price() == 102.0);
+    CHECK(result.trades[0]->quantity() == 10);
+    CHECK(result.trades[0]->price() == 102.0);
 
-    assert(result.trades[1]->quantity() == 10);
-    assert(result.trades[1]->price() == 101.0);
+    CHECK(result.trades[1]->quantity() == 10);
+    CHECK(result.trades[1]->price() == 101.0);
 
-    assert(incoming_sell->remaining_quantity() == 5);
-    assert(incoming_sell->status() ==
+    CHECK(incoming_sell->remaining_quantity() == 5);
+    CHECK(incoming_sell->status() ==
            engine::OrderStatus::PARTIALLY_FILLED);
 
-    assert(book.order_count() == 1);
-    assert(book.ask_level_count() == 1);
-    assert(book.bid_level_count() == 0);
+    CHECK(book.order_count() == 1);
+    CHECK(book.ask_level_count() == 1);
+    CHECK(book.bid_level_count() == 0);
 
-    assert(book.best_ask() == 101.0);
-    assert(book.best_ask_level().total_quantity() == 5);
-    assert(book.best_ask_level().front() == incoming_sell);
+    CHECK(book.best_ask() == 101.0);
+    CHECK(book.best_ask_level().total_quantity() == 5);
+    CHECK(book.best_ask_level().front() == incoming_sell);
 }
 
 void test_rested_buy_matches_on_subsequent_order()
@@ -1054,8 +1055,8 @@ void test_rested_buy_matches_on_subsequent_order()
     MatchResult first_result =
         matcher.match(book, first_buy);
 
-    assert(!first_result.matched);
-    assert(book.order_count() == 1);
+    CHECK(!first_result.matched);
+    CHECK(book.order_count() == 1);
 
     auto incoming_sell =
         make_order("S1", Side::SELL, 99.0, 10, 2);
@@ -1063,22 +1064,22 @@ void test_rested_buy_matches_on_subsequent_order()
     MatchResult second_result =
         matcher.match(book, incoming_sell);
 
-    assert(second_result.matched);
-    assert(second_result.trades.size() == 1);
+    CHECK(second_result.matched);
+    CHECK(second_result.trades.size() == 1);
 
-    assert(second_result.trades.front()->maker_order_id() == "B1");
-    assert(second_result.trades.front()->price() == 100.0);
-    assert(second_result.trades.front()->quantity() == 10);
+    CHECK(second_result.trades.front()->maker_order_id() == "B1");
+    CHECK(second_result.trades.front()->price() == 100.0);
+    CHECK(second_result.trades.front()->quantity() == 10);
 
-    assert(first_buy->status() ==
+    CHECK(first_buy->status() ==
            engine::OrderStatus::FILLED);
 
-    assert(incoming_sell->status() ==
+    CHECK(incoming_sell->status() ==
            engine::OrderStatus::FILLED);
 
-    assert(book.order_count() == 0);
-    assert(book.bid_level_count() == 0);
-    assert(book.ask_level_count() == 0);
+    CHECK(book.order_count() == 0);
+    CHECK(book.bid_level_count() == 0);
+    CHECK(book.ask_level_count() == 0);
 }
 
 void test_rested_sell_matches_on_subsequent_order()
@@ -1093,8 +1094,8 @@ void test_rested_sell_matches_on_subsequent_order()
     MatchResult first_result =
         matcher.match(book, first_sell);
 
-    assert(!first_result.matched);
-    assert(book.order_count() == 1);
+    CHECK(!first_result.matched);
+    CHECK(book.order_count() == 1);
 
     auto incoming_buy =
         make_order("B1", Side::BUY, 101.0, 10, 2);
@@ -1102,22 +1103,22 @@ void test_rested_sell_matches_on_subsequent_order()
     MatchResult second_result =
         matcher.match(book, incoming_buy);
 
-    assert(second_result.matched);
-    assert(second_result.trades.size() == 1);
+    CHECK(second_result.matched);
+    CHECK(second_result.trades.size() == 1);
 
-    assert(second_result.trades.front()->maker_order_id() == "S1");
-    assert(second_result.trades.front()->price() == 100.0);
-    assert(second_result.trades.front()->quantity() == 10);
+    CHECK(second_result.trades.front()->maker_order_id() == "S1");
+    CHECK(second_result.trades.front()->price() == 100.0);
+    CHECK(second_result.trades.front()->quantity() == 10);
 
-    assert(first_sell->status() ==
+    CHECK(first_sell->status() ==
            engine::OrderStatus::FILLED);
 
-    assert(incoming_buy->status() ==
+    CHECK(incoming_buy->status() ==
            engine::OrderStatus::FILLED);
 
-    assert(book.order_count() == 0);
-    assert(book.bid_level_count() == 0);
-    assert(book.ask_level_count() == 0);
+    CHECK(book.order_count() == 0);
+    CHECK(book.bid_level_count() == 0);
+    CHECK(book.ask_level_count() == 0);
 }
 
 void test_cancel_rested_order_after_matching()
@@ -1137,25 +1138,25 @@ void test_cancel_rested_order_after_matching()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(incoming_buy->remaining_quantity() == 0);
+    CHECK(result.matched);
+    CHECK(incoming_buy->remaining_quantity() == 0);
 
-    assert(resting_sell->remaining_quantity() == 5);
-    assert(resting_sell->status() ==
+    CHECK(resting_sell->remaining_quantity() == 5);
+    CHECK(resting_sell->status() ==
            engine::OrderStatus::PARTIALLY_FILLED);
 
-    assert(book.order_count() == 1);
+    CHECK(book.order_count() == 1);
 
     bool cancelled =
         book.cancel_order(resting_sell->order_id());
 
-    assert(cancelled);
+    CHECK(cancelled);
 
-    assert(resting_sell->status() ==
+    CHECK(resting_sell->status() ==
            engine::OrderStatus::CANCELLED);
 
-    assert(book.order_count() == 0);
-    assert(book.ask_level_count() == 0);
+    CHECK(book.order_count() == 0);
+    CHECK(book.ask_level_count() == 0);
 }
 
 void test_trade_contains_correct_maker_and_taker()
@@ -1174,15 +1175,15 @@ void test_trade_contains_correct_maker_and_taker()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 1);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 1);
 
     const auto &trade = result.trades.front();
 
-    assert(trade->maker_order_id() == "S1");
-    assert(trade->taker_order_id() == "B1");
-    assert(trade->price() == 100.0);
-    assert(trade->quantity() == 4);
+    CHECK(trade->maker_order_id() == "S1");
+    CHECK(trade->taker_order_id() == "B1");
+    CHECK(trade->price() == 100.0);
+    CHECK(trade->quantity() == 4);
 }
 
 void test_book_integrity_after_multi_level_partial_match()
@@ -1209,25 +1210,25 @@ void test_book_integrity_after_multi_level_partial_match()
     MatchResult result =
         matcher.match(book, incoming_buy);
 
-    assert(result.matched);
-    assert(result.trades.size() == 2);
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 2);
 
-    assert(incoming_buy->remaining_quantity() == 5);
+    CHECK(incoming_buy->remaining_quantity() == 5);
 
-    assert(book.order_count() == 2);
-    assert(book.bid_level_count() == 1);
-    assert(book.ask_level_count() == 1);
+    CHECK(book.order_count() == 2);
+    CHECK(book.bid_level_count() == 1);
+    CHECK(book.ask_level_count() == 1);
 
-    assert(book.best_bid() == 101.0);
-    assert(book.best_ask() == 102.0);
+    CHECK(book.best_bid() == 101.0);
+    CHECK(book.best_ask() == 102.0);
 
-    assert(book.best_bid_level().order_count() == 1);
-    assert(book.best_bid_level().total_quantity() == 5);
-    assert(book.best_bid_level().front() == incoming_buy);
+    CHECK(book.best_bid_level().order_count() == 1);
+    CHECK(book.best_bid_level().total_quantity() == 5);
+    CHECK(book.best_bid_level().front() == incoming_buy);
 
-    assert(book.best_ask_level().order_count() == 1);
-    assert(book.best_ask_level().total_quantity() == 30);
-    assert(book.best_ask_level().front() == ask_102);
+    CHECK(book.best_ask_level().order_count() == 1);
+    CHECK(book.best_ask_level().total_quantity() == 30);
+    CHECK(book.best_ask_level().front() == ask_102);
 }
 
 int main()

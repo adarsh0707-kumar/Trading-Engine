@@ -3,7 +3,8 @@
 #include "network/Protocol.hpp"
 #include "serialization/JsonSerializer.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <chrono>
 #include <cstring>
 #include <iostream>
@@ -62,7 +63,7 @@ static int connectToServer(
             SOCK_STREAM,
             0);
 
-    assert(fd >= 0);
+    CHECK(fd >= 0);
 
     sockaddr_in address{};
 
@@ -81,7 +82,7 @@ static int connectToServer(
             reinterpret_cast<sockaddr *>(&address),
             sizeof(address));
 
-    assert(result == 0);
+    CHECK(result == 0);
 
     return fd;
 }
@@ -101,7 +102,7 @@ static void test_engine_broadcasts_trades()
 
     engine_runtime::Engine engine(config);
 
-    assert(engine.start());
+    CHECK(engine.start());
 
     std::this_thread::sleep_for(
         std::chrono::milliseconds(50));
@@ -112,13 +113,13 @@ static void test_engine_broadcasts_trades()
     const std::string hello =
         receiveMessage(clientFd);
 
-    assert(!hello.empty());
+    CHECK(!hello.empty());
 
     const serialization::Message helloMsg =
         serialization::JsonSerializer::deserialize(
             hello);
 
-    assert(
+    CHECK(
         helloMsg.type ==
         serialization::MessageType::HELLO);
 
@@ -138,20 +139,20 @@ static void test_engine_broadcasts_trades()
             std::chrono::milliseconds(10));
     }
 
-    assert(!tradeJson.empty());
+    CHECK(!tradeJson.empty());
 
     const serialization::Message tradeMsg =
         serialization::JsonSerializer::deserialize(
             tradeJson);
 
-    assert(
+    CHECK(
         tradeMsg.type ==
         serialization::MessageType::TRADE);
 
-    assert(tradeMsg.payload.find("TEST") !=
+    CHECK(tradeMsg.payload.find("TEST") !=
            std::string::npos);
 
-    assert(tradeMsg.payload.find("100") !=
+    CHECK(tradeMsg.payload.find("100") !=
            std::string::npos);
 
     ::close(clientFd);

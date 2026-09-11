@@ -1,6 +1,7 @@
 #include "orderbook/OrderBook.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <cmath>
 #include <iostream>
 #include <memory>
@@ -50,7 +51,7 @@ namespace
 
     void assert_price_equal(double actual, double expected)
     {
-        assert(std::fabs(actual - expected) < EPSILON);
+        CHECK(std::fabs(actual - expected) < EPSILON);
     }
 
     /*
@@ -62,10 +63,10 @@ namespace
     {
         OrderBook book("BTC-USD");
 
-        assert(book.empty());
-        assert(book.order_count() == 0);
-        assert(book.bid_level_count() == 0);
-        assert(book.ask_level_count() == 0);
+        CHECK(book.empty());
+        CHECK(book.order_count() == 0);
+        CHECK(book.bid_level_count() == 0);
+        CHECK(book.ask_level_count() == 0);
     }
 
     /*
@@ -88,7 +89,7 @@ namespace
             threw = true;
         }
 
-        assert(threw);
+        CHECK(threw);
     }
 
     /*
@@ -111,7 +112,7 @@ namespace
             threw = true;
         }
 
-        assert(threw);
+        CHECK(threw);
     }
 
     /*
@@ -127,7 +128,7 @@ namespace
             make_buy("B1", 100.0, 10, 1));
 
         assert_price_equal(book.best_bid(), 100.0);
-        assert(book.best_bid_level().price() == 100.0);
+        CHECK(book.best_bid_level().price() == 100.0);
     }
 
     /*
@@ -143,7 +144,7 @@ namespace
             make_sell("S1", 105.0, 10, 1));
 
         assert_price_equal(book.best_ask(), 105.0);
-        assert(book.best_ask_level().price() == 105.0);
+        CHECK(book.best_ask_level().price() == 105.0);
     }
 
     /*
@@ -344,8 +345,8 @@ namespace
             make_buy("B2", 105.0, 20, 2));
 
         assert_price_equal(book.best_bid(), 105.0);
-        assert(book.bid_level_count() == 1);
-        assert(book.best_bid_level().order_count() == 2);
+        CHECK(book.bid_level_count() == 1);
+        CHECK(book.best_bid_level().order_count() == 2);
     }
 
     /*
@@ -365,8 +366,8 @@ namespace
             make_sell("S2", 105.0, 20, 2));
 
         assert_price_equal(book.best_ask(), 105.0);
-        assert(book.ask_level_count() == 1);
-        assert(book.best_ask_level().order_count() == 2);
+        CHECK(book.ask_level_count() == 1);
+        CHECK(book.best_ask_level().order_count() == 2);
     }
 
     /*
@@ -393,8 +394,8 @@ namespace
             book.best_bid_level().price(),
             book.best_bid());
 
-        assert(book.best_bid_level().order_count() == 1);
-        assert(book.best_bid_level().total_quantity() == 25);
+        CHECK(book.best_bid_level().order_count() == 1);
+        CHECK(book.best_bid_level().total_quantity() == 25);
     }
 
     /*
@@ -421,8 +422,8 @@ namespace
             book.best_ask_level().price(),
             book.best_ask());
 
-        assert(book.best_ask_level().order_count() == 1);
-        assert(book.best_ask_level().total_quantity() == 25);
+        CHECK(book.best_ask_level().order_count() == 1);
+        CHECK(book.best_ask_level().total_quantity() == 25);
     }
 
     /*
@@ -440,8 +441,8 @@ namespace
         book.add_order(
             make_buy("B2", 105.0, 10, 2));
 
-        assert(book.bid_level_count() == 2);
-        assert(book.ask_level_count() == 0);
+        CHECK(book.bid_level_count() == 2);
+        CHECK(book.ask_level_count() == 0);
 
         bool threw = false;
 
@@ -454,7 +455,7 @@ namespace
             threw = true;
         }
 
-        assert(threw);
+        CHECK(threw);
     }
 
     /*
@@ -472,8 +473,8 @@ namespace
         book.add_order(
             make_sell("S2", 105.0, 10, 2));
 
-        assert(book.bid_level_count() == 0);
-        assert(book.ask_level_count() == 2);
+        CHECK(book.bid_level_count() == 0);
+        CHECK(book.ask_level_count() == 2);
 
         bool threw = false;
 
@@ -486,7 +487,7 @@ namespace
             threw = true;
         }
 
-        assert(threw);
+        CHECK(threw);
     }
 
 } // namespace
