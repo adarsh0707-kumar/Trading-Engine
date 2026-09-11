@@ -39,6 +39,12 @@ bool SocketServer::start()
         return false;
     }
 
+    {
+        std::lock_guard<std::mutex> lock(stopMutex_);
+
+        stopRequested_ = false;
+    }
+
     try
     {
         serverFd_ =
@@ -77,16 +83,27 @@ void SocketServer::stop()
         return;
     }
 
+    /*
+     * Shutting the listening socket down makes the blocked accept()
+     * fail so the accept thread can observe the stop request. The
+     * descriptor is closed only once that thread has been joined,
+     * because the operating system may hand its number straight back
+     * out to an unrelated socket.
+     */
     if (serverFd_ >= 0)
     {
         ::shutdown(
             serverFd_,
             SHUT_RDWR);
-
-        ::close(serverFd_);
-
-        serverFd_ = -1;
     }
+
+    {
+        std::lock_guard<std::mutex> lock(stopMutex_);
+
+        stopRequested_ = true;
+    }
+
+    stopCv_.notify_all();
 
     if (acceptThread_.joinable())
     {
@@ -96,6 +113,13 @@ void SocketServer::stop()
     if (heartbeatThread_.joinable())
     {
         heartbeatThread_.join();
+    }
+
+    if (serverFd_ >= 0)
+    {
+        ::close(serverFd_);
+
+        serverFd_ = -1;
     }
 
     std::unordered_map<std::uint64_t, std::shared_ptr<ClientConnection>> clients;
@@ -234,9 +258,18 @@ void SocketServer::heartbeatLoop()
 {
     while (running_)
     {
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(
-                heartbeatIntervalMs_));
+        {
+            std::unique_lock<std::mutex> lock(stopMutex_);
+
+            stopCv_.wait_for(
+                lock,
+                std::chrono::milliseconds(
+                    heartbeatIntervalMs_),
+                [this]
+                {
+                    return stopRequested_;
+                });
+        }
 
         if (!running_)
         {
