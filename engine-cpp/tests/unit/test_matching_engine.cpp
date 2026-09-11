@@ -6,6 +6,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 #include <algorithm>
 
 namespace
@@ -1231,6 +1232,43 @@ void test_book_integrity_after_multi_level_partial_match()
     CHECK(book.best_ask_level().front() == ask_102);
 }
 
+void test_trade_ids_are_unique_across_matches()
+{
+    MatchingEngine matcher;
+
+    std::vector<std::string> trade_ids;
+
+    for (int round = 0; round < 2; ++round)
+    {
+        OrderBook book("BTC-USD");
+
+        book.add_order(
+            make_order("S1", Side::SELL, 100.0, 4, 1));
+
+        book.add_order(
+            make_order("S2", Side::SELL, 101.0, 4, 2));
+
+        MatchResult result =
+            matcher.match(
+                book,
+                make_order("B1", Side::BUY, 101.0, 8, 3));
+
+        CHECK(result.trades.size() == 2);
+
+        for (const auto &trade : result.trades)
+        {
+            trade_ids.push_back(trade->trade_id());
+        }
+    }
+
+    std::sort(trade_ids.begin(), trade_ids.end());
+
+    CHECK(
+        std::adjacent_find(
+            trade_ids.begin(),
+            trade_ids.end()) == trade_ids.end());
+}
+
 int main()
 {
     test_buy_matches_best_ask();
@@ -1280,8 +1318,10 @@ int main()
     test_book_integrity_after_multi_level_partial_match();
     test_partially_filled_order_rests_after_existing_orders();
 
+    test_trade_ids_are_unique_across_matches();
+
     std::cout
-        << "All MatchingEngine Phase 1.13 tests passed (34/34)"
+        << "All MatchingEngine Phase 1.13 tests passed (35/35)"
         << std::endl;
 
     return 0;
