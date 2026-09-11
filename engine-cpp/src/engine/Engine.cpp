@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <thread>
 
 namespace trading
@@ -122,10 +123,25 @@ void Engine::run_loop()
             continue;
         }
 
-        const ::engine::MatchResult result =
-            state_->matching_engine().match(
-                state_->order_book(),
-                incoming_order);
+        ::engine::MatchResult result;
+
+        try
+        {
+            result =
+                state_->matching_engine().match(
+                    state_->order_book(),
+                    incoming_order);
+        }
+        catch (const std::exception &error)
+        {
+            logger_->warn(
+                "Rejected order " +
+                tick.order_id +
+                ": " +
+                error.what());
+
+            continue;
+        }
 
         for (const auto &trade : result.trades)
         {

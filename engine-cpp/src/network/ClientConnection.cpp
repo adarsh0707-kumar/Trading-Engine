@@ -29,6 +29,13 @@ ClientConnection::ClientConnection(
 ClientConnection::~ClientConnection()
 {
     stop();
+
+    if (socketFd_ >= 0)
+    {
+        ::close(socketFd_);
+
+        socketFd_ = -1;
+    }
 }
 
 std::uint64_t ClientConnection::id() const
@@ -85,15 +92,20 @@ void ClientConnection::stop()
         return;
     }
 
+    /*
+     * The descriptor is only shut down here, never closed: the receive
+     * thread may be blocked in recv() on it, and a closed descriptor
+     * number is immediately reusable by the operating system. Shutting
+     * the socket down unblocks the thread and closes the connection at
+     * the protocol level; the descriptor itself is released by the
+     * destructor, which cannot run before the receive thread exits
+     * because that thread holds a shared_ptr to this connection.
+     */
     if (socketFd_ >= 0)
     {
         ::shutdown(
             socketFd_,
             SHUT_RDWR);
-
-        ::close(socketFd_);
-
-        socketFd_ = -1;
     }
 }
 
@@ -208,10 +220,6 @@ void ClientConnection::receiveLoop()
         ::shutdown(
             socketFd_,
             SHUT_RDWR);
-
-        ::close(socketFd_);
-
-        socketFd_ = -1;
     }
 
     if (wasRunning && disconnectHandler_)
