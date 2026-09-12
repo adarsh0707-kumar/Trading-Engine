@@ -15,19 +15,242 @@ This document records the development progress, completed milestones, implementa
 
 # Latest Commit Summary
 
+## 2026-09-12 — Phase 3.5 Streaming Analytics Pipeline
+
+**Status:** ✅ Complete
+
+Phase 3.5 connects the existing Python socket-ingestion layer to the analytics processing pipeline.
+
+Incoming C++ `TRADE` messages can now travel through parsing, domain-model conversion, streaming analytics, result generation, and deterministic publishing.
+
+### What Changed
+
+* Added streaming analytics processing
+* Added per-symbol streaming state
+* Added incremental SMA calculation
+* Added incremental EMA calculation
+* Added incremental VWAP calculation
+* Added streaming volatility calculation
+* Added deterministic `AnalyticsResult` generation
+* Preserved source trade timestamps
+* Added unique analytics event identifiers
+* Added transport-independent `AnalyticsPublisher`
+* Added injected callable publisher sinks
+* Added deterministic compact JSON serialization
+* Added stable JSON key ordering
+* Added `AnalyticsService` orchestration
+* Added end-to-end raw `TRADE` → analytics-result processing
+* Added regression tests for the complete analytics pipeline
+* Exported analytics configuration through `analytics.config`
+
+### Streaming Pipeline
+
+```text
+C++ Trading Engine
+        ↓
+C++ TCP Transport
+        ↓
+Python SocketClient
+        ↓
+Message Parser
+        ↓
+Trade Domain Model
+        ↓
+StreamingProcessor
+        ↓
+Per-Symbol Analytics State
+        ↓
+SMA / EMA / VWAP / Volatility
+        ↓
+AnalyticsResult
+        ↓
+AnalyticsPublisher
+        ↓
+Deterministic JSON Output
+```
+
+### Analytics State
+
+The streaming processor maintains state independently for each symbol.
+
+Current analytical state includes:
+
+```text
+SMA
+EMA
+VWAP
+Volatility
+```
+
+### Analytics Result
+
+Each processed trade produces an `AnalyticsResult`.
+
+The result includes analytical fields together with the current portfolio-related placeholders:
+
+```text
+event_id
+event_type
+timestamp
+symbol
+price
+quantity
+vwap
+sma
+ema
+volatility
+position
+realized_pnl
+unrealized_pnl
+equity
+peak_equity
+drawdown
+```
+
+The position and risk fields remain deterministic zero/default values for now.
+
+### Protocol Compatibility
+
+Phase 3.5 remains compatible with the current C++ `TRADE` protocol.
+
+Current trade payload information includes:
+
+```text
+symbol
+price
+quantity
+taker_order_id
+maker_order_id
+taker_side
+buy_order_id
+sell_order_id
+```
+
+The explicit `taker_side` field allows the Python parser to derive the correct buy and sell order identifiers.
+
+Position and PnL calculations are still deferred because a complete portfolio/risk model requires additional trading-account semantics beyond simply identifying the executed side.
+
+### Publisher
+
+`AnalyticsPublisher` separates analytics calculation from result delivery.
+
+The publisher supports:
+
+* Injected callable sinks
+* Deterministic JSON serialization
+* Compact output
+* Stable key ordering
+* Unique analytics event identifiers
+* Transport-independent publication
+
+This keeps the streaming processor independent from the future Node.js gateway or other downstream transports.
+
+### Service Integration
+
+`AnalyticsService` now coordinates:
+
+```text
+SocketClient
+     ↓
+Incoming TRADE
+     ↓
+MessageParser
+     ↓
+Trade
+     ↓
+StreamingProcessor
+     ↓
+AnalyticsResult
+     ↓
+AnalyticsPublisher
+```
+
+### End-to-End Validation
+
+A deterministic end-to-end pipeline was verified using a C++-compatible trade message:
+
+```text
+Raw TRADE JSON
+      ↓
+Message Parser
+      ↓
+Trade
+      ↓
+StreamingProcessor
+      ↓
+AnalyticsResult
+      ↓
+AnalyticsPublisher
+      ↓
+JSON Sink
+```
+
+### Validation
+
+```text
+Full Python test suite       PASS — 92 passed
+Publisher tests              PASS — 6 passed
+End-to-end pipeline          PASS
+Trade parsing                PASS
+Streaming processing         PASS
+Indicator updates            PASS
+Analytics result generation  PASS
+Publisher serialization      PASS
+Deterministic JSON output    PASS
+```
+
+### Deferred to Phase 3.6
+
+The following remain intentionally deferred:
+
+```text
+Position accounting
+Realized PnL
+Unrealized PnL
+Equity tracking
+Peak equity
+Drawdown
+Risk limits
+Risk events
+```
+
+### Result
+
+Phase 3.5 establishes the first complete Python analytics vertical slice.
+
+```text
+C++ Trade
+    ↓
+TCP
+    ↓
+Python Ingestion
+    ↓
+Parser
+    ↓
+Streaming Analytics
+    ↓
+AnalyticsResult
+    ↓
+Publisher
+```
+
+---
+
 ## 2026-09-11 — Trade Events Carry the Taker Side
 
 **Status:** ✅ Complete
 
-The TRADE message carried only `taker_order_id` and `maker_order_id`. Taker and maker identify who crossed the spread, not the direction of the fill, so `MessageParser` mislabelled every sell-initiated execution: it mapped the taker to `buy_order_id` and the maker to `sell_order_id`. The missing direction also forced `StreamingProcessor` to report position, PnL, and drawdown as zero placeholders, blocking Phase 3.6.
+The TRADE message carried only `taker_order_id` and `maker_order_id`. Taker and maker identify who crossed the spread, not the direction of the fill, so `MessageParser` could not reliably determine the buy/sell side of an execution.
 
 ### What Changed
 
 * `engine::Trade` stores the taker side and exposes `buy_order_id()` / `sell_order_id()` derived from it
-* The TRADE payload emits `taker_side`, `buy_order_id`, and `sell_order_id` alongside the existing taker/maker identifiers
-* `MessageParser` requires `taker_side`, rejects unknown values, and derives the buy/sell identifiers from it
-* The Python `Trade` model gained `taker_side` (required) plus `taker_order_id` / `maker_order_id`
-* `docs/02-architecture.md` and `docs/03-data-model.md` document the new field and the mapping rule
+* The TRADE payload emits `taker_side`, `buy_order_id`, and `sell_order_id`
+* `MessageParser` requires `taker_side`
+* Unknown side values are rejected
+* Python `Trade` gained `taker_side`
+* Python `Trade` retains `taker_order_id` and `maker_order_id`
+* Architecture and data-model documentation were updated
 
 ### Key Files
 
@@ -59,22 +282,18 @@ pytest           PASS — 89 passed
 
 **Status:** ✅ Complete
 
-`MatchingEngine` derived `trade_id` from the taker and maker order identifiers alone, so the same identifier was emitted whenever a taker matched the same counterparty again or an engine restart reissued order identifiers. Downstream analytics key trades by `trade_id`, so those executions collapsed into one.
+`MatchingEngine` previously derived `trade_id` only from taker and maker order identifiers.
 
 ### What Changed
 
-* Added a per-engine monotonic trade sequence to `MatchingEngine`
-* Changed the trade identifier format to `trade-<sequence>-<taker>-<maker>`
-* Added a unit test asserting identifiers stay unique across repeated matches
-
-### Key Files
+* Added a per-engine monotonic trade sequence
+* Changed trade identifiers to:
 
 ```text
-Modified:
-engine-cpp/include/matching/MatchingEngine.hpp
-engine-cpp/src/matching/MatchingEngine.cpp
-engine-cpp/tests/unit/test_matching_engine.cpp
+trade-<sequence>-<taker>-<maker>
 ```
+
+* Added tests covering repeated matches
 
 ### Validation
 
@@ -89,15 +308,17 @@ ctest (Debug)    PASS — 15/15
 
 **Status:** ✅ Complete
 
-Three defects found while reviewing the C++ engine (PR #21, PR #23) plus the first working CI pipeline (PR #24).
+Several defects were found during C++ engine review and CI integration.
 
 ### What Changed
 
-* Made the C++ test suite assert under `NDEBUG` via `tests/TestCheck.hpp`, which unmasked 5 failing Release tests
-* Stopped closing socket descriptors while the receive and accept threads could still be using them
-* Replaced the heartbeat `sleep_for` with a condition variable so shutdown no longer waits a full heartbeat interval
-* Wrapped the `MatchingEngine::match` call in `Engine::run_loop`, so a rejected order is logged instead of terminating the process
-* Added `.github/workflows/test.yml`: ctest in Debug and Release, plus the Python analytics suite
+* Added `tests/TestCheck.hpp` so assertions remain active under `NDEBUG`
+* Fixed socket descriptor lifetime during receive and accept operations
+* Replaced heartbeat `sleep_for` shutdown waiting with a condition variable
+* Prevented rejected orders from terminating the engine process
+* Added GitHub Actions CI
+* Added Debug and Release C++ test jobs
+* Added Python analytics test job
 
 ### Key Files
 
@@ -124,114 +345,33 @@ GitHub Actions CI   PASS — 7/7 checks
 
 ---
 
-## 2026-09-10 — Phase 3.4 Socket Ingestion
-
-**Status:** ✅ Complete
-
-The latest commit completes **Phase 3.4 — Socket Ingestion**, connecting the Python analytics service directly to the C++ trading-engine TCP transport.
-
-### What Changed
-
-* Added Python `SocketClient`
-* Implemented C++-compatible TCP message framing
-* Added 4-byte big-endian payload-length handling
-* Added UTF-8 JSON payload decoding
-* Added fragmented TCP frame handling
-* Added multiple-frame-per-read handling
-* Added maximum payload-size protection
-* Added invalid UTF-8 validation
-* Added connection/disconnection callbacks
-* Added optional automatic reconnection
-* Added configurable reconnect delay
-* Added heartbeat handling
-* Added graceful shutdown
-* Added socket-client unit tests
-* Added deterministic socket integration tests
-* Added C++ ↔ Python interoperability validation
-* Updated analytics configuration
-* Exported socket-ingestion classes through the ingestion package
-
-### Key Files
-
-```text
-Modified:
-analytics-py/src/analytics/config/settings.py
-analytics-py/src/analytics/ingestion/__init__.py
-analytics-py/src/analytics/ingestion/socket_client.py
-
-Added:
-analytics-py/tests/unit/test_socket_client.py
-analytics-py/tests/integration/test_socket_ingestion.py
-```
-
-### Validation
-
-```text
-Socket integration test       PASS
-Full Python test suite        PASS — 66 passed
-C++ ↔ Python interoperability PASS
-Fragmented frames             PASS
-Multiple frames               PASS
-Payload validation            PASS
-UTF-8 validation              PASS
-Heartbeat                     PASS
-Graceful shutdown             PASS
-git diff --check              PASS
-```
-
-### Result
-
-The end-to-end transport path is now operational:
-
-```text
-C++ Trading Engine
-        ↓
-Trade Generation
-        ↓
-C++ TCP Transport
-        ↓
-4-byte Length + UTF-8 JSON
-        ↓
-Python SocketClient
-        ↓
-Message Callback
-```
-
-### Next Commit Target
-
-**Phase 3.5 — Message Parsing**
-
-The next milestone will convert incoming transport messages into validated Python analytics models and establish the message-processing boundary for the streaming analytics pipeline.
-
----
-
-
 # Phase 1 — C++ Matching Engine
 
-## Phase 1 Status
+## Status
 
 ✅ **Complete**
 
-Phase 1 established the core C++ matching-engine functionality.
+Phase 1 established the deterministic C++ matching-engine foundation.
 
-### Completed Work
+### Completed
 
-* Order model implemented
+* Order model
 * Order-side handling
 * Price-level container
 * Order insertion
-* Best bid calculation
-* Best ask calculation
+* Best bid/ask
 * Order matching
+* Partial fills
 * Trade generation
+* Cancellation
+* Book snapshots
 * Matching-engine integration
+* Deterministic simulation
 * Unit tests
 * Integration tests
 * Sanitizer validation
-* Build-system integration
-* Documentation updates
 
-### Matching Engine Flow
+### Matching Flow
 
 ```text
 Incoming Order
@@ -249,127 +389,87 @@ Trade Generation
 Book Update
 ```
 
-### Validation
+### Exit Criteria
 
-* Matching-engine tests passed
-* Integration tests passed
-* Sanitizer checks completed
-* Core order-book behavior validated
-
-### Phase 1 Exit Criteria
-
-✅ Order model implemented
-✅ Price-level management implemented
-✅ Add-order functionality implemented
-✅ Best bid/ask implemented
-✅ Matching implemented
-✅ Trade generation implemented
-✅ Tests passing
-✅ Sanitizer validation completed
+```text
+Order Model             ✅
+Price Levels            ✅
+Order Insertion         ✅
+Best Bid/Ask            ✅
+Matching                ✅
+Trade Generation        ✅
+Cancellation            ✅
+Tests                   ✅
+Sanitizers              ✅
+```
 
 ---
 
 # Phase 2 — C++ TCP Transport
 
-## Phase 2 Status
+## Status
 
 ✅ **Complete**
 
-Phase 2 added the C++ TCP transport layer required to expose trading-engine events to external services.
-
-### Phase 2 Objectives
-
-* TCP server
-* Client connection management
-* Message framing
-* JSON serialization
-* Heartbeat/liveness
-* Reconnection support
-* Graceful shutdown
-* Raw TCP verification
-* Protocol documentation
-
-All Phase 2 objectives have been completed.
+Phase 2 established the network communication boundary between the C++ trading engine and downstream services.
 
 ---
 
 ## Phase 2.1 — C++ Transport Server
 
-### Status
+**Status:** ✅ Complete
 
-✅ **Complete**
-
-Implemented the TCP server responsible for accepting connections from downstream consumers.
-
-### Completed
+Completed:
 
 * TCP listening socket
 * Port configuration
 * Client accept loop
-* Connection lifecycle management
-* Transport integration with the C++ engine
-* Build-system integration
+* Engine integration
+* Client lifecycle management
 
 ---
 
 ## Phase 2.2 — Client Connection Handling
 
-### Status
+**Status:** ✅ Complete
 
-✅ **Complete**
-
-Implemented client connection management.
-
-### Completed
+Completed:
 
 * Client registration
-* Client disconnection handling
-* Per-client connection state
-* Connection cleanup
+* Client disconnection
+* Connection state
 * Safe socket ownership
-* Client lifecycle logging
+* Connection cleanup
+* Lifecycle logging
 
 ---
 
 ## Phase 2.3 — Heartbeat / Liveness
 
-### Status
+**Status:** ✅ Complete
 
-✅ **Complete**
-
-Implemented heartbeat support for monitoring TCP client liveness.
-
-### Completed
+Completed:
 
 * Heartbeat messages
-* Heartbeat request/response handling
+* Heartbeat request/response
 * Liveness tracking
 * Timeout handling
 * Connection health monitoring
 
-### Validation
-
-* Dedicated heartbeat tests passed
-* Manual TCP validation passed
-
 ### Merge
 
-* Commit: `66d8de7`
-* Pull Request: `#17`
+```text
+Commit: 66d8de7
+Pull Request: #17
+```
 
 ---
 
 ## Phase 2.4 — Message Framing
 
-### Status
+**Status:** ✅ Complete
 
-✅ **Complete**
-
-Implemented deterministic TCP message framing.
-
-### Wire Protocol
-
-Each message is transmitted as:
+Wire format:
 
 ```text
 4-byte unsigned payload length
@@ -379,132 +479,90 @@ Big-endian byte order
 UTF-8 JSON payload
 ```
 
-### Completed
+Maximum payload:
 
-* 4-byte payload-length prefix
-* Big-endian encoding
-* Payload boundary detection
-* Partial TCP frame handling
-* Multiple frames in a single read
-* Deterministic frame parsing
+```text
+1 MiB
+```
 
 ---
 
 ## Phase 2.5 — JSON Serialization
 
-### Status
+**Status:** ✅ Complete
 
-✅ **Complete**
-
-Implemented JSON serialization for transport messages.
-
-### Completed
+Completed:
 
 * JSON message generation
 * Message type field
 * Request identifiers
 * Timestamp fields
-* Trade payload serialization
+* Trade serialization
 * Heartbeat serialization
-* Transport-compatible JSON structure
 
 ---
 
 ## Phase 2.6 — Reconnection
 
-### Status
+**Status:** ✅ Complete
 
-✅ **Complete**
+Completed:
 
-Implemented client reconnection support.
-
-### Completed
-
-* Connection failure detection
+* Failure detection
 * Reconnection attempts
 * Configurable reconnect behavior
 * Reconnect delay
-* Connection state reset
-* Safe reconnection lifecycle
+* Connection-state reset
 
 ---
 
 ## Phase 2.7 — Graceful Shutdown
 
-### Status
+**Status:** ✅ Complete
 
-✅ **Complete**
-
-Implemented safe transport shutdown.
-
-### Completed
+Completed:
 
 * Server shutdown
 * Client disconnect
 * Socket cleanup
 * Thread cleanup
-* Idempotent shutdown behavior
+* Idempotent shutdown
 * Resource cleanup
 
 ---
 
-## Phase 2.8 — Raw TCP / `nc` Verification
+## Phase 2.8 — Raw TCP Verification
 
-### Status
+**Status:** ✅ Complete
 
-✅ **Complete**
+Verified:
 
-Verified the transport protocol independently using raw TCP tooling.
-
-### Validation
-
-* TCP connection established
-* Framed messages transmitted
-* JSON payload received
-* Heartbeat verified
-* Connection lifecycle verified
+* TCP connection
+* Framed messages
+* JSON payload
+* Heartbeat
+* Connection lifecycle
 
 ---
 
-## Phase 2 Protocol Documentation
-
-### Status
-
-✅ **Complete**
-
-The protocol documentation now consistently defines:
+## Phase 2 Validation
 
 ```text
-4-byte big-endian payload length
-            +
-UTF-8 JSON payload
-```
-
-The same framing definition is used by the C++ transport and Python ingestion layers.
-
----
-
-## Phase 2 Test Results
-
-```text
-Total transport tests: 13
-Passed:                 13
-Failed:                  0
-
-Result: 100% PASS
+Transport tests: 13/13 PASS
+C++ tests:       15/15 PASS
+Debug:           PASS
+Release:         PASS
 ```
 
 ---
 
 # Phase 3 — Python Analytics
 
-## Phase 3 Status
+## Status
 
 🚧 **In Progress**
 
-Phase 3 introduces the Python analytics service responsible for consuming trading-engine events and producing analytical information.
-
-The Python analytics pipeline is being implemented incrementally.
+Phase 3 is the Python analytics subsystem. The first seven implementation stages are now complete through the Phase 3.5 streaming slice.
 
 ---
 
@@ -514,9 +572,7 @@ The Python analytics pipeline is being implemented incrementally.
 
 ✅ **Complete**
 
-Established the Python analytics service structure.
-
-### Completed
+Completed:
 
 * Python project structure
 * Package configuration
@@ -525,27 +581,10 @@ Established the Python analytics service structure.
 * Model package
 * Indicator package
 * Ingestion package
-* Test structure
+* Test infrastructure
 * Pytest configuration
 * Development dependencies
 * Basic service configuration
-
-### Project Structure
-
-```text
-analytics-py/
-├── src/
-│   └── analytics/
-│       ├── config/
-│       ├── indicators/
-│       ├── ingestion/
-│       ├── models/
-│       └── ...
-│
-└── tests/
-    ├── unit/
-    └── integration/
-```
 
 ---
 
@@ -555,61 +594,47 @@ analytics-py/
 
 ✅ **Complete**
 
-Implemented the initial analytics data models.
+Implemented:
 
-### Models
+```text
+Tick
+Trade
+AnalyticsResult
+```
 
-* `Tick`
-* `Trade`
-* `AnalyticsResult`
+Completed:
 
-### Objectives Completed
-
-* Typed analytical data structures
+* Typed data structures
 * Validation
 * Serialization compatibility
-* Deterministic model behavior
-* Unit testing
+* Deterministic behavior
+* Unit tests
 
 ---
 
-# Phase 3.3 — Streaming Indicators
+# Phase 3.3 — Technical Indicators
 
 ## Status
 
 ✅ **Complete**
 
-Implemented the initial streaming analytics indicators.
+Implemented:
 
-### Indicators
+```text
+VWAP
+SMA
+EMA
+Volatility
+```
 
-* VWAP
-* SMA
-* EMA
-* Volatility
+Completed:
 
-### Completed
-
-* Streaming state management
-* Incremental calculations
+* Streaming-compatible calculations
 * Input validation
 * Reset behavior
 * Deterministic calculations
-* Unit tests
 * Edge-case handling
-
-### Test / Coverage Status
-
-Before socket ingestion was added:
-
-```text
-Tests:                 55
-Statements:            182
-Missed statements:       1
-Coverage:               99%
-```
-
-The remaining defensive VWAP branch is intentionally retained because it represents a logically unreachable state under validated inputs.
+* Unit tests
 
 ---
 
@@ -621,97 +646,27 @@ The remaining defensive VWAP branch is intentionally retained because it represe
 
 **Completion Date:** 2026-09-10
 
-Phase 3.4 implements the Python socket-ingestion layer responsible for consuming events from the C++ trading-engine transport.
-
-The Python analytics service can now communicate directly with the C++ trading engine using the same TCP framing protocol implemented in Phase 2.
-
----
-
-## Phase 3.4 Objectives
-
-The following objectives have been completed:
+Completed:
 
 * Python TCP socket client
-* C++-compatible message framing
+* C++-compatible framing
 * Big-endian payload lengths
-* UTF-8 JSON payloads
-* Fragmented TCP frame handling
-* Multiple frames in a single TCP read
-* Maximum payload-size validation
-* Invalid UTF-8 detection
-* Connection lifecycle callbacks
-* Optional automatic reconnection
-* Configurable reconnect delay
-* Graceful shutdown
-* Heartbeat handling
-* Deterministic unit tests
-* Deterministic integration tests
-* C++ ↔ Python interoperability
-
----
-
-## Socket Client
-
-### File
-
-```text
-analytics-py/src/analytics/ingestion/socket_client.py
-```
-
-### Main Component
-
-```text
-SocketClient
-```
-
-The `SocketClient` provides:
-
-* TCP connection management
-* Connection timeout
-* Receive timeout
-* Message callbacks
+* UTF-8 JSON decoding
+* Fragmented frame handling
+* Multiple frames per read
+* Payload-size validation
+* UTF-8 validation
 * Connection callbacks
 * Disconnect callbacks
-* Optional automatic reconnection
-* Configurable reconnect delay
-* Graceful shutdown
-* Payload-size protection
-* Protocol validation
+* Automatic reconnection
+* Reconnect delay
 * Heartbeat handling
+* Graceful shutdown
+* Socket unit tests
+* Socket integration tests
+* C++ ↔ Python interoperability
 
----
-
-## Wire Protocol
-
-The Python ingestion layer implements the same framing protocol used by the C++ transport.
-
-```text
-4-byte unsigned payload length
-          ↓
-Big-endian byte order
-          ↓
-UTF-8 JSON payload
-```
-
-### Maximum Payload Size
-
-```text
-1 MiB
-```
-
-Payloads exceeding the configured maximum are rejected.
-
----
-
-## Configuration
-
-### Updated File
-
-```text
-analytics-py/src/analytics/config/settings.py
-```
-
-### Environment Variables
+### Configuration
 
 ```text
 TRADING_ENGINE_HOST
@@ -729,383 +684,234 @@ TRADING_ENGINE_MAX_PAYLOAD_SIZE
 127.0.0.1:9000
 ```
 
----
-
-## Ingestion Package Exports
-
-### Updated File
+### Validation
 
 ```text
-analytics-py/src/analytics/ingestion/__init__.py
-```
-
-Exports:
-
-```text
-SocketClient
-SocketProtocolError
+Socket integration        PASS
+Full Python suite         PASS
+C++ ↔ Python interop      PASS
+Fragmented frames         PASS
+Multiple frames           PASS
+Payload validation        PASS
+UTF-8 validation          PASS
+Heartbeat                 PASS
+Graceful shutdown         PASS
 ```
 
 ---
 
-## Unit Tests
-
-### File
-
-```text
-analytics-py/tests/unit/test_socket_client.py
-```
-
-### Coverage Areas
-
-The unit-test suite covers:
-
-* Message framing
-* Fragmented frames
-* Multiple messages in one read
-* Oversized payload rejection
-* Invalid UTF-8 detection
-* Heartbeat handling
-* Sending without an active connection
-* Idempotent shutdown
-* Socket receive behavior
-* Connection lifecycle
-* Protocol validation
-
----
-
-## Integration Tests
-
-### File
-
-```text
-analytics-py/tests/integration/test_socket_ingestion.py
-```
-
-The integration test implements a deterministic local TCP server using the exact C++ wire protocol.
-
-The test deliberately fragments frames to verify that the Python client correctly reconstructs complete messages.
-
-### Verified Messages
-
-```text
-HELLO
-TRADE
-```
-
-### Dedicated Integration Test
-
-```text
-1 passed
-```
-
----
-
-## Full Python Test Suite
-
-After Phase 3.4:
-
-```text
-66 passed
-```
-
-Result:
-
-```text
-PASS
-```
-
----
-
-# Phase 3.4 — C++ ↔ Python Interoperability
+# Phase 3.5 — Streaming Analytics
 
 ## Status
 
 ✅ **Complete**
 
-Manual interoperability testing was performed between the C++ trading engine and the Python analytics service.
+**Completion Date:** 2026-09-12
 
-### C++ Endpoint
+Phase 3.5 connects the completed socket-ingestion layer to the streaming analytics pipeline.
 
-```text
-127.0.0.1:9000
-```
-
-### Python Client
-
-Connected successfully and received:
+### Completed Components
 
 ```text
-HELLO
-TRADE
-HEARTBEAT
+Message Parser
+Streaming Processor
+Per-Symbol State
+Indicator Updates
+AnalyticsResult
+AnalyticsPublisher
+AnalyticsService
 ```
 
----
-
-## Example Trade Event
-
-```json
-{
-  "type": "TRADE",
-  "request_id": "trade-SIM-00000171-SIM-00000089",
-  "timestamp": "2026-09-10T15:15:02Z",
-  "payload": "{\"symbol\":\"SIM\",\"price\":98.57,\"quantity\":3,\"taker_order_id\":\"SIM-00000171\",\"maker_order_id\":\"SIM-00000089\"}"
-}
-```
-
-### Interoperability Results
-
-* TCP connection established
-* HELLO message received
-* Trade events received
-* Trade structure parsed
-* Heartbeat request/response verified
-* Graceful shutdown verified
-* Disconnect callback verified
-* No runtime exceptions observed
-
----
-
-# Phase 3.4 — End-to-End Ingestion Flow
-
-The completed transport-to-ingestion path is:
+### Processing Flow
 
 ```text
-C++ Order
+Incoming JSON
       ↓
-Order Book
+Message Parser
       ↓
-Matching Engine
+Trade
       ↓
-Trade Generation
+StreamingProcessor
       ↓
-C++ TCP Transport
+Per-Symbol State
       ↓
-4-byte Length + JSON
+SMA / EMA / VWAP / Volatility
       ↓
+AnalyticsResult
+      ↓
+AnalyticsPublisher
+```
+
+### Message Parsing
+
+The parser now:
+
+* validates incoming message types;
+* extracts transport payloads;
+* parses `TRADE` messages;
+* converts trade payloads into `Trade`;
+* validates required fields;
+* validates `taker_side`;
+* derives buy/sell order identifiers;
+* rejects malformed messages.
+
+### Streaming Processor
+
+The processor:
+
+* maintains state per symbol;
+* consumes trade events incrementally;
+* updates indicator state;
+* produces deterministic analytics results;
+* preserves source timestamps.
+
+### Analytics Publisher
+
+The publisher:
+
+* accepts an injected callable sink;
+* serializes results deterministically;
+* emits compact JSON;
+* uses stable key ordering;
+* assigns unique analytics event identifiers;
+* remains independent from network transport.
+
+### Service Orchestration
+
+`AnalyticsService` connects:
+
+```text
+SocketClient
+      ↓
+Message Parser
+      ↓
+StreamingProcessor
+      ↓
+AnalyticsPublisher
+```
+
+### Position / PnL Status
+
+Position and risk-related result fields remain deterministic placeholders:
+
+```text
+position = 0
+realized_pnl = 0
+unrealized_pnl = 0
+equity = 0
+peak_equity = 0
+drawdown = 0
+```
+
+These are intentionally deferred to Phase 3.6.
+
+### Validation
+
+```text
+Full Python test suite       PASS — 92 passed
+Publisher tests              PASS — 6 passed
+End-to-end pipeline          PASS
+Parser → Trade               PASS
+Trade → Processor            PASS
+Processor → Result           PASS
+Result → Publisher           PASS
+Deterministic JSON           PASS
+```
+
+### Result
+
+Phase 3.5 establishes the complete streaming analytics vertical slice:
+
+```text
+C++ Trade
+    ↓
+TCP Transport
+    ↓
 Python SocketClient
-      ↓
-Message Callback
-```
-
-This establishes the foundation for the remaining Python streaming analytics pipeline.
-
----
-
-# Phase 3.4 — Files Changed
-
-### Modified
-
-```text
-analytics-py/src/analytics/config/settings.py
-analytics-py/src/analytics/ingestion/__init__.py
-analytics-py/src/analytics/ingestion/socket_client.py
-```
-
-### Added
-
-```text
-analytics-py/tests/integration/test_socket_ingestion.py
-analytics-py/tests/unit/test_socket_client.py
+    ↓
+Message Parser
+    ↓
+Trade
+    ↓
+StreamingProcessor
+    ↓
+AnalyticsResult
+    ↓
+AnalyticsPublisher
 ```
 
 ---
 
-# Phase 3.4 — Validation
-
-```text
-Dedicated socket integration test     PASS
-Full Python test suite                PASS
-C++ ↔ Python interoperability         PASS
-Fragmented-frame handling             PASS
-Multiple-frame handling               PASS
-Payload-size validation               PASS
-UTF-8 validation                      PASS
-Heartbeat handling                    PASS
-Graceful shutdown                     PASS
-git diff --check                      PASS
-```
-
----
-
-# Phase 3 Documentation Status
-
-## Status
-
-🚧 **In Progress**
-
-Documentation is being updated continuously as each analytics milestone is completed.
-
-Current documented implementation includes:
-
-```text
-Phase 3.1  Python Foundation       ✅
-Phase 3.2  Analytics Models        ✅
-Phase 3.3  Indicators              ✅
-Phase 3.4  Socket Ingestion        ✅
-```
-
----
-
-# Phase 3.5 — Message Parsing
+# Phase 3.6 — Risk Analytics
 
 ## Status
 
 ⏳ **Planned**
 
-Planned work:
+Phase 3.6 will introduce portfolio and risk calculations.
 
-* Normalize incoming JSON messages
-* Parse `HELLO`
-* Parse `TRADE`
-* Parse `HEARTBEAT`
-* Validate message types
-* Convert transport payloads into analytics models
-* Handle malformed messages
-* Add parser tests
+### Planned Components
 
----
+```text
+Position
+Realized PnL
+Unrealized PnL
+Equity
+Peak Equity
+Drawdown
+Risk Manager
+```
 
-# Phase 3.6 — Streaming Processor
+### Planned Work
 
-## Status
-
-⏳ **Planned**
-
-Planned work:
-
-* Streaming event processor
-* Event dispatch
-* Trade processing
-* Tick processing
-* Indicator updates
-* Stateful analytics pipeline
-* Processing error isolation
-
----
-
-# Phase 3.7 — Indicator State
-
-## Status
-
-⏳ **Planned**
-
-Planned work:
-
-* Persistent indicator state
-* VWAP state
-* SMA state
-* EMA state
-* Volatility state
-* Symbol-level state management
-* State reset behavior
-
----
-
-# Phase 3.8 — Position Tracking
-
-## Status
-
-⏳ **Planned**
-
-Planned work:
-
-* Position model
-* Position updates
-* Buy/sell accounting
-* Quantity tracking
+* Position accounting
+* Buy/sell quantity tracking
 * Average entry price
-* Symbol-level positions
-* Position tests
-
----
-
-# Phase 3.9 — Realized PnL
-
-## Status
-
-⏳ **Planned**
-
-Planned work:
-
-* Realized profit/loss calculation
-* Closed-position accounting
-* Trade-to-position reconciliation
-* Realized PnL aggregation
-* Unit tests
-
----
-
-# Phase 3.10 — Unrealized PnL
-
-## Status
-
-⏳ **Planned**
-
-Planned work:
-
-* Mark-to-market calculations
-* Latest-price tracking
-* Open-position valuation
+* Realized PnL
 * Unrealized PnL
-* Combined PnL calculations
-
----
-
-# Phase 3.11 — Equity / Drawdown
-
-## Status
-
-⏳ **Planned**
-
-Planned work:
-
-* Equity curve
-* Peak equity
-* Drawdown calculation
+* Equity calculation
+* Peak equity tracking
+* Drawdown
 * Maximum drawdown
-* Recovery tracking
-* Time-series analytics
-
----
-
-# Phase 3.12 — Risk Management
-
-## Status
-
-⏳ **Planned**
-
-Planned work:
-
 * Position limits
 * Exposure limits
-* PnL thresholds
-* Drawdown thresholds
+* Risk thresholds
 * Risk events
-* Risk-state tracking
-* Risk validation tests
+
+### Exit Criteria
+
+Risk calculations pass deterministic fixtures and integrate with the Phase 3.5 streaming pipeline.
 
 ---
 
-# Phase 3.13 — Analytics Publisher
+# Phase 3.7 — Analytics Publishing Contract
 
 ## Status
 
 ⏳ **Planned**
 
-Planned work:
+The initial publisher implementation exists in Phase 3.5.
 
-* Analytics output interface
-* Event publishing
-* Downstream integration
-* Structured analytics messages
-* Publisher configuration
-* Error handling
+Phase 3.7 will formalize the downstream publishing contract.
+
+### Planned Work
+
+* Freeze analytics event schema
+* Define downstream event contracts
+* Output validation
+* Delivery semantics
+* Failure handling
+* Publisher reliability
+* Node gateway integration preparation
+* Documentation
+
+### Exit Criteria
+
+Analytics results can be consumed through a documented and stable downstream interface.
 
 ---
 
-# Phase 3.14 — Integration Testing
+# Phase 3.8 — Integration Testing
 
 ## Status
 
@@ -1115,53 +921,16 @@ Planned work:
 
 * C++ → Python integration tests
 * Transport → parser integration
-* Parser → analytics integration
-* Analytics → publisher integration
+* Parser → processor integration
+* Processor → publisher integration
 * Failure scenarios
 * Reconnection scenarios
 * Heartbeat scenarios
+* End-to-end regression tests
 
 ---
 
-# Phase 3.15 — End-to-End Validation
-
-## Status
-
-⏳ **Planned**
-
-Planned complete flow:
-
-```text
-Order
-  ↓
-Order Book
-  ↓
-Matching Engine
-  ↓
-Trade
-  ↓
-C++ TCP Transport
-  ↓
-Python Socket Ingestion
-  ↓
-Message Parser
-  ↓
-Streaming Processor
-  ↓
-Indicators
-  ↓
-Position Tracking
-  ↓
-PnL
-  ↓
-Risk
-  ↓
-Analytics Publisher
-```
-
----
-
-# Phase 3.16 — Performance
+# Phase 3.9 — Performance
 
 ## Status
 
@@ -1169,18 +938,18 @@ Analytics Publisher
 
 Planned work:
 
-* Message throughput benchmark
-* Parsing benchmark
-* Analytics processing benchmark
-* Socket ingestion latency
-* Memory usage measurement
-* CPU usage measurement
+* Message throughput benchmarks
+* Parser benchmarks
+* Analytics processing benchmarks
+* Socket latency measurements
+* Memory usage measurements
+* CPU measurements
 * Backpressure evaluation
 * Performance regression tests
 
 ---
 
-# Phase 3.17 — Production Configuration
+# Phase 3.10 — Production Configuration
 
 ## Status
 
@@ -1188,15 +957,180 @@ Planned work:
 
 Planned work:
 
-* Production environment configuration
-* Environment variable validation
+* Production configuration
+* Environment validation
 * Logging configuration
 * Runtime configuration
 * Connection configuration
 * Retry configuration
 * Payload limits
 * Operational defaults
-* Production deployment preparation
+* Deployment preparation
+
+---
+
+# Phase 4 — Node Gateway
+
+## Status
+
+⏳ **Planned**
+
+Planned components:
+
+* HTTP API
+* WebSocket API
+* Authentication
+* Authorization
+* Request validation
+* Engine communication
+* Analytics communication
+* API error handling
+
+---
+
+# Phase 5 — Web Dashboard
+
+## Status
+
+⏳ **Planned**
+
+Planned features:
+
+* Market data
+* Order book
+* Recent trades
+* VWAP
+* SMA
+* EMA
+* Volatility
+* Position
+* PnL
+* Drawdown
+* Connection status
+* Engine status
+* Real-time updates
+
+---
+
+# Phase 6 — Persistence
+
+## Status
+
+⏳ **Planned**
+
+Planned data:
+
+* Orders
+* Trades
+* Market data
+* Positions
+* Analytics results
+* System events
+
+---
+
+# Phase 7 — Authentication and Security
+
+## Status
+
+⏳ **Planned**
+
+Planned features:
+
+* Authentication
+* Authorization
+* Token management
+* Role-based access
+* Input validation
+* Rate limiting
+* Audit logging
+* Secret management
+* Secure configuration
+
+---
+
+# Phase 8 — Observability
+
+## Status
+
+⏳ **Planned**
+
+Planned components:
+
+* Structured logging
+* Metrics
+* Health checks
+* Readiness checks
+* Liveness checks
+* Distributed tracing
+* Performance monitoring
+* Error tracking
+
+### Planned Metrics
+
+```text
+Orders/sec
+Trades/sec
+Matching latency
+Transport latency
+Socket connections
+Message throughput
+Analytics processing latency
+API latency
+Error rate
+CPU usage
+Memory usage
+```
+
+---
+
+# Phase 9 — Deployment
+
+## Status
+
+⏳ **Planned**
+
+Planned work:
+
+* Docker images
+* Docker Compose environment
+* Environment configuration
+* Service networking
+* Health checks
+* Deployment documentation
+* Operational runbook
+
+### Target Services
+
+```text
+C++ Trading Engine
+Python Analytics
+Node Gateway
+Web Dashboard
+Database
+Observability Stack
+```
+
+---
+
+# Phase 10 — Performance and Production Hardening
+
+## Status
+
+⏳ **Planned**
+
+Planned work:
+
+* Load testing
+* Stress testing
+* Latency benchmarking
+* Memory profiling
+* CPU profiling
+* Concurrency testing
+* Failure injection
+* Recovery testing
+* Security review
+* Performance regression tests
 
 ---
 
@@ -1216,7 +1150,6 @@ Orders ────────────────► │    Order Book    
                          └──────────┬───────────┘
                                     │
                                     │ TCP
-                                    │
                                     ▼
                          ┌──────────────────────┐
                          │   C++ TCP Transport  │
@@ -1226,36 +1159,19 @@ Orders ────────────────► │    Order Book    
                          │    UTF-8 JSON        │
                          └──────────┬───────────┘
                                     │
-                                    │
                                     ▼
                          ┌──────────────────────┐
-                         │ Python SocketClient  │
+                         │   Python Analytics  │
                          │                      │
-                         │ Phase 3.4            │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
+                         │   SocketClient       │
+                         │        ↓             │
                          │   Message Parser     │
-                         │     Phase 3.5        │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │ Streaming Processor  │
-                         │     Phase 3.6        │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │ Analytics Pipeline   │
-                         │   Phases 3.7–3.12    │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │ Analytics Publisher  │
-                         │     Phase 3.13       │
+                         │        ↓             │
+                         │ StreamingProcessor   │
+                         │        ↓             │
+                         │ AnalyticsResult      │
+                         │        ↓             │
+                         │ AnalyticsPublisher   │
                          └──────────────────────┘
 ```
 
@@ -1263,25 +1179,27 @@ Orders ────────────────► │    Order Book    
 
 # Completion Criteria
 
-Phase 3 will be considered complete when:
+Phase 3 is considered complete when:
 
 * [x] Python project foundation implemented
 * [x] Analytics models implemented
-* [x] Streaming indicators implemented
+* [x] Technical indicators implemented
 * [x] Socket ingestion implemented
-* [ ] Message parsing implemented
-* [ ] Streaming processor implemented
-* [ ] Indicator state management implemented
+* [x] Message parsing implemented
+* [x] Streaming processor implemented
+* [x] Per-symbol indicator state implemented
 * [ ] Position tracking implemented
 * [ ] Realized PnL implemented
 * [ ] Unrealized PnL implemented
 * [ ] Equity and drawdown implemented
 * [ ] Risk management implemented
-* [ ] Analytics publisher implemented
-* [ ] Integration test suite completed
-* [ ] End-to-end validation completed
+* [x] Initial analytics publisher implemented
+* [ ] Publishing contract finalized
+* [ ] Integration test suite expanded
 * [ ] Performance benchmarks completed
 * [ ] Production configuration completed
+
+Phase 3 remains **In Progress** because the risk, publishing-contract, performance, and production-readiness work is not yet complete.
 
 ---
 
@@ -1300,21 +1218,21 @@ Phase 3 will be considered complete when:
 | Phase 2.8  | Raw TCP Verification       | ✅ Complete |
 | Phase 3.1  | Python Foundation          | ✅ Complete |
 | Phase 3.2  | Analytics Models           | ✅ Complete |
-| Phase 3.3  | Streaming Indicators       | ✅ Complete |
+| Phase 3.3  | Technical Indicators       | ✅ Complete |
 | Phase 3.4  | Socket Ingestion           | ✅ Complete |
-| Phase 3.5  | Message Parsing            | ⏳ Planned  |
-| Phase 3.6  | Streaming Processor        | ⏳ Planned  |
-| Phase 3.7  | Indicator State            | ⏳ Planned  |
-| Phase 3.8  | Position Tracking          | ⏳ Planned  |
-| Phase 3.9  | Realized PnL               | ⏳ Planned  |
-| Phase 3.10 | Unrealized PnL             | ⏳ Planned  |
-| Phase 3.11 | Equity / Drawdown          | ⏳ Planned  |
-| Phase 3.12 | Risk Management            | ⏳ Planned  |
-| Phase 3.13 | Analytics Publisher        | ⏳ Planned  |
-| Phase 3.14 | Integration Testing        | ⏳ Planned  |
-| Phase 3.15 | End-to-End Validation      | ⏳ Planned  |
-| Phase 3.16 | Performance                | ⏳ Planned  |
-| Phase 3.17 | Production Configuration   | ⏳ Planned  |
+| Phase 3.5  | Streaming Analytics        | ✅ Complete |
+| Phase 3.6  | Risk Analytics             | ⏳ Planned  |
+| Phase 3.7  | Publishing Contract        | ⏳ Planned  |
+| Phase 3.8  | Integration Testing        | ⏳ Planned  |
+| Phase 3.9  | Performance                | ⏳ Planned  |
+| Phase 3.10 | Production Configuration   | ⏳ Planned  |
+| Phase 4    | Node Gateway               | ⏳ Planned  |
+| Phase 5    | Web Dashboard              | ⏳ Planned  |
+| Phase 6    | Persistence                | ⏳ Planned  |
+| Phase 7    | Authentication & Security  | ⏳ Planned  |
+| Phase 8    | Observability              | ⏳ Planned  |
+| Phase 9    | Deployment                 | ⏳ Planned  |
+| Phase 10   | Performance & Hardening    | ⏳ Planned  |
 
 ---
 
@@ -1336,47 +1254,73 @@ The C++ TCP transport layer is implemented, tested, documented, and validated.
 
 🚧 **In Progress**
 
-The Python analytics service has completed:
+Completed:
 
 ```text
 Phase 3.1 — Python Foundation
 Phase 3.2 — Analytics Models
-Phase 3.3 — Streaming Indicators
+Phase 3.3 — Technical Indicators
 Phase 3.4 — Socket Ingestion
+Phase 3.5 — Streaming Analytics
 ```
 
-The next implementation milestone is:
-
-```text
-Phase 3.5 — Message Parsing
-```
-
-The remaining Phase 3 analytics, risk, publishing, integration, performance, and production-readiness work remains planned.
-
----
-
-# Latest Milestone
-
-```text
-Date:   2026-09-10
-Phase:  Phase 3.4
-Task:   Socket Ingestion
-Status: ✅ Complete
-```
-
-The project now has a validated communication path from the C++ matching engine into the Python analytics service.
+Current analytics vertical slice:
 
 ```text
 C++ Trading Engine
         ↓
 C++ TCP Transport
         ↓
-Framed JSON Messages
+Python SocketClient
+        ↓
+Message Parser
+        ↓
+StreamingProcessor
+        ↓
+AnalyticsResult
+        ↓
+AnalyticsPublisher
+```
+
+The next implementation milestone is:
+
+```text
+Phase 3.6 — Risk Analytics
+```
+
+---
+
+# Latest Milestone
+
+```text
+Date:   2026-09-12
+Phase:  Phase 3.5
+Task:   Streaming Analytics Pipeline
+Status: ✅ Complete
+```
+
+The project now has a complete validated path from C++ trade generation through Python streaming analytics and result publication.
+
+```text
+C++ Trading Engine
+        ↓
+C++ TCP Transport
+        ↓
+Framed JSON
         ↓
 Python SocketClient
         ↓
-Analytics Pipeline
+Message Parser
+        ↓
+StreamingProcessor
+        ↓
+AnalyticsResult
+        ↓
+AnalyticsPublisher
 ```
 
-Phase 3.5 — **Message Parsing** is the next development target.
+The next development target is:
 
+```text
+Phase 3.6 — Risk Analytics
+```

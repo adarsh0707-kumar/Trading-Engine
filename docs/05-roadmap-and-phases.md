@@ -549,15 +549,15 @@ Phase 3.4 is considered complete when:
 
 ## Status
 
-⏳ **Pending**
+✅ **Complete**
 
 ## Objectives
 
 Connect the socket-ingestion layer to the analytics processing pipeline.
 
-The streaming pipeline should consume incoming engine events and update analytical state continuously.
+The streaming pipeline consumes incoming trading-engine events, converts them into domain models, updates per-symbol analytical state, produces deterministic analytics results, and publishes those results through a transport-independent publisher interface.
 
-## Planned Flow
+## Implemented Flow
 
 ```text
 C++ Trading Engine
@@ -568,39 +568,235 @@ Python SocketClient
         ↓
 Message Parser
         ↓
-Streaming Processor
+Trade Domain Model
+        ↓
+StreamingProcessor
         ↓
 ┌─────────────────────────────┐
 │ SMA                         │
 │ EMA                         │
 │ VWAP                        │
 │ Volatility                  │
-│ Position                    │
-│ PnL                         │
-│ Drawdown                    │
 └─────────────────────────────┘
         ↓
-Analytics Result
+AnalyticsResult
         ↓
-Publisher
+AnalyticsPublisher
+        ↓
+JSON Output / Injected Sink
 ```
 
-## Planned Work
+## Implemented Components
 
-* Parse incoming trade messages.
-* Convert transport messages into domain models.
-* Feed trades into the streaming processor.
-* Maintain indicator state.
-* Maintain position state.
-* Calculate PnL.
-* Calculate drawdown.
-* Produce `AnalyticsResult`.
-* Add streaming integration tests.
-* Verify deterministic output using fixtures.
+### Streaming Processor
+
+The streaming processor:
+
+* consumes parsed trade events;
+* maintains per-symbol streaming state;
+* updates indicators incrementally;
+* preserves source event timestamps;
+* produces deterministic `AnalyticsResult` objects;
+* supports repeated processing of events for the same symbol.
+
+### Indicator State
+
+Streaming state currently supports:
+
+```text
+SMA
+EMA
+VWAP
+Volatility
+```
+
+Indicator calculations are updated as new trade events arrive rather than requiring the complete historical dataset to be recalculated.
+
+### Analytics Result
+
+Each processed trade produces an `AnalyticsResult` containing the current analytical state for the symbol.
+
+The result includes:
+
+```text
+event_id
+event_type
+timestamp
+symbol
+price
+quantity
+vwap
+sma
+ema
+volatility
+position
+realized_pnl
+unrealized_pnl
+equity
+peak_equity
+drawdown
+```
+
+The risk and position-related fields are currently retained as deterministic zero/default values until explicit trade-side information is available from the engine protocol.
+
+### Analytics Publisher
+
+A transport-independent `AnalyticsPublisher` was implemented to separate analytics calculation from downstream delivery.
+
+The publisher supports:
+
+* injected callable sinks;
+* deterministic JSON serialization;
+* compact output;
+* stable key ordering;
+* unique analytics event identifiers;
+* publication without coupling the analytics processor to a specific transport.
+
+Example output type:
+
+```text
+ANALYTICS_UPDATE
+```
+
+### Service Integration
+
+The `AnalyticsService` now orchestrates:
+
+```text
+SocketClient
+    ↓
+Incoming Message
+    ↓
+Trade Parsing
+    ↓
+StreamingProcessor
+    ↓
+AnalyticsResult
+    ↓
+AnalyticsPublisher
+```
+
+The service can therefore process a live engine event through the complete Phase 3.5 pipeline.
+
+## Protocol Compatibility
+
+Phase 3.5 consumes the existing C++ `TRADE` message schema without modifying the transport protocol.
+
+Current trade fields are:
+
+```text
+symbol
+price
+quantity
+taker_order_id
+maker_order_id
+```
+
+The existing protocol does not expose a reliable explicit BUY/SELL side for the executed trade.
+
+Therefore Phase 3.5 intentionally does not attempt to infer trading position direction from order identifiers.
+
+Position, PnL, equity, and drawdown calculations are deferred to Phase 3.6 until the protocol provides the required side information.
+
+## End-to-End Validation
+
+A deterministic end-to-end test verifies:
+
+```text
+Raw TRADE JSON
+      ↓
+Message Parser
+      ↓
+Trade
+      ↓
+StreamingProcessor
+      ↓
+AnalyticsResult
+      ↓
+AnalyticsPublisher
+      ↓
+Deterministic JSON Sink
+```
+
+The pipeline has also been manually verified using a C++-compatible `TRADE` payload.
+
+## Testing
+
+Phase 3.5 validation includes:
+
+* streaming processor unit tests;
+* publisher unit tests;
+* analytics-service integration tests;
+* deterministic serialization tests;
+* end-to-end raw-message processing;
+* existing Phase 3 regression tests.
+
+Current complete Python test suite:
+
+```text
+92 passed
+```
+
+Targeted publisher tests:
+
+```text
+6 passed
+```
+
+## Deferred Work
+
+The following functionality is intentionally deferred:
+
+```text
+Position tracking
+Realized PnL
+Unrealized PnL
+Equity
+Peak equity
+Drawdown
+Risk calculations
+```
+
+These belong to Phase 3.6 and require reliable trade-side information from the trading-engine protocol.
 
 ## Exit Criteria
 
-A live trade received from the C++ engine can travel through the Python analytics pipeline and produce a validated analytics result.
+Phase 3.5 is complete because:
+
+* incoming trade messages can be parsed;
+* trades are converted into domain models;
+* streaming state is maintained per symbol;
+* indicators are updated incrementally;
+* `AnalyticsResult` objects are produced;
+* analytics results have deterministic event identifiers;
+* analytics results can be published;
+* output serialization is deterministic;
+* end-to-end pipeline processing is verified;
+* the complete Python test suite passes.
+
+## Completion Result
+
+Phase 3.5 establishes the first complete Python streaming analytics slice:
+
+```text
+C++ Trade
+    ↓
+TCP Transport
+    ↓
+Python SocketClient
+    ↓
+Trade Parser
+    ↓
+StreamingProcessor
+    ↓
+Indicators
+    ↓
+AnalyticsResult
+    ↓
+AnalyticsPublisher
+```
+
+The analytics service is now capable of processing engine-generated trade events continuously and producing downstream-consumable analytics events.
 
 ---
 
@@ -612,23 +808,81 @@ A live trade received from the C++ engine can travel through the Python analytic
 
 ## Objectives
 
-Add risk-management calculations to the analytics service.
+Add position and risk-management calculations to the streaming analytics service.
+
+Phase 3.6 will extend the Phase 3.5 streaming pipeline with trade-direction-aware portfolio state.
 
 ## Planned Components
 
 ```text
-Position Sizing
-PnL
+Trade Side
+     ↓
+Position State
+     ↓
+Realized PnL
+     ↓
+Unrealized PnL
+     ↓
+Equity
+     ↓
+Peak Equity
+     ↓
 Drawdown
+     ↓
 Risk Manager
 ```
 
+## Protocol Requirement
+
+The current C++ `TRADE` event does not provide reliable explicit BUY/SELL side information.
+
+Before position and PnL calculations can be considered production-ready, the event protocol must expose sufficient information to determine trade direction.
+
+Potential protocol evolution may include an explicit:
+
+```text
+side
+```
+
+field or an equivalent deterministic representation of the executed trade direction.
+
+## Planned Work
+
+* Extend the trade protocol with explicit side information.
+* Update C++ trade serialization.
+* Update Python trade parsing.
+* Maintain position state.
+* Calculate realized PnL.
+* Calculate unrealized PnL.
+* Track equity.
+* Track peak equity.
+* Calculate drawdown.
+* Implement risk calculations.
+* Add deterministic risk fixtures.
+* Add C++ ↔ Python compatibility tests.
+* Add streaming regression tests.
+
 ## Exit Criteria
 
-Risk calculations pass deterministic fixtures and integrate with the streaming analytics pipeline.
+Risk calculations pass deterministic fixtures and integrate correctly with the Phase 3.5 streaming analytics pipeline.
+
+The resulting flow should be:
+
+```text
+C++ Trade + Side
+       ↓
+Python SocketClient
+       ↓
+Trade
+       ↓
+StreamingProcessor
+       ↓
+Position / PnL / Risk
+       ↓
+AnalyticsResult
+```
 
 ---
-
 # Phase 3.7 — Analytics Publishing
 
 ## Status
@@ -637,19 +891,24 @@ Risk calculations pass deterministic fixtures and integrate with the streaming a
 
 ## Objectives
 
-Publish calculated analytics results to downstream services.
+Harden analytics-result publication for downstream services.
+
+Phase 3.5 already provides the initial transport-independent publisher implementation. Phase 3.7 will formalize the downstream publishing contract and prepare it for integration with the Node gateway.
 
 ## Planned Work
 
-* Define analytics-result event format.
-* Implement publisher.
+* Freeze the analytics-result event schema.
+* Define downstream event contracts.
 * Add output validation.
+* Add publisher reliability handling.
 * Add integration tests.
-* Prepare interface for the Node gateway.
+* Prepare gateway integration.
+* Document analytics event compatibility.
+* Define delivery and failure semantics.
 
 ## Exit Criteria
 
-Analytics results can be published through a stable service interface.
+Analytics results can be published through a documented and stable service interface suitable for consumption by the Node gateway.
 
 ---
 
@@ -931,7 +1190,6 @@ Memory growth
 The platform meets documented MVP performance and reliability targets.
 
 ---
-
 # Milestone Summary
 
 | Phase     | Component                 | Status     |
@@ -943,14 +1201,14 @@ The platform meets documented MVP performance and reliability targets.
 | Phase 3.2 | Domain Models             | ✅ Complete |
 | Phase 3.3 | Technical Indicators      | ✅ Complete |
 | Phase 3.4 | Socket Ingestion          | ✅ Complete |
-| Phase 3.5 | Streaming Analytics       | ⏳ Pending  |
+| Phase 3.5 | Streaming Analytics       | ✅ Complete |
 | Phase 3.6 | Risk Analytics            | ⏳ Pending  |
 | Phase 3.7 | Analytics Publishing      | ⏳ Pending  |
 | Phase 4   | Node Gateway              | ⏳ Pending  |
 | Phase 5   | Web Dashboard             | ⏳ Pending  |
 | Phase 6   | Persistence               | ⏳ Pending  |
 | Phase 7   | Authentication & Security | ⏳ Pending  |
-| Phase 8   | Observability              | ⏳ Pending  |
+| Phase 8   | Observability             | ⏳ Pending  |
 | Phase 9   | Deployment                | ⏳ Pending  |
 | Phase 10  | Performance & Hardening   | ⏳ Pending  |
 
@@ -1003,7 +1261,6 @@ Phase 3.5 — Streaming Analytics
 ```
 
 ---
-
 # Vertical-Slice Validation
 
 Each major phase should be validated through an executable end-to-end path.
@@ -1027,14 +1284,32 @@ Framed JSON Message
     ↓
 Python SocketClient
     ↓
-Python Callback
+Message Parser
+    ↓
+Trade Domain Model
+    ↓
+StreamingProcessor
+    ↓
+Indicator State
+    ↓
+AnalyticsResult
+    ↓
+AnalyticsPublisher
+    ↓
+Deterministic JSON Output
 ```
 
-This represents the current Phase 1 → Phase 2 → Phase 3.4 vertical slice.
+This represents the completed:
+
+```text
+Phase 1 → Phase 2 → Phase 3.1 → Phase 3.2 → Phase 3.3 → Phase 3.4 → Phase 3.5
+```
+
+vertical slice.
 
 ## Next Vertical Slice
 
-Phase 3.5 will extend the flow to:
+Phase 3.6 will extend the flow with reliable trade-side information:
 
 ```text
 C++ Order
@@ -1043,7 +1318,7 @@ Order Book
     ↓
 Matching Engine
     ↓
-Trade
+Trade + Side
     ↓
 C++ Transport
     ↓
@@ -1051,9 +1326,17 @@ Python SocketClient
     ↓
 Message Parser
     ↓
-Streaming Processor
+StreamingProcessor
     ↓
-Indicators / Position / PnL / Risk
+Indicators
+    ↓
+Position
+    ↓
+PnL
+    ↓
+Equity / Drawdown
+    ↓
+Risk Analytics
     ↓
 AnalyticsResult
 ```
@@ -1137,10 +1420,9 @@ A phase is considered complete only when:
 * The implementation is merged into `main`.
 
 ---
-
 # Current Project Status
 
-As of September 10, 2026:
+As of **September 12, 2026**:
 
 ```text
 Phase 0        ████████████████████ 100%  Complete
@@ -1150,7 +1432,7 @@ Phase 3.1      ████████████████████ 100%
 Phase 3.2      ████████████████████ 100%  Complete
 Phase 3.3      ████████████████████ 100%  Complete
 Phase 3.4      ████████████████████ 100%  Complete
-Phase 3.5      ░░░░░░░░░░░░░░░░░░░░   0%  Pending
+Phase 3.5      ████████████████████ 100%  Complete
 Phase 3.6      ░░░░░░░░░░░░░░░░░░░░   0%  Pending
 Phase 3.7      ░░░░░░░░░░░░░░░░░░░░   0%  Pending
 Phase 4        ░░░░░░░░░░░░░░░░░░░░   0%  Pending
@@ -1162,10 +1444,28 @@ Phase 9        ░░░░░░░░░░░░░░░░░░░░   0%
 Phase 10       ░░░░░░░░░░░░░░░░░░░░   0%  Pending
 ```
 
-The project has completed the C++ matching-engine foundation, C++ transport layer, and the first four Python analytics stages.
+The project has completed:
+
+* C++ matching-engine foundation.
+* C++ TCP transport layer.
+* Python analytics foundation.
+* Python domain models.
+* Technical indicators.
+* Python socket ingestion.
+* Streaming analytics processing.
+* Analytics-result generation.
+* Analytics-result publishing.
+
+The current Python analytics test suite passes:
+
+```text
+92 passed
+```
 
 The immediate next milestone is:
 
 ```text
-Phase 3.5 — Streaming Analytics
+Phase 3.6 — Risk Analytics
 ```
+
+Phase 3.6 will introduce trade-direction-aware position, PnL, equity, drawdown, and risk calculations after the trade protocol is extended with reliable side information.
