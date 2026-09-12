@@ -28,7 +28,14 @@ class MessageParser:
             "payload": "{...}"
         }
 
+
     The ``payload`` field for TRADE messages is itself a JSON string.
+
+    The ``payload`` field for TRADE messages is itself a JSON string
+    carrying ``taker_side``; ``buy_order_id``/``sell_order_id`` are derived
+    from it because taker/maker identifies who crossed the spread, not the
+    direction of the fill.
+
     """
 
     SUPPORTED_TYPES = frozenset({"TRADE", "MARKET_TICK"})
@@ -101,10 +108,53 @@ class MessageParser:
         )
         payload = self._parse_payload(envelope)
 
+
+        symbol = self._require_string(
+            payload,
+            "symbol",
+            "TRADE payload",
+        )
+        price = self._parse_decimal(
+            payload,
+            "price",
+            "TRADE payload",
+        )
+        quantity = self._parse_positive_int(
+            payload,
+            "quantity",
+            "TRADE payload",
+        )
+        taker_order_id = self._require_string(
+            payload,
+            "taker_order_id",
+            "TRADE payload",
+        )
+        maker_order_id = self._require_string(
+            payload,
+            "maker_order_id",
+            "TRADE payload",
+        )
+        taker_side = self._require_string(
+            payload,
+            "taker_side",
+            "TRADE payload",
+        )
+
+        if taker_side not in ("BUY", "SELL"):
+            raise MessageParseError(
+                "TRADE payload.taker_side must be BUY or SELL"
+            )
+
+        if taker_side == "BUY":
+            buy_order_id, sell_order_id = taker_order_id, maker_order_id
+        else:
+            buy_order_id, sell_order_id = maker_order_id, taker_order_id
+
         return Trade(
             event_id=event_id,
             event_type="TRADE",
             trade_id=event_id,
+
             symbol=self._require_string(
                 payload,
                 "symbol",
@@ -131,6 +181,17 @@ class MessageParser:
                 "maker_order_id",
                 "TRADE payload",
             ),
+
+            symbol=symbol,
+            price=price,
+            quantity=quantity,
+            timestamp=timestamp,
+            taker_side=taker_side,
+            buy_order_id=buy_order_id,
+            sell_order_id=sell_order_id,
+            taker_order_id=taker_order_id,
+            maker_order_id=maker_order_id,
+
         )
 
     def _parse_tick(self, envelope: dict[str, Any]) -> Tick:

@@ -96,6 +96,7 @@ def test_socket_client_receives_cxx_compatible_messages() -> None:
                     "quantity": 3,
                     "taker_order_id": "SIM-00000001",
                     "maker_order_id": "SIM-00000002",
+                    "taker_side": "BUY",
                 },
                 separators=(",", ":"),
             ),
@@ -156,6 +157,7 @@ def test_socket_client_receives_cxx_compatible_messages() -> None:
             "quantity": 3,
             "taker_order_id": "SIM-00000001",
             "maker_order_id": "SIM-00000002",
+            "taker_side": "BUY",
         }
 
     finally:

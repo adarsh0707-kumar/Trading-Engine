@@ -1,7 +1,8 @@
 #include "orderbook/Order.hpp"
 #include "orderbook/PriceLevel.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -36,16 +37,16 @@ int main()
         level.add_order(order1);
         level.add_order(order2);
 
-        assert(level.order_count() == 2);
-        assert(level.total_quantity() == 150);
+        CHECK(level.order_count() == 2);
+        CHECK(level.total_quantity() == 150);
 
         bool cancelled = level.cancel_order("B1");
 
-        assert(cancelled);
-        assert(order1->status() == OrderStatus::CANCELLED);
-        assert(level.order_count() == 1);
-        assert(level.total_quantity() == 50);
-        assert(level.front()->order_id() == "B2");
+        CHECK(cancelled);
+        CHECK(order1->status() == OrderStatus::CANCELLED);
+        CHECK(level.order_count() == 1);
+        CHECK(level.total_quantity() == 50);
+        CHECK(level.front()->order_id() == "B2");
     }
 
     // Test 2: cancel middle order preserves FIFO
@@ -62,15 +63,15 @@ int main()
 
         bool cancelled = level.cancel_order("B2");
 
-        assert(cancelled);
-        assert(order2->status() == OrderStatus::CANCELLED);
-        assert(level.order_count() == 2);
-        assert(level.total_quantity() == 175);
-        assert(level.front()->order_id() == "B1");
+        CHECK(cancelled);
+        CHECK(order2->status() == OrderStatus::CANCELLED);
+        CHECK(level.order_count() == 2);
+        CHECK(level.total_quantity() == 175);
+        CHECK(level.front()->order_id() == "B1");
 
         // B1 should remain at the front.
         // B3 should remain behind it.
-        assert(level.front()->order_id() == "B1");
+        CHECK(level.front()->order_id() == "B1");
     }
 
     // Test 3: unknown order returns false
@@ -82,10 +83,10 @@ int main()
 
         bool cancelled = level.cancel_order("UNKNOWN");
 
-        assert(!cancelled);
-        assert(level.order_count() == 1);
-        assert(level.total_quantity() == 100);
-        assert(order->is_active());
+        CHECK(!cancelled);
+        CHECK(level.order_count() == 1);
+        CHECK(level.total_quantity() == 100);
+        CHECK(order->is_active());
     }
 
     // Test 4: empty order ID is rejected
@@ -106,7 +107,7 @@ int main()
             threw = true;
         }
 
-        assert(threw);
+        CHECK(threw);
     }
 
     // Test 5: partially filled order can be cancelled
@@ -118,16 +119,16 @@ int main()
 
         order->fill(40);
 
-        assert(order->remaining_quantity() == 60);
-        assert(order->status() == OrderStatus::PARTIALLY_FILLED);
-        assert(level.total_quantity() == 100);
+        CHECK(order->remaining_quantity() == 60);
+        CHECK(order->status() == OrderStatus::PARTIALLY_FILLED);
+        CHECK(level.total_quantity() == 100);
 
         bool cancelled = level.cancel_order("B1");
 
-        assert(cancelled);
-        assert(order->status() == OrderStatus::CANCELLED);
-        assert(level.order_count() == 0);
-        assert(level.total_quantity() == 40);
+        CHECK(cancelled);
+        CHECK(order->status() == OrderStatus::CANCELLED);
+        CHECK(level.order_count() == 0);
+        CHECK(level.total_quantity() == 40);
     }
 
     std::cout

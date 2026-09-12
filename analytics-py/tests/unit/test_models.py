@@ -79,12 +79,14 @@ def test_trade_creation() -> None:
         symbol="SIM",
         price=Decimal("101.25"),
         quantity=40,
+        taker_side="BUY",
         buy_order_id="ord-000010",
         sell_order_id="ord-000009",
         timestamp=TIMESTAMP,
     )
 
     assert trade.trade_id == "trd-000045"
+    assert trade.taker_side == "BUY"
     assert trade.price == Decimal("101.25")
     assert trade.quantity == 40
     assert trade.buy_order_id == "ord-000010"
@@ -99,6 +101,7 @@ def test_trade_to_dict() -> None:
         symbol="SIM",
         price=Decimal("101.25"),
         quantity=40,
+        taker_side="SELL",
         timestamp=TIMESTAMP,
     )
 
@@ -120,6 +123,7 @@ def test_trade_to_dict() -> None:
         ("symbol", ""),
         ("price", Decimal("0")),
         ("quantity", 0),
+        ("taker_side", "LONG"),
     ],
 )
 def test_trade_rejects_invalid_values(field: str, value: object) -> None:
@@ -130,6 +134,7 @@ def test_trade_rejects_invalid_values(field: str, value: object) -> None:
         "symbol": "SIM",
         "price": Decimal("101.25"),
         "quantity": 40,
+        "taker_side": "BUY",
         "timestamp": TIMESTAMP,
     }
 

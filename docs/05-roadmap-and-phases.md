@@ -512,6 +512,9 @@ price
 quantity
 taker_order_id
 maker_order_id
+taker_side
+buy_order_id
+sell_order_id
 ```
 
 Python successfully received real trade events from the C++ engine and responded to transport heartbeats.

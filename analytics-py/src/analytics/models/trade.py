@@ -19,8 +19,11 @@ class Trade:
     price: Decimal
     quantity: int
     timestamp: datetime
+    taker_side: str
     buy_order_id: str | None = None
     sell_order_id: str | None = None
+    taker_order_id: str | None = None
+    maker_order_id: str | None = None
 
     def __post_init__(self) -> None:
         if not self.event_id:
@@ -40,6 +43,9 @@ class Trade:
 
         if self.quantity <= 0:
             raise ValueError("quantity must be positive")
+
+        if self.taker_side not in ("BUY", "SELL"):
+            raise ValueError("taker_side must be BUY or SELL")
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the model to a JSON-friendly dictionary."""

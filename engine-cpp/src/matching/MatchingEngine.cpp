@@ -1,11 +1,39 @@
 #include "matching/MatchingEngine.hpp"
 
 #include <algorithm>
+#include <iomanip>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
 namespace engine
 {
+
+    std::string MatchingEngine::next_trade_id(
+        const std::string &taker_order_id,
+        const std::string &maker_order_id) const
+    {
+        /*
+         * The taker/maker pair alone does not identify a trade: the same
+         * pair matches again whenever a partially filled order trades
+         * with the same counterparty, and order identifiers repeat
+         * across engine restarts. The sequence number makes every trade
+         * identifier unique for the lifetime of the engine.
+         */
+        std::ostringstream trade_id;
+
+        trade_id
+            << "trade-"
+            << std::setw(8)
+            << std::setfill('0')
+            << ++trade_sequence_
+            << "-"
+            << taker_order_id
+            << "-"
+            << maker_order_id;
+
+        return trade_id.str();
+    }
 
     MatchResult MatchingEngine::match(
         OrderBook &order_book,
@@ -80,16 +108,16 @@ namespace engine
                     resting_order->price();
 
                 const std::string trade_id =
-                    "trade-" +
-                    incoming_order->order_id() +
-                    "-" +
-                    resting_order->order_id();
+                    next_trade_id(
+                        incoming_order->order_id(),
+                        resting_order->order_id());
 
                 auto trade = std::make_shared<Trade>(
                     trade_id,
                     order_book.symbol(),
                     incoming_order->order_id(),
                     resting_order->order_id(),
+                    incoming_order->side(),
                     trade_price,
                     trade_quantity);
 
@@ -146,16 +174,16 @@ namespace engine
                     resting_order->price();
 
                 const std::string trade_id =
-                    "trade-" +
-                    incoming_order->order_id() +
-                    "-" +
-                    resting_order->order_id();
+                    next_trade_id(
+                        incoming_order->order_id(),
+                        resting_order->order_id());
 
                 auto trade = std::make_shared<Trade>(
                     trade_id,
                     order_book.symbol(),
                     incoming_order->order_id(),
                     resting_order->order_id(),
+                    incoming_order->side(),
                     trade_price,
                     trade_quantity);
 

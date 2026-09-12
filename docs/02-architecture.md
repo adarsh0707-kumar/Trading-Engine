@@ -164,6 +164,7 @@ Example event:
   "symbol": "SIM",
   "price": 101.25,
   "quantity": 25,
+  "taker_side": "BUY",
   "buy_order_id": "B-100",
   "sell_order_id": "S-044"
 }

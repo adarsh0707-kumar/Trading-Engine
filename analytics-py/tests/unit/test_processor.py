@@ -20,8 +20,16 @@ def _trade(index: int, price: str, quantity: int = 1, symbol: str = "SIM") -> Tr
         price=Decimal(price),
         quantity=quantity,
         timestamp=BASE_TIME + timedelta(seconds=index),
+
         buy_order_id=f"taker-{index}",
         sell_order_id=f"maker-{index}",
+
+        taker_side="BUY",
+        buy_order_id=f"taker-{index}",
+        sell_order_id=f"maker-{index}",
+        taker_order_id=f"taker-{index}",
+        maker_order_id=f"maker-{index}",
+
     )
 
 

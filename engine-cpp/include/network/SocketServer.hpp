@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -68,6 +69,10 @@ private:
 
     std::thread acceptThread_;
     std::thread heartbeatThread_;
+
+    std::mutex stopMutex_;
+    std::condition_variable stopCv_;
+    bool stopRequested_{false};
 
     mutable std::mutex clientsMutex_;
 

@@ -4,7 +4,8 @@
 #include "serialization/Message.hpp"
 
 #include <arpa/inet.h>
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <chrono>
 #include <cstdint>
 #include <iostream>
@@ -32,7 +33,7 @@ static std::string receiveMessage(int fd)
                 sizeof(temp),
                 0);
 
-        assert(received > 0);
+        CHECK(received > 0);
 
         buffer.insert(
             buffer.end(),
@@ -58,7 +59,7 @@ static int connectToServer(std::uint16_t port)
             SOCK_STREAM,
             0);
 
-    assert(fd >= 0);
+    CHECK(fd >= 0);
 
     sockaddr_in address{};
 
@@ -77,7 +78,7 @@ static int connectToServer(std::uint16_t port)
             reinterpret_cast<sockaddr *>(&address),
             sizeof(address));
 
-    assert(result == 0);
+    CHECK(result == 0);
 
     return fd;
 }
@@ -115,9 +116,9 @@ static void test_graceful_shutdown()
         100,
         2);
 
-    assert(server.start());
-    assert(server.isRunning());
-    assert(server.port() != 0);
+    CHECK(server.start());
+    CHECK(server.isRunning());
+    CHECK(server.port() != 0);
 
     /*
      * Connect a client so shutdown is tested while
@@ -126,7 +127,7 @@ static void test_graceful_shutdown()
     const int clientFd =
         connectToServer(server.port());
 
-    assert(
+    CHECK(
         waitForClientCount(
             server,
             1,
@@ -142,15 +143,15 @@ static void test_graceful_shutdown()
     const Message message =
         JsonSerializer::deserialize(hello);
 
-    assert(
+    CHECK(
         message.type ==
         MessageType::HELLO);
 
     /*
      * The server should currently have one active client.
      */
-    assert(server.isRunning());
-    assert(server.clientCount() == 1);
+    CHECK(server.isRunning());
+    CHECK(server.clientCount() == 1);
 
     /*
      * --------------------------------------------------------
@@ -170,9 +171,9 @@ static void test_graceful_shutdown()
     /*
      * Verify the final server state.
      */
-    assert(!server.isRunning());
-    assert(server.clientCount() == 0);
-    assert(server.port() == 0);
+    CHECK(!server.isRunning());
+    CHECK(server.clientCount() == 0);
+    CHECK(server.port() == 0);
 
     /*
      * The client socket should also be safe to close after
@@ -190,9 +191,9 @@ static void test_graceful_shutdown()
      */
     server.stop();
 
-    assert(!server.isRunning());
-    assert(server.clientCount() == 0);
-    assert(server.port() == 0);
+    CHECK(!server.isRunning());
+    CHECK(server.clientCount() == 0);
+    CHECK(server.port() == 0);
 }
 
 int main()

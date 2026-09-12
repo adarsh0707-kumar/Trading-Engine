@@ -1,7 +1,8 @@
 #include "orderbook/Order.hpp"
 #include "orderbook/OrderBook.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -41,15 +42,15 @@ int main()
 
         book.add_order(bid);
 
-        assert(book.order_count() == 1);
-        assert(book.best_bid() == 100.0);
+        CHECK(book.order_count() == 1);
+        CHECK(book.best_bid() == 100.0);
 
         bool cancelled = book.cancel_order("B1");
 
-        assert(cancelled);
-        assert(bid->status() == OrderStatus::CANCELLED);
-        assert(book.order_count() == 0);
-        assert(book.bids().empty());
+        CHECK(cancelled);
+        CHECK(bid->status() == OrderStatus::CANCELLED);
+        CHECK(book.order_count() == 0);
+        CHECK(book.bids().empty());
     }
 
     // Test 2: cancel an ask order
@@ -65,15 +66,15 @@ int main()
 
         book.add_order(ask);
 
-        assert(book.order_count() == 1);
-        assert(book.best_ask() == 101.0);
+        CHECK(book.order_count() == 1);
+        CHECK(book.best_ask() == 101.0);
 
         bool cancelled = book.cancel_order("S1");
 
-        assert(cancelled);
-        assert(ask->status() == OrderStatus::CANCELLED);
-        assert(book.order_count() == 0);
-        assert(book.asks().empty());
+        CHECK(cancelled);
+        CHECK(ask->status() == OrderStatus::CANCELLED);
+        CHECK(book.order_count() == 0);
+        CHECK(book.asks().empty());
     }
 
     // Test 3: cancel one order and preserve other orders
@@ -97,17 +98,17 @@ int main()
         book.add_order(bid1);
         book.add_order(bid2);
 
-        assert(book.order_count() == 2);
+        CHECK(book.order_count() == 2);
 
         bool cancelled = book.cancel_order("B1");
 
-        assert(cancelled);
-        assert(bid1->status() == OrderStatus::CANCELLED);
-        assert(bid2->is_active());
-        assert(book.order_count() == 1);
-        assert(book.best_bid() == 100.0);
-        assert(book.bids().at(100.0).front()->order_id() == "B2");
-        assert(book.bids().at(100.0).total_quantity() == 50);
+        CHECK(cancelled);
+        CHECK(bid1->status() == OrderStatus::CANCELLED);
+        CHECK(bid2->is_active());
+        CHECK(book.order_count() == 1);
+        CHECK(book.best_bid() == 100.0);
+        CHECK(book.bids().at(100.0).front()->order_id() == "B2");
+        CHECK(book.bids().at(100.0).total_quantity() == 50);
     }
 
     // Test 4: cancel partially filled order
@@ -125,16 +126,16 @@ int main()
 
         bid->fill(40);
 
-        assert(bid->remaining_quantity() == 60);
-        assert(bid->status() == OrderStatus::PARTIALLY_FILLED);
-        assert(book.order_count() == 1);
+        CHECK(bid->remaining_quantity() == 60);
+        CHECK(bid->status() == OrderStatus::PARTIALLY_FILLED);
+        CHECK(book.order_count() == 1);
 
         bool cancelled = book.cancel_order("B1");
 
-        assert(cancelled);
-        assert(bid->status() == OrderStatus::CANCELLED);
-        assert(book.order_count() == 0);
-        assert(book.bids().empty());
+        CHECK(cancelled);
+        CHECK(bid->status() == OrderStatus::CANCELLED);
+        CHECK(book.order_count() == 0);
+        CHECK(book.bids().empty());
     }
 
     // Test 5: unknown order returns false
@@ -152,9 +153,9 @@ int main()
 
         bool cancelled = book.cancel_order("UNKNOWN");
 
-        assert(!cancelled);
-        assert(book.order_count() == 1);
-        assert(bid->is_active());
+        CHECK(!cancelled);
+        CHECK(book.order_count() == 1);
+        CHECK(bid->is_active());
     }
 
     // Test 6: empty order ID is rejected
@@ -172,7 +173,7 @@ int main()
             threw = true;
         }
 
-        assert(threw);
+        CHECK(threw);
     }
 
     // Test 7: cancellation removes empty price level
@@ -196,16 +197,16 @@ int main()
         book.add_order(bid1);
         book.add_order(bid2);
 
-        assert(book.order_count() == 2);
-        assert(book.best_bid() == 100.0);
+        CHECK(book.order_count() == 2);
+        CHECK(book.best_bid() == 100.0);
 
         bool cancelled = book.cancel_order("B1");
 
-        assert(cancelled);
-        assert(book.order_count() == 1);
-        assert(book.bids().size() == 1);
-        assert(book.best_bid() == 99.0);
-        assert(book.bids().at(99.0).front()->order_id() == "B2");
+        CHECK(cancelled);
+        CHECK(book.order_count() == 1);
+        CHECK(book.bids().size() == 1);
+        CHECK(book.best_bid() == 99.0);
+        CHECK(book.bids().at(99.0).front()->order_id() == "B2");
     }
 
     // Test 8: filled order cannot be cancelled
@@ -223,7 +224,7 @@ int main()
 
         bid->fill(100);
 
-        assert(bid->is_fully_filled());
+        CHECK(bid->is_fully_filled());
 
         bool threw = false;
 
@@ -236,8 +237,8 @@ int main()
             threw = true;
         }
 
-        assert(threw);
-        assert(book.order_count() == 1);
+        CHECK(threw);
+        CHECK(book.order_count() == 1);
     }
 
     std::cout

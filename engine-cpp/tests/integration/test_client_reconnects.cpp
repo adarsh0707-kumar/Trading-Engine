@@ -4,7 +4,8 @@
 #include "serialization/Message.hpp"
 
 #include <arpa/inet.h>
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <chrono>
 #include <cstdint>
 #include <iostream>
@@ -32,7 +33,7 @@ static std::string receiveMessage(int fd)
                 sizeof(temp),
                 0);
 
-        assert(received > 0);
+        CHECK(received > 0);
 
         buffer.insert(
             buffer.end(),
@@ -58,7 +59,7 @@ static int connectToServer(std::uint16_t port)
             SOCK_STREAM,
             0);
 
-    assert(fd >= 0);
+    CHECK(fd >= 0);
 
     sockaddr_in address{};
 
@@ -77,7 +78,7 @@ static int connectToServer(std::uint16_t port)
             reinterpret_cast<sockaddr *>(&address),
             sizeof(address));
 
-    assert(result == 0);
+    CHECK(result == 0);
 
     return fd;
 }
@@ -115,9 +116,9 @@ static void test_client_reconnects()
         100,
         2);
 
-    assert(server.start());
-    assert(server.isRunning());
-    assert(server.port() != 0);
+    CHECK(server.start());
+    CHECK(server.isRunning());
+    CHECK(server.port() != 0);
 
     /*
      * --------------------------------------------------------
@@ -127,7 +128,7 @@ static void test_client_reconnects()
     const int firstClientFd =
         connectToServer(server.port());
 
-    assert(
+    CHECK(
         waitForClientCount(
             server,
             1,
@@ -139,7 +140,7 @@ static void test_client_reconnects()
     const Message firstMessage =
         JsonSerializer::deserialize(firstHello);
 
-    assert(
+    CHECK(
         firstMessage.type ==
         MessageType::HELLO);
 
@@ -155,7 +156,7 @@ static void test_client_reconnects()
 
     ::close(firstClientFd);
 
-    assert(
+    CHECK(
         waitForClientCount(
             server,
             0,
@@ -172,7 +173,7 @@ static void test_client_reconnects()
     const int secondClientFd =
         connectToServer(server.port());
 
-    assert(
+    CHECK(
         waitForClientCount(
             server,
             1,
@@ -184,14 +185,14 @@ static void test_client_reconnects()
     const Message secondMessage =
         JsonSerializer::deserialize(secondHello);
 
-    assert(
+    CHECK(
         secondMessage.type ==
         MessageType::HELLO);
 
     /*
      * The server must still be operational after reconnect.
      */
-    assert(server.isRunning());
+    CHECK(server.isRunning());
 
     /*
      * Clean up the second client.
@@ -202,7 +203,7 @@ static void test_client_reconnects()
 
     ::close(secondClientFd);
 
-    assert(
+    CHECK(
         waitForClientCount(
             server,
             0,
@@ -213,8 +214,8 @@ static void test_client_reconnects()
      */
     server.stop();
 
-    assert(!server.isRunning());
-    assert(server.clientCount() == 0);
+    CHECK(!server.isRunning());
+    CHECK(server.clientCount() == 0);
 }
 
 int main()

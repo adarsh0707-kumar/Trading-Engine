@@ -3,7 +3,8 @@
 #include "serialization/JsonSerializer.hpp"
 #include "serialization/Message.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <chrono>
 #include <cstring>
 #include <iostream>
@@ -59,7 +60,7 @@ static std::string receiveMessage(int fd)
                 sizeof(temp),
                 0);
 
-        assert(received > 0);
+        CHECK(received > 0);
 
         buffer.insert(
             buffer.end(),
@@ -86,7 +87,7 @@ static int connectToServer(
             SOCK_STREAM,
             0);
 
-    assert(fd >= 0);
+    CHECK(fd >= 0);
 
     sockaddr_in address{};
 
@@ -105,7 +106,7 @@ static int connectToServer(
             reinterpret_cast<sockaddr *>(&address),
             sizeof(address));
 
-    assert(result == 0);
+    CHECK(result == 0);
 
     return fd;
 }
@@ -114,9 +115,9 @@ static void test_server_accepts_client()
 {
     SocketServer server(0);
 
-    assert(server.start());
-    assert(server.isRunning());
-    assert(server.port() != 0);
+    CHECK(server.start());
+    CHECK(server.isRunning());
+    CHECK(server.port() != 0);
 
     const int clientFd =
         connectToServer(server.port());
@@ -132,7 +133,7 @@ static void test_server_accepts_client()
             std::chrono::milliseconds(5));
     }
 
-    assert(server.clientCount() == 1);
+    CHECK(server.clientCount() == 1);
 
     const std::string hello =
         receiveMessage(clientFd);
@@ -140,7 +141,7 @@ static void test_server_accepts_client()
     const Message message =
         JsonSerializer::deserialize(hello);
 
-    assert(
+    CHECK(
         message.type ==
         MessageType::HELLO);
 
@@ -148,14 +149,14 @@ static void test_server_accepts_client()
 
     server.stop();
 
-    assert(!server.isRunning());
+    CHECK(!server.isRunning());
 }
 
 static void test_heartbeat()
 {
     SocketServer server(0);
 
-    assert(server.start());
+    CHECK(server.start());
 
     const int clientFd =
         connectToServer(server.port());
@@ -183,7 +184,7 @@ static void test_heartbeat()
     const auto frame =
         Protocol::frame(json);
 
-    assert(
+    CHECK(
         sendAll(
             clientFd,
             frame));
@@ -195,15 +196,15 @@ static void test_heartbeat()
         JsonSerializer::deserialize(
             responseJson);
 
-    assert(
+    CHECK(
         response.type ==
         MessageType::HEARTBEAT);
 
-    assert(
+    CHECK(
         response.requestId ==
         "heartbeat-1");
 
-    assert(
+    CHECK(
         response.payload ==
         "OK");
 
@@ -216,7 +217,7 @@ static void test_broadcast()
 {
     SocketServer server(0);
 
-    assert(server.start());
+    CHECK(server.start());
 
     const int clientFd =
         connectToServer(server.port());
@@ -246,15 +247,15 @@ static void test_broadcast()
         JsonSerializer::deserialize(
             responseJson);
 
-    assert(
+    CHECK(
         received.type ==
         MessageType::TRADE);
 
-    assert(
+    CHECK(
         received.requestId ==
         "trade-1");
 
-    assert(
+    CHECK(
         received.payload ==
         "price=101.5 quantity=10");
 

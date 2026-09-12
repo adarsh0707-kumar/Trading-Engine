@@ -1,6 +1,7 @@
 #include "market/MockMarketGenerator.hpp"
 
-#include <cassert>
+#include "../TestCheck.hpp"
+
 #include <iostream>
 #include <stdexcept>
 
@@ -16,10 +17,10 @@ static void test_first_tick_is_deterministic()
 
     Tick tick = generator.next();
 
-    assert(tick.sequence == 1);
-    assert(tick.order_id == "SIM-00000001");
-    assert(tick.symbol == "SIM");
-    assert(tick.is_valid());
+    CHECK(tick.sequence == 1);
+    CHECK(tick.order_id == "SIM-00000001");
+    CHECK(tick.symbol == "SIM");
+    CHECK(tick.is_valid());
 }
 
 static void test_same_seed_produces_same_stream()
@@ -36,14 +37,14 @@ static void test_same_seed_produces_same_stream()
         Tick a = first.next();
         Tick b = second.next();
 
-        assert(a.sequence == b.sequence);
-        assert(a.order_id == b.order_id);
-        assert(a.symbol == b.symbol);
-        assert(a.side == b.side);
-        assert(a.order_type == b.order_type);
-        assert(a.price == b.price);
-        assert(a.quantity == b.quantity);
-        assert(a.time_in_force == b.time_in_force);
+        CHECK(a.sequence == b.sequence);
+        CHECK(a.order_id == b.order_id);
+        CHECK(a.symbol == b.symbol);
+        CHECK(a.side == b.side);
+        CHECK(a.order_type == b.order_type);
+        CHECK(a.price == b.price);
+        CHECK(a.quantity == b.quantity);
+        CHECK(a.time_in_force == b.time_in_force);
     }
 }
 
@@ -74,7 +75,7 @@ static void test_different_seed_produces_different_stream()
         }
     }
 
-    assert(different);
+    CHECK(different);
 }
 
 static void test_sequence_numbers_are_monotonic()
@@ -86,8 +87,8 @@ static void test_sequence_numbers_are_monotonic()
     {
         Tick tick = generator.next();
 
-        assert(tick.sequence == expected);
-        assert(generator.next_sequence() == expected + 1);
+        CHECK(tick.sequence == expected);
+        CHECK(generator.next_sequence() == expected + 1);
     }
 }
 
@@ -102,11 +103,11 @@ static void test_order_ids_are_unique()
     {
         Tick tick = generator.next();
 
-        assert(!tick.order_id.empty());
+        CHECK(!tick.order_id.empty());
 
         if (!previous_id.empty())
         {
-            assert(tick.order_id != previous_id);
+            CHECK(tick.order_id != previous_id);
         }
 
         previous_id = tick.order_id;
@@ -128,13 +129,13 @@ static void test_generated_values_are_in_range()
     {
         Tick tick = generator.next();
 
-        assert(tick.price >= 100.00);
-        assert(tick.price <= 101.00);
+        CHECK(tick.price >= 100.00);
+        CHECK(tick.price <= 101.00);
 
-        assert(tick.quantity >= 10);
-        assert(tick.quantity <= 20);
+        CHECK(tick.quantity >= 10);
+        CHECK(tick.quantity <= 20);
 
-        assert(tick.is_valid());
+        CHECK(tick.is_valid());
     }
 }
 
@@ -147,13 +148,13 @@ static void test_generate_count()
 
     MarketData data = generator.generate(50);
 
-    assert(data.size() == 50);
-    assert(!data.empty());
+    CHECK(data.size() == 50);
+    CHECK(!data.empty());
 
     for (std::size_t i = 0; i < data.size(); ++i)
     {
-        assert(data.ticks()[i].sequence == i + 1);
-        assert(data.ticks()[i].is_valid());
+        CHECK(data.ticks()[i].sequence == i + 1);
+        CHECK(data.ticks()[i].is_valid());
     }
 }
 
@@ -174,23 +175,23 @@ static void test_reset_replays_stream()
     Tick replay_second = generator.next();
     Tick replay_third = generator.next();
 
-    assert(first.sequence == replay_first.sequence);
-    assert(first.order_id == replay_first.order_id);
-    assert(first.price == replay_first.price);
-    assert(first.quantity == replay_first.quantity);
-    assert(first.side == replay_first.side);
+    CHECK(first.sequence == replay_first.sequence);
+    CHECK(first.order_id == replay_first.order_id);
+    CHECK(first.price == replay_first.price);
+    CHECK(first.quantity == replay_first.quantity);
+    CHECK(first.side == replay_first.side);
 
-    assert(second.sequence == replay_second.sequence);
-    assert(second.order_id == replay_second.order_id);
-    assert(second.price == replay_second.price);
-    assert(second.quantity == replay_second.quantity);
-    assert(second.side == replay_second.side);
+    CHECK(second.sequence == replay_second.sequence);
+    CHECK(second.order_id == replay_second.order_id);
+    CHECK(second.price == replay_second.price);
+    CHECK(second.quantity == replay_second.quantity);
+    CHECK(second.side == replay_second.side);
 
-    assert(third.sequence == replay_third.sequence);
-    assert(third.order_id == replay_third.order_id);
-    assert(third.price == replay_third.price);
-    assert(third.quantity == replay_third.quantity);
-    assert(third.side == replay_third.side);
+    CHECK(third.sequence == replay_third.sequence);
+    CHECK(third.order_id == replay_third.order_id);
+    CHECK(third.price == replay_third.price);
+    CHECK(third.quantity == replay_third.quantity);
+    CHECK(third.side == replay_third.side);
 }
 
 static void test_invalid_configuration_is_rejected()
@@ -210,7 +211,7 @@ static void test_invalid_configuration_is_rejected()
         threw = true;
     }
 
-    assert(threw);
+    CHECK(threw);
 }
 
 static void test_empty_symbol_is_rejected()
@@ -229,7 +230,7 @@ static void test_empty_symbol_is_rejected()
         threw = true;
     }
 
-    assert(threw);
+    CHECK(threw);
 }
 
 int main()
