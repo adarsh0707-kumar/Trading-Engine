@@ -155,33 +155,6 @@ class MessageParser:
             event_type="TRADE",
             trade_id=event_id,
 
-            symbol=self._require_string(
-                payload,
-                "symbol",
-                "TRADE payload",
-            ),
-            price=self._parse_decimal(
-                payload,
-                "price",
-                "TRADE payload",
-            ),
-            quantity=self._parse_positive_int(
-                payload,
-                "quantity",
-                "TRADE payload",
-            ),
-            timestamp=timestamp,
-            buy_order_id=self._require_string(
-                payload,
-                "taker_order_id",
-                "TRADE payload",
-            ),
-            sell_order_id=self._require_string(
-                payload,
-                "maker_order_id",
-                "TRADE payload",
-            ),
-
             symbol=symbol,
             price=price,
             quantity=quantity,

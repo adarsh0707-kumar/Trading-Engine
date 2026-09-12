@@ -1,24 +1,4 @@
-"""Streaming processor that turns Trade events into AnalyticsResult snapshots.
-
-Position, PnL, drawdown, and equity are reported as zero placeholders in
-
-Phase 3.5. The TRADE wire message (engine-cpp/include/orderbook/Trade.hpp)
-carries only taker_order_id/maker_order_id and no BUY/SELL side. Taker vs.
-maker identifies which order crossed the spread, not which side of the
-book it came from -- the taker's own order can itself be BUY or SELL
-(see MatchingEngine::match) -- so a directional fill cannot be derived
-from the current wire message. Real position/PnL tracking is deferred
-until the protocol carries an explicit side field (planned ahead of
-Phase 3.6).
-
-Phase 3.5. The TRADE message now carries ``taker_side``, so the direction
-of each fill is available; consuming it to maintain position and PnL is
-Phase 3.6 work.
-
-
-Volatility is intentionally not calculated here: AnalyticsResult has no
-volatility field yet, so there is nowhere to put it.
-"""
+"""Streaming processor for indicators and risk analytics."""
 
 from __future__ import annotations
 
@@ -28,6 +8,7 @@ from typing import Dict, List
 
 from analytics.indicators import calculate_ema, calculate_sma, calculate_vwap
 from analytics.models import AnalyticsResult, Trade
+from analytics.risk import RiskManager
 
 
 @dataclass
@@ -36,36 +17,57 @@ class _SymbolState:
 
     prices: List[Decimal] = field(default_factory=list)
     quantities: List[int] = field(default_factory=list)
+    risk_manager: RiskManager | None = None
 
 
 class StreamingProcessor:
-    """Consume Trade events and emit deterministic AnalyticsResult snapshots."""
+    """Consume Trade events and emit deterministic AnalyticsResult snapshots.
+
+    Indicator and risk state are maintained independently for each symbol.
+    """
 
     def __init__(
         self,
         *,
         sma_period: int = 5,
         ema_period: int = 5,
+        initial_equity: Decimal = Decimal("10000"),
     ) -> None:
         if sma_period <= 0:
             raise ValueError("sma_period must be positive")
         if ema_period <= 0:
             raise ValueError("ema_period must be positive")
+        if initial_equity < 0:
+            raise ValueError("initial_equity must not be negative")
 
         self._sma_period = sma_period
         self._ema_period = ema_period
+        self._initial_equity = initial_equity
         self._symbols: Dict[str, _SymbolState] = {}
         self._sequence = 0
 
     def process_trade(self, trade: Trade) -> AnalyticsResult:
-        """Update per-symbol indicator state and return an AnalyticsResult."""
+        """Update indicators and risk state for one trade."""
+
         state = self._symbols.setdefault(trade.symbol, _SymbolState())
+
+        if state.risk_manager is None:
+            state.risk_manager = RiskManager(
+                initial_equity=self._initial_equity,
+            )
+
         state.prices.append(trade.price)
         state.quantities.append(trade.quantity)
 
         vwap = calculate_vwap(state.prices, state.quantities)
         sma = calculate_sma(state.prices, self._sma_period)
         ema = calculate_ema(state.prices, self._ema_period)
+
+        risk = state.risk_manager.process_trade(
+            quantity=trade.quantity,
+            price=trade.price,
+            side=trade.taker_side,
+        )
 
         self._sequence += 1
 
@@ -77,12 +79,12 @@ class StreamingProcessor:
             vwap=vwap,
             sma=sma,
             ema=ema,
-            position=0,
-            realized_pnl=Decimal("0"),
-            unrealized_pnl=Decimal("0"),
-            equity=Decimal("0"),
-            peak_equity=Decimal("0"),
-            drawdown=Decimal("0"),
+            position=risk.position,
+            realized_pnl=risk.realized_pnl,
+            unrealized_pnl=risk.unrealized_pnl,
+            equity=risk.equity,
+            peak_equity=risk.peak_equity,
+            drawdown=risk.drawdown,
             timestamp=trade.timestamp,
         )
 

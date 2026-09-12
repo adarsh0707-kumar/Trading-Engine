@@ -13,8 +13,6 @@ from analytics.models import Tick, Trade
 
 
 
-def _trade_message() -> str:
-=======
 def _trade_message(taker_side: str = "BUY") -> str:
 
     return json.dumps(
