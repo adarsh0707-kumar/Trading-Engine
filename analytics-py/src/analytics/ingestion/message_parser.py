@@ -28,10 +28,14 @@ class MessageParser:
             "payload": "{...}"
         }
 
+
+    The ``payload`` field for TRADE messages is itself a JSON string.
+
     The ``payload`` field for TRADE messages is itself a JSON string
     carrying ``taker_side``; ``buy_order_id``/``sell_order_id`` are derived
     from it because taker/maker identifies who crossed the spread, not the
     direction of the fill.
+
     """
 
     SUPPORTED_TYPES = frozenset({"TRADE", "MARKET_TICK"})
@@ -104,6 +108,7 @@ class MessageParser:
         )
         payload = self._parse_payload(envelope)
 
+
         symbol = self._require_string(
             payload,
             "symbol",
@@ -149,6 +154,34 @@ class MessageParser:
             event_id=event_id,
             event_type="TRADE",
             trade_id=event_id,
+
+            symbol=self._require_string(
+                payload,
+                "symbol",
+                "TRADE payload",
+            ),
+            price=self._parse_decimal(
+                payload,
+                "price",
+                "TRADE payload",
+            ),
+            quantity=self._parse_positive_int(
+                payload,
+                "quantity",
+                "TRADE payload",
+            ),
+            timestamp=timestamp,
+            buy_order_id=self._require_string(
+                payload,
+                "taker_order_id",
+                "TRADE payload",
+            ),
+            sell_order_id=self._require_string(
+                payload,
+                "maker_order_id",
+                "TRADE payload",
+            ),
+
             symbol=symbol,
             price=price,
             quantity=quantity,
@@ -158,6 +191,7 @@ class MessageParser:
             sell_order_id=sell_order_id,
             taker_order_id=taker_order_id,
             maker_order_id=maker_order_id,
+
         )
 
     def _parse_tick(self, envelope: dict[str, Any]) -> Tick:

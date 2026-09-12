@@ -12,7 +12,11 @@ from analytics.ingestion import MessageParseError, MessageParser
 from analytics.models import Tick, Trade
 
 
+
+def _trade_message() -> str:
+=======
 def _trade_message(taker_side: str = "BUY") -> str:
+
     return json.dumps(
         {
             "type": "TRADE",
@@ -25,7 +29,9 @@ def _trade_message(taker_side: str = "BUY") -> str:
                     "quantity": 3,
                     "taker_order_id": "SIM-00000001",
                     "maker_order_id": "SIM-00000002",
+
                     "taker_side": taker_side,
+
                 },
                 separators=(",", ":"),
             ),
@@ -65,10 +71,13 @@ def test_parse_trade_from_cxx_wire_message() -> None:
     assert trade.symbol == "SIM"
     assert trade.price == Decimal("98.57")
     assert trade.quantity == 3
+
     assert trade.taker_side == "BUY"
+
     assert trade.buy_order_id == "SIM-00000001"
     assert trade.sell_order_id == "SIM-00000002"
     assert trade.timestamp.tzinfo == timezone.utc
+
 
 
 def test_sell_taker_maps_maker_to_the_buy_side() -> None:
@@ -87,6 +96,7 @@ def test_parse_rejects_unknown_taker_side() -> None:
 
     with pytest.raises(MessageParseError, match="taker_side must be BUY or SELL"):
         MessageParser().parse(json.dumps(message))
+
 
 
 def test_parse_tick() -> None:
