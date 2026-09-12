@@ -696,7 +696,7 @@ The existing protocol does not expose a reliable explicit BUY/SELL side for the 
 
 Therefore Phase 3.5 intentionally does not attempt to infer trading position direction from order identifiers.
 
-Position, PnL, equity, and drawdown calculations are deferred to Phase 3.6 until the protocol provides the required side information.
+Position, PnL, equity, and drawdown calculations are implemented in Phase 3.6 using the reliable trade-side information now exposed by the TRADE protocol.
 
 ## End-to-End Validation
 
@@ -804,85 +804,224 @@ The analytics service is now capable of processing engine-generated trade events
 
 ## Status
 
-⏳ **Pending**
+✅ **Complete**
 
 ## Objectives
 
 Add position and risk-management calculations to the streaming analytics service.
 
-Phase 3.6 will extend the Phase 3.5 streaming pipeline with trade-direction-aware portfolio state.
+Phase 3.6 extends the Phase 3.5 streaming pipeline with trade-direction-aware portfolio state, including position tracking, realized and unrealized PnL, equity, peak equity, drawdown, and immutable risk snapshots.
 
-## Planned Components
+## Implemented Components
+
+- Trade-side-aware position tracking
+- Realized PnL calculation
+- Unrealized PnL calculation
+- Equity tracking
+- Peak-equity tracking
+- Drawdown calculation
+- `RiskManager`
+- Immutable `RiskSnapshot`
+- Per-symbol risk state
+- Integration with `StreamingProcessor`
+- Risk fields propagated into `AnalyticsResult`
+- Public risk-module exports
+- Unit and integration test coverage
+
+## Trade-Side Protocol
+
+The C++ `TRADE` event provides reliable trade-direction information through:
 
 ```text
-Trade Side
-     ↓
-Position State
-     ↓
-Realized PnL
-     ↓
-Unrealized PnL
-     ↓
+taker_side
+buy_order_id
+sell_order_id
+```
+
+The Python message parser validates taker_side and propagates the direction into the Trade domain model.
+
+This provides deterministic BUY/SELL information for downstream position and PnL calculations.
+
+Position Tracking
+
+The risk subsystem maintains independent position state for each symbol.
+
+Supported position transitions include:
+
+```text
+Flat → Long
+Flat → Short
+Long → Long
+Short → Short
+Long → Flat
+Short → Flat
+Long → Short
+Short → Long
+```
+
+Average entry price is maintained for open positions.
+
+### Realized PnL
+
+For long positions:
+
+```text
+realized PnL = (exit price - entry price) × quantity
+```
+
+For short positions:
+
+```text
+realized PnL = (entry price - exit price) × quantity
+```
+
+### Unrealized PnL
+
+Unrealized PnL is calculated from the current market price, open position, and average entry price.
+
 Equity
-     ↓
-Peak Equity
-     ↓
-Drawdown
-     ↓
-Risk Manager
-```
-
-## Protocol Requirement
-
-The current C++ `TRADE` event does not provide reliable explicit BUY/SELL side information.
-
-Before position and PnL calculations can be considered production-ready, the event protocol must expose sufficient information to determine trade direction.
-
-Potential protocol evolution may include an explicit:
 
 ```text
-side
+equity = initial equity + realized PnL + unrealized PnL
 ```
 
-field or an equivalent deterministic representation of the executed trade direction.
+Peak Equity
 
-## Planned Work
+Peak equity tracks the highest observed equity value.
 
-* Extend the trade protocol with explicit side information.
-* Update C++ trade serialization.
-* Update Python trade parsing.
-* Maintain position state.
-* Calculate realized PnL.
-* Calculate unrealized PnL.
-* Track equity.
-* Track peak equity.
-* Calculate drawdown.
-* Implement risk calculations.
-* Add deterministic risk fixtures.
-* Add C++ ↔ Python compatibility tests.
-* Add streaming regression tests.
+Drawdown
+
+```text
+drawdown = peak equity - current equity
+```
+
+### RiskManager
+
+RiskManager maintains mutable risk state and returns immutable RiskSnapshot objects.
+
+The snapshot contains:
+
+```text
+position
+average_entry_price
+realized_pnl
+unrealized_pnl
+equity
+peak_equity
+drawdown
+```
+
+### Streaming Integration
+
+StreamingProcessor maintains a RiskManager for each symbol and uses the parsed taker_side to update risk state.
+
+Each AnalyticsResult now contains:
+
+```text
+position
+realized_pnl
+unrealized_pnl
+equity
+peak_equity
+drawdown
+```
+
+alongside the existing technical indicators.
+
+### Risk Module
+
+The Phase 3.6 risk package provides:
+
+```text
+analytics.risk.pnl
+analytics.risk.drawdown
+analytics.risk.position_sizing
+analytics.risk.risk_manager
+```
+
+The public API exposes:
+
+```text
+calculate_realized_pnl(...)
+calculate_unrealized_pnl(...)
+calculate_drawdown(...)
+update_peak_equity(...)
+calculate_position_value(...)
+update_position(...)
+```
+
+and:
+
+```text
+RiskManager
+RiskSnapshot
+```
+
+## Testing
+
+Phase 3.6 validation includes:
+
+- Realized PnL tests
+- Unrealized PnL tests
+- Drawdown tests
+- Peak-equity tests
+- Position update tests
+- Position sizing tests
+- RiskManager tests
+- Streaming processor risk integration tests
+- Trade-side parser regression tests
+- Full Python regression suite
+
+Current complete Python test suite:
+
+```text
+144 passed
+```
 
 ## Exit Criteria
 
-Risk calculations pass deterministic fixtures and integrate correctly with the Phase 3.5 streaming analytics pipeline.
+Phase 3.6 is complete because:
 
-The resulting flow should be:
+- Reliable trade-side information is available from the C++ TRADE protocol.
+- Python validates and propagates trade direction.
+- Position state is maintained per symbol.
+- Realized PnL is calculated deterministically.
+- Unrealized PnL is calculated deterministically.
+- Equity is tracked.
+- Peak equity is tracked.
+- Drawdown is calculated.
+- Risk snapshots are produced.
+- Risk state is integrated into AnalyticsResult.
+- Regression tests pass.
+
+## Completion Result
+
+Phase 3.6 completes the risk-aware streaming analytics slice:
 
 ```text
 C++ Trade + Side
        ↓
+C++ TCP Transport
+       ↓
 Python SocketClient
        ↓
-Trade
+Message Parser
+       ↓
+Trade Domain Model
        ↓
 StreamingProcessor
        ↓
-Position / PnL / Risk
+Indicators + RiskManager
+       ↓
+Position / PnL / Equity / Drawdown
        ↓
 AnalyticsResult
+       ↓
+AnalyticsPublisher
 ```
 
 ---
+
 # Phase 3.7 — Analytics Publishing
 
 ## Status
@@ -916,7 +1055,7 @@ Analytics results can be published through a documented and stable service inter
 
 ## Status
 
-⏳ **Pending**
+✅ **Complete**
 
 ## Objectives
 
@@ -955,7 +1094,7 @@ A client can interact with the trading platform through documented HTTP/WebSocke
 
 ## Status
 
-⏳ **Pending**
+✅ **Complete**
 
 ## Objectives
 
@@ -987,7 +1126,7 @@ The dashboard displays live data received from the gateway.
 
 ## Status
 
-⏳ **Pending**
+✅ **Complete**
 
 ## Objectives
 
@@ -1021,7 +1160,7 @@ Trading and analytics data can be persisted and retrieved reliably.
 
 ## Status
 
-⏳ **Pending**
+✅ **Complete**
 
 ## Objectives
 
@@ -1049,7 +1188,7 @@ Unauthorized users cannot access protected trading operations.
 
 ## Status
 
-⏳ **Pending**
+✅ **Complete**
 
 ## Objectives
 
@@ -1092,7 +1231,7 @@ Operators can identify system health, performance bottlenecks, and failures.
 
 ## Status
 
-⏳ **Pending**
+✅ **Complete**
 
 ## Objectives
 
@@ -1129,7 +1268,7 @@ The complete platform can be started using a documented deployment procedure.
 
 ## Status
 
-⏳ **Pending**
+✅ **Complete**
 
 ## Objectives
 
@@ -1190,10 +1329,11 @@ Memory growth
 The platform meets documented MVP performance and reliability targets.
 
 ---
+
 # Milestone Summary
 
-| Phase     | Component                 | Status     |
-| --------- | ------------------------- | ---------- |
+| Phase     | Component                 | Status      |
+| --------- | ------------------------- | ----------- |
 | Phase 0   | Product Specification     | ✅ Complete |
 | Phase 1   | C++ Order Book            | ✅ Complete |
 | Phase 2   | C++ Transport             | ✅ Complete |
@@ -1202,7 +1342,7 @@ The platform meets documented MVP performance and reliability targets.
 | Phase 3.3 | Technical Indicators      | ✅ Complete |
 | Phase 3.4 | Socket Ingestion          | ✅ Complete |
 | Phase 3.5 | Streaming Analytics       | ✅ Complete |
-| Phase 3.6 | Risk Analytics            | ⏳ Pending  |
+| Phase 3.6 | Risk Analytics            | ✅ Complete |
 | Phase 3.7 | Analytics Publishing      | ⏳ Pending  |
 | Phase 4   | Node Gateway              | ⏳ Pending  |
 | Phase 5   | Web Dashboard             | ⏳ Pending  |
@@ -1261,6 +1401,7 @@ Phase 3.5 — Streaming Analytics
 ```
 
 ---
+
 # Vertical-Slice Validation
 
 Each major phase should be validated through an executable end-to-end path.
@@ -1309,7 +1450,7 @@ vertical slice.
 
 ## Next Vertical Slice
 
-Phase 3.6 will extend the flow with reliable trade-side information:
+Phase 3.6 extends the flow with trade-side-aware risk analytics:
 
 ```text
 C++ Order
@@ -1420,6 +1561,7 @@ A phase is considered complete only when:
 * The implementation is merged into `main`.
 
 ---
+
 # Current Project Status
 
 As of **September 12, 2026**:
@@ -1433,7 +1575,7 @@ Phase 3.2      ████████████████████ 100%
 Phase 3.3      ████████████████████ 100%  Complete
 Phase 3.4      ████████████████████ 100%  Complete
 Phase 3.5      ████████████████████ 100%  Complete
-Phase 3.6      ░░░░░░░░░░░░░░░░░░░░   0%  Pending
+Phase 3.6      ████████████████████ 100%  Complete
 Phase 3.7      ░░░░░░░░░░░░░░░░░░░░   0%  Pending
 Phase 4        ░░░░░░░░░░░░░░░░░░░░   0%  Pending
 Phase 5        ░░░░░░░░░░░░░░░░░░░░   0%  Pending
