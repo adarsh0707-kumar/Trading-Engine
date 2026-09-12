@@ -21,9 +21,6 @@ def _trade(index: int, price: str, quantity: int = 1, symbol: str = "SIM") -> Tr
         quantity=quantity,
         timestamp=BASE_TIME + timedelta(seconds=index),
 
-        buy_order_id=f"taker-{index}",
-        sell_order_id=f"maker-{index}",
-
         taker_side="BUY",
         buy_order_id=f"taker-{index}",
         sell_order_id=f"maker-{index}",
@@ -68,16 +65,16 @@ def test_symbols_are_tracked_independently() -> None:
     assert result.sma == Decimal("15")
 
 
-def test_position_and_pnl_are_zero_placeholders() -> None:
+def test_position_and_pnl_are_calculated_from_trade_side() -> None:
     processor = StreamingProcessor()
 
     result = processor.process_trade(_trade(1, "100"))
 
-    assert result.position == 0
+    assert result.position == 1
     assert result.realized_pnl == Decimal("0")
     assert result.unrealized_pnl == Decimal("0")
-    assert result.equity == Decimal("0")
-    assert result.peak_equity == Decimal("0")
+    assert result.equity == Decimal("10000")
+    assert result.peak_equity == Decimal("10000")
     assert result.drawdown == Decimal("0")
 
 
@@ -108,3 +105,33 @@ def test_rejects_non_positive_periods() -> None:
 
     with pytest.raises(ValueError):
         StreamingProcessor(ema_period=-1)
+
+
+def test_risk_state_is_propagated_through_processor() -> None:
+    processor = StreamingProcessor(initial_equity=Decimal("10000"))
+
+    processor.process_trade(_trade(1, "100"))
+
+    result = processor.process_trade(
+        Trade(
+            event_id="evt-2",
+            event_type="TRADE",
+            trade_id="trd-2",
+            symbol="SIM",
+            price=Decimal("110"),
+            quantity=1,
+            timestamp=BASE_TIME + timedelta(seconds=2),
+            taker_side="SELL",
+            buy_order_id="maker-2",
+            sell_order_id="taker-2",
+            taker_order_id="taker-2",
+            maker_order_id="maker-2",
+        )
+    )
+
+    assert result.position == 0
+    assert result.realized_pnl == Decimal("10")
+    assert result.unrealized_pnl == Decimal("0")
+    assert result.equity == Decimal("10010")
+    assert result.peak_equity == Decimal("10010")
+    assert result.drawdown == Decimal("0")
