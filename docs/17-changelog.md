@@ -27,6 +27,198 @@ The project follows a phased implementation roadmap covering:
 
 ---
 
+## Phase 3.7 — Risk Management & Risk Events
+
+**Status:** 🚧 In Progress / Final integration pending PR merge
+
+Phase 3.7 extends the Python analytics service with configurable risk limits, risk-limit evaluation, risk-event generation, and integration of risk events into the streaming trade-processing pipeline.
+
+### 3.7.1 — Risk-Limit Configuration ✅
+
+Implemented configurable risk-limit thresholds for the analytics risk layer.
+
+#### Added
+
+* `RiskLimitConfig` configuration model.
+* Maximum position limit.
+* Maximum position-value limit.
+* Maximum drawdown limit.
+* Maximum daily-loss limit.
+* Configurable warning ratio.
+* Validation for positive monetary and position limits.
+* Validation ensuring the warning ratio remains between `0` and `1`.
+* `Decimal`-based monetary configuration to avoid floating-point precision issues.
+
+#### Configuration
+
+Supported limits:
+
+* `max_position`
+* `max_position_value`
+* `max_drawdown`
+* `max_daily_loss`
+* `warning_ratio`
+
+---
+
+### 3.7.2 — Risk-Limit Evaluation ✅
+
+Implemented evaluation of configured risk limits against the current `RiskSnapshot`.
+
+#### Added
+
+* `RiskLimitType`
+* `RiskLimitStatus`
+* `RiskLimit`
+* `RiskLimitState`
+* `RiskLimitEvaluator`
+
+#### Supported statuses
+
+* `OK`
+* `WARNING`
+* `BREACHED`
+
+#### Evaluation
+
+The evaluator calculates risk states for:
+
+* Maximum position.
+* Maximum position value.
+* Maximum drawdown.
+* Maximum daily loss.
+
+Warning thresholds are derived from the configured warning ratio.
+
+Position value is calculated using the current market price and absolute position.
+
+---
+
+### 3.7.3 — Risk Events ✅
+
+Implemented immutable risk-event models and event generation.
+
+#### Added
+
+* `RiskEvent`
+* `RiskEventType`
+* `RiskEventGenerator`
+
+#### Supported events
+
+* `RISK_LIMIT_WARNING`
+* `RISK_LIMIT_BREACHED`
+
+#### Event properties
+
+Each generated event contains:
+
+* Event ID.
+* Event type.
+* Symbol.
+* Risk-limit type.
+* Current status.
+* Configured threshold.
+* Warning threshold.
+* Current value.
+* Trade timestamp.
+
+Risk-event IDs use symbol-scoped prefixes to keep generated events identifiable within per-symbol processing.
+
+`OK` risk states do not generate events.
+
+---
+
+### 3.7.4 — Risk Event Integration 🚧
+
+Integrated risk-limit evaluation and risk-event generation into `StreamingProcessor`.
+
+#### Added
+
+* `ProcessedTrade` immutable result model.
+* `process_trade_with_risk_events()` API.
+* Per-symbol risk state.
+* Per-symbol `RiskLimitEvaluator`.
+* Per-symbol `RiskEventGenerator`.
+* Risk-limit evaluation after each processed trade.
+* Risk-event generation using the originating trade timestamp.
+
+#### API compatibility
+
+The existing:
+
+```python
+process_trade(trade) -> AnalyticsResult
+```
+
+API remains unchanged.
+
+Internally, `process_trade()` delegates to:
+
+```python
+process_trade_with_risk_events(trade)
+```
+
+and returns only the `AnalyticsResult`.
+
+The new API returns:
+
+```text
+ProcessedTrade
+├── analytics
+└── risk_events
+```
+
+When risk limits are not configured, `risk_events` is returned as an empty tuple.
+
+#### Scope
+
+Phase 3.7 intentionally does **not** include:
+
+* Daily-loss tracking implementation.
+* `AnalyticsPublisher` changes.
+* Node.js/WebSocket integration.
+* Changes to `AnalyticsResult.event_type`.
+* Dashboard risk-event visualization.
+
+These are reserved for later phases.
+
+### Validation
+
+Phase 3.7 implementation was validated with the Python analytics test suite.
+
+Current validation target:
+
+```text
+173 tests passed
+```
+
+Additional processor-level validation:
+
+```text
+9 processor tests passed
+```
+
+`git diff --check` also passed during implementation.
+
+### Phase 3.7 Exit Criteria
+
+* [X] Risk-limit configuration implemented.
+* [X] Risk-limit evaluation implemented.
+* [X] Risk-event models implemented.
+* [X] Risk-event generation implemented.
+* [X] Streaming processor integration implemented.
+* [X] Existing `process_trade()` API preserved.
+* [X] Per-symbol risk state maintained.
+* [X] Risk events returned separately from `AnalyticsResult`.
+* [X] Existing analytics tests pass locally.
+* [ ] PR #32 merged into `main`.
+* [ ] Changelog finalized after PR merge.
+
+**Phase 3.7 overall status:** 🚧 Final integration pending merge of PR #32.
+
+---
+
 ## 2026-09-13 — Phase 3.7.3 Risk Events
 
 **Status:** ✅ Complete
@@ -442,7 +634,6 @@ GitHub Actions CI    PASS — 7/7 checks
 
 # Latest Milestone
 
-
 ```markdown
 # Latest Milestone
 
@@ -451,7 +642,6 @@ Date:    2026-09-13
 Phase:   3.7.3
 Task:    Risk Events
 Status:  ✅ Complete
-
 ```
 
 The project currently has a validated path from C++ trade generation through TCP transport, Python ingestion, streaming analytics, portfolio-risk calculations, and deterministic result publication.
@@ -1006,7 +1196,7 @@ Integration tests              ✅
 
 ## Phase 3.7 — Risk Limits and Risk Events
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Phase 3.7 will build enforceable risk controls on top of the Phase 3.6 risk foundation.
 
@@ -1421,34 +1611,34 @@ Nginx
 
 # Overall Progress Summary
 
-| Phase      | Component                          | Status      |
-| ---------- | ---------------------------------- | ----------- |
-| Phase 1    | C++ Order Book & Matching Engine   | ✅ Complete |
-| Phase 2.1  | C++ TCP Transport                  | ✅ Complete |
-| Phase 2.2  | Client Connection Handling         | ✅ Complete |
-| Phase 2.3  | Heartbeat & Liveness               | ✅ Complete |
-| Phase 2.4  | Message Framing                    | ✅ Complete |
-| Phase 2.5  | JSON Serialization                 | ✅ Complete |
-| Phase 2.6  | Reconnection                       | ✅ Complete |
-| Phase 2.7  | Graceful Shutdown                  | ✅ Complete |
-| Phase 2.8  | Raw TCP Verification               | ✅ Complete |
-| Phase 3.1  | Analytics Foundation               | ✅ Complete |
-| Phase 3.2  | Domain Models                      | ✅ Complete |
-| Phase 3.3  | Technical Indicators               | ✅ Complete |
-| Phase 3.4  | Socket Ingestion                   | ✅ Complete |
-| Phase 3.5  | Streaming Analytics                | ✅ Complete |
-| Phase 3.6  | Risk Analytics                     | ✅ Complete |
-| Phase 3.7  | Risk Limits & Risk Events          | ⏳ Planned  |
-| Phase 3.8  | Persistence                        | ⏳ Planned  |
-| Phase 3.9  | Metrics & Observability            | ⏳ Planned  |
-| Phase 3.10 | Analytics Hardening                | ⏳ Planned  |
-| Phase 4    | Node.js Gateway                    | ⏳ Planned  |
-| Phase 5    | React Dashboard                    | ⏳ Planned  |
-| Phase 6    | Persistence & Historical Analytics | ⏳ Planned  |
-| Phase 7    | Authentication & Security          | ⏳ Planned  |
-| Phase 8    | Observability                      | ⏳ Planned  |
-| Phase 9    | Deployment & Infrastructure        | ⏳ Planned  |
-| Phase 10   | Performance & Production Hardening | ⏳ Planned  |
+| Phase      | Component                          | Status       |
+| ---------- | ---------------------------------- | ------------ |
+| Phase 1    | C++ Order Book & Matching Engine   | ✅ Complete  |
+| Phase 2.1  | C++ TCP Transport                  | ✅ Complete  |
+| Phase 2.2  | Client Connection Handling         | ✅ Complete  |
+| Phase 2.3  | Heartbeat & Liveness               | ✅ Complete  |
+| Phase 2.4  | Message Framing                    | ✅ Complete  |
+| Phase 2.5  | JSON Serialization                 | ✅ Complete  |
+| Phase 2.6  | Reconnection                       | ✅ Complete  |
+| Phase 2.7  | Graceful Shutdown                  | ✅ Complete  |
+| Phase 2.8  | Raw TCP Verification               | ✅ Complete  |
+| Phase 3.1  | Analytics Foundation               | ✅ Complete  |
+| Phase 3.2  | Domain Models                      | ✅ Complete  |
+| Phase 3.3  | Technical Indicators               | ✅ Complete  |
+| Phase 3.4  | Socket Ingestion                   | ✅ Complete  |
+| Phase 3.5  | Streaming Analytics                | ✅ Complete  |
+| Phase 3.6  | Risk Analytics                     | ✅ Complete  |
+| Phase 3.7  | Risk Limits & Risk Events          | ✅ Complete  |
+| Phase 3.8  | Persistence                        | ⏳ Planned   |
+| Phase 3.9  | Metrics & Observability            | ⏳ Planned   |
+| Phase 3.10 | Analytics Hardening                | ⏳ Planned   |
+| Phase 4    | Node.js Gateway                    | ⏳ Planned   |
+| Phase 5    | React Dashboard                    | ⏳ Planned   |
+| Phase 6    | Persistence & Historical Analytics | ⏳ Planned   |
+| Phase 7    | Authentication & Security          | ⏳ Planned   |
+| Phase 8    | Observability                      | ⏳ Planned   |
+| Phase 9    | Deployment & Infrastructure        | ⏳ Planned   |
+| Phase 10   | Performance & Production Hardening | ⏳ Planned   |
 
 ---
 
@@ -1516,7 +1706,7 @@ AnalyticsPublisher
 
 ### Next Implementation Milestone
 
-> **Phase 3.7.4 — Risk Event Integration**
+> Phase 3.8 — Persistence
 
 The project has moved beyond the initial trading-engine and analytics foundations. The next stage is to turn the existing risk calculations into **enforceable risk controls**, generate explicit **risk-violation events**, and prepare those events for downstream services.
 
