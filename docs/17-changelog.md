@@ -27,6 +27,37 @@ The project follows a phased implementation roadmap covering:
 
 ---
 
+## 2026-09-13 — Phase 3.7.3 Risk Events
+
+**Status:** ✅ Complete
+
+Phase 3.7.3 adds the risk-event domain and generation layer to the Python analytics service.
+
+### Implemented
+
+* Added `RiskEventType` for risk-limit warnings and breaches.
+* Added immutable `RiskEvent` domain model.
+* Added `RiskEvent.from_state()` conversion from `RiskLimitState`.
+* Added JSON-friendly `RiskEvent.to_dict()` serialization.
+* Added `RiskEventGenerator`.
+* Added deterministic sequential risk-event identifiers.
+* Added configurable event-ID prefixes.
+* Added filtering of `OK` risk-limit states.
+* Added warning-event generation.
+* Added breach-event generation.
+* Added Decimal serialization as strings.
+* Added ISO-8601 timestamp serialization.
+* Added validation for event state consistency.
+* Added unit tests for risk-event generation and serialization.
+
+### Risk Event Types
+
+```text
+RISK_LIMIT_WARNING
+RISK_LIMIT_BREACHED
+
+---
+
 # Latest Commit Summary
 
 ## 2026-09-12 — Phase 3.6 Risk Analytics
@@ -411,11 +442,16 @@ GitHub Actions CI    PASS — 7/7 checks
 
 # Latest Milestone
 
+
+```markdown
+# Latest Milestone
+
 ```text
-Date:    2026-09-12
-Phase:   3.6
-Task:    Risk Analytics
+Date:    2026-09-13
+Phase:   3.7.3
+Task:    Risk Events
 Status:  ✅ Complete
+
 ```
 
 The project currently has a validated path from C++ trade generation through TCP transport, Python ingestion, streaming analytics, portfolio-risk calculations, and deterministic result publication.
@@ -1480,7 +1516,7 @@ AnalyticsPublisher
 
 ### Next Implementation Milestone
 
-> **Phase 3.7 — Risk Limits and Risk Events**
+> **Phase 3.7.4 — Risk Event Integration**
 
 The project has moved beyond the initial trading-engine and analytics foundations. The next stage is to turn the existing risk calculations into **enforceable risk controls**, generate explicit **risk-violation events**, and prepare those events for downstream services.
 
