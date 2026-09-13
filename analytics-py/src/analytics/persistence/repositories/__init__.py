@@ -5,9 +5,9 @@ from analytics.persistence.repositories.position import PositionRepository
 from analytics.persistence.repositories.risk import RiskRepository
 from analytics.persistence.repositories.trade import TradeRepository
 
-all = [
-"AnalyticsRepository",
-"PositionRepository",
-"RiskRepository",
-"TradeRepository",
+__all__ = [
+    "AnalyticsRepository",
+    "PositionRepository",
+    "RiskRepository",
+    "TradeRepository",
 ]
