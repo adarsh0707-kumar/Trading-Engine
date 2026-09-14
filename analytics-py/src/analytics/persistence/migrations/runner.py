@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import psycopg
 
@@ -49,27 +48,47 @@ class MigrationRunner:
                 continue
 
             version = match.group("version")
+
             if version in seen_versions:
                 raise ValueError(f"duplicate migration version: {version}")
 
             seen_versions.add(version)
-            migrations.append(Migration(version=version, path=path))
+            migrations.append(
+                Migration(
+                    version=version,
+                    path=path,
+                )
+            )
 
-        return tuple(sorted(migrations, key=lambda migration: int(migration.version)))
+        return tuple(
+            sorted(
+                migrations,
+                key=lambda migration: int(migration.version),
+            )
+        )
 
     def run(self) -> tuple[str, ...]:
-        """Apply pending migrations and return their versions."""
+        """Apply all pending migrations atomically.
 
-        self._ensure_migration_table()
-        applied = self._applied_versions()
-        newly_applied: list[str] = []
+        The migration table creation, migration SQL, and migration records
+        all execute inside one transaction. If any migration fails, the
+        entire migration run is rolled back.
+        """
 
-        for migration in self.discover():
-            if migration.version in applied:
-                continue
+        migrations = self.discover()
 
-            sql = migration.path.read_text(encoding="utf-8")
-            with self._connection.transaction():
+        with self._connection.transaction():
+            self._ensure_migration_table()
+
+            applied = self._applied_versions()
+            newly_applied: list[str] = []
+
+            for migration in migrations:
+                if migration.version in applied:
+                    continue
+
+                sql = migration.path.read_text(encoding="utf-8")
+
                 with self._connection.cursor() as cursor:
                     cursor.execute(sql)
                     cursor.execute(
@@ -80,25 +99,34 @@ class MigrationRunner:
                         (migration.version,),
                     )
 
-            newly_applied.append(migration.version)
+                newly_applied.append(migration.version)
 
         return tuple(newly_applied)
 
     def _ensure_migration_table(self) -> None:
-        with self._connection.transaction():
-            with self._connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS schema_migrations (
-                        version TEXT PRIMARY KEY,
-                        applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    )
-                    """
+        """Create the migration tracking table if necessary."""
+
+        with self._connection.cursor() as cursor:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    version TEXT PRIMARY KEY,
+                    applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
+                """
+            )
 
     def _applied_versions(self) -> set[str]:
+        """Return versions already recorded as applied."""
+
         with self._connection.cursor() as cursor:
-            cursor.execute("SELECT version FROM schema_migrations")
+            cursor.execute(
+                """
+                SELECT version
+                FROM schema_migrations
+                """
+            )
+
             return {row[0] for row in cursor.fetchall()}
 
 

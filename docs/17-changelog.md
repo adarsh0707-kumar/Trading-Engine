@@ -27,9 +27,208 @@ The project follows a phased implementation roadmap covering:
 
 ---
 
-## Phase 3.7 — Risk Management & Risk Events
+## 2026-09-14 — Phase 3.8 — PostgreSQL Schema & Integration Tests
 
-**Status:** 🚧 In Progress / Final integration pending PR merge
+### Status
+
+* ✅ PostgreSQL dependency (`psycopg[binary]`)
+* ✅ PostgreSQL migration runner
+* ✅ Transaction-safe migration execution
+* ✅ Migration discovery and deterministic ordering
+* ✅ Idempotent migration execution
+* ✅ Duplicate-version validation
+* ✅ Migration runner unit tests
+* ✅ Real PostgreSQL integration tests
+* ✅ PostgreSQL schema and index validation
+* ✅ PostgreSQL migration idempotency validation
+* ✅ PostgreSQL repository round-trip validation
+* ✅ PostgreSQL repository query validation
+* ✅ PostgreSQL repository upsert validation
+* ✅ PostgreSQL constraint validation
+* ✅ Failed migration rollback validation
+* ⏳ Remaining PostgreSQL repositories
+* ⏳ Persistence integration with the streaming processor
+
+### PostgreSQL Migration Runner
+
+Implemented the PostgreSQL migration infrastructure under:
+
+`analytics-py/src/analytics/persistence/migrations/`
+
+The migration runner:
+
+* Discovers `.sql` migration files from the configured migration directory.
+* Extracts and validates migration versions.
+* Applies migrations in deterministic version order.
+* Tracks applied migration versions in the database.
+* Skips migrations that have already been applied.
+* Rejects duplicate migration versions.
+* Executes the complete migration run inside a single database transaction.
+* Keeps migration execution atomic so failed migrations do not leave partial schema changes or migration records.
+* Returns the versions successfully applied during the current execution.
+
+### PostgreSQL Integration Tests
+
+Added real PostgreSQL integration coverage under:
+
+`analytics-py/tests/integration/test_postgres.py`
+
+The integration suite uses an isolated PostgreSQL schema for each test module.
+
+Coverage includes:
+
+1. Real migration execution against PostgreSQL.
+2. Expected `trades` schema validation.
+3. Expected PostgreSQL indexes and constraints.
+4. Migration idempotency.
+5. PostgreSQL trade persistence and round-trip retrieval.
+6. Symbol-based trade queries and timestamp ordering.
+7. Inclusive timestamp-range queries.
+8. Trade upsert behavior.
+9. PostgreSQL constraint enforcement.
+10. Atomic rollback of failed migrations.
+
+### Validation
+
+Migration runner unit tests:
+
+```text
+8 passed
+```
+
+PostgreSQL integration tests:
+
+```text
+8 passed
+```
+
+Full analytics test suite:
+
+```text
+206 passed
+```
+
+Repository validation:
+
+```text
+Repository validation:
+```
+
+passes successfully.
+
+### Environment
+
+Integration tests use:
+
+```
+TRADING_ENGINE_TEST_DATABASE_URL
+```
+
+PostgreSQL credentials are kept outside the repository through the environment variable.
+
+Phase 3.8 Exit Criteria
+
+- [X] PostgreSQL migration runner implemented.
+- [X] Atomic migration execution implemented.
+- [X] Migration idempotency validated.
+- [X] Real PostgreSQL integration tests implemented.
+- [X] PostgreSQL schema and indexes validated.
+- [X] Repository persistence validated.
+- [X] Repository query behavior validated.
+- [X] Repository upsert behavior validated.
+- [X] PostgreSQL constraints validated.
+- [X] Failed migration rollback validated.
+- [X] Full analytics test suite passing.
+- [ ] Remaining PostgreSQL repositories.
+- [ ] Persistence integration with the streaming processor.
+
+Phase 3.8 PostgreSQL schema and integration-test milestone: ✅ Complete
+
+```
+
+**Also change these existing sections:**
+
+```md
+## Phase 3.7 — Risk Limits and Risk Events
+
+**Status:** ✅ Complete
+```
+
+Remove the old ### Planned wording and replace it with the already-completed Phase 3.7 implementation details if you want the changelog to stay consistent.
+
+In Overall Progress Summary, change:
+
+```markdown
+| Phase 3.8  | Persistence                        | ⏳ Planned   |
+```
+
+to:
+
+```markdown
+| Phase 3.8  | PostgreSQL Schema & Integration    | ✅ Complete  |
+```
+
+In Phase 3 completion, change:
+
+```markdown
+### Remaining
+
+* [ ] Risk limits
+* [ ] Risk events
+* [ ] Risk-event publication
+* [ ] Persistence
+* [ ] Metrics and observability
+* [ ] Analytics service hardening
+```
+
+to:
+
+```markdown
+### Remaining
+
+* [X] Risk limits
+* [X] Risk events
+* [ ] Risk-event publication
+* [X] PostgreSQL schema and migration layer
+* [X] PostgreSQL integration tests
+* [ ] Remaining persistence repositories
+* [ ] Persistence integration with the streaming processor
+* [ ] Metrics and observability
+* [ ] Analytics service hardening
+```
+
+And update the Current Overall Status section so the completed milestones include:
+
+```markdown
+Phase 3.1 — Analytics Foundation
+Phase 3.2 — Domain Models
+Phase 3.3 — Technical Indicators
+Phase 3.4 — Socket Ingestion
+Phase 3.5 — Streaming Analytics
+Phase 3.6 — Risk Analytics
+Phase 3.7 — Risk Limits & Risk Events
+Phase 3.8 — PostgreSQL Schema & Integration Tests
+```
+
+The Next Implementation Milestone should now be:
+
+```markdown
+> Phase 3.9 — Metrics and Observability
+```
+
+And the Project Status should become:
+
+```markdown
+**Latest Completed Milestone:** Phase 3.8 — PostgreSQL Schema & Integration Tests
+
+**Next Milestone:** Phase 3.9 — Metrics and Observability
+```
+
+---
+
+## 2026-09-13 — Phase 3.7 — Risk Management & Risk Events
+
+**Status:** ✅ Complete
 
 Phase 3.7 extends the Python analytics service with configurable risk limits, risk-limit evaluation, risk-event generation, and integration of risk events into the streaming trade-processing pipeline.
 
@@ -129,7 +328,7 @@ Risk-event IDs use symbol-scoped prefixes to keep generated events identifiable 
 
 ---
 
-### 3.7.4 — Risk Event Integration 🚧
+### 3.7.4 — Risk Event Integration ✅ Complete
 
 Integrated risk-limit evaluation and risk-event generation into `StreamingProcessor`.
 
@@ -212,10 +411,7 @@ Additional processor-level validation:
 * [X] Per-symbol risk state maintained.
 * [X] Risk events returned separately from `AnalyticsResult`.
 * [X] Existing analytics tests pass locally.
-* [ ] PR #32 merged into `main`.
-* [ ] Changelog finalized after PR merge.
-
-**Phase 3.7 overall status:** 🚧 Final integration pending merge of PR #32.
+* **Phase 3.7 overall status:** ✅ Complete
 
 ---
 
@@ -638,9 +834,9 @@ GitHub Actions CI    PASS — 7/7 checks
 # Latest Milestone
 
 ```text
-Date:    2026-09-13
-Phase:   3.7.3
-Task:    Risk Events
+Date:    2026-09-14
+Phase:   3.8
+Task:    PostgreSQL Schema & Integration Tests
 Status:  ✅ Complete
 ```
 
@@ -669,7 +865,7 @@ AnalyticsPublisher
 The next development target is:
 
 ```text
-Phase 3.7 — Risk Limits and Risk Events
+Phase 3.9 — Metrics and Observability
 ```
 
 ---
@@ -881,7 +1077,7 @@ C++ Release          PASS — 15/15
 
 Phase 3 implements the Python analytics subsystem responsible for consuming C++ trade events, maintaining streaming state, calculating indicators, tracking portfolio risk, and publishing analytics results.
 
-Completed:
+### Phase 3 Completed
 
 ```text
 Phase 3.1 — Analytics Foundation
@@ -890,9 +1086,25 @@ Phase 3.3 — Technical Indicators
 Phase 3.4 — Socket Ingestion
 Phase 3.5 — Streaming Analytics
 Phase 3.6 — Risk Analytics
+Phase 3.7 — Risk Limits & Risk Events
+Phase 3.8 — PostgreSQL Schema & Integration Tests
 ```
 
 Remaining work focuses on risk controls, persistence, observability, hardening, and production-facing analytics behavior.
+
+### Phase 3 Remaining
+
+Replace the current:
+
+```md
+### Remaining
+
+* [ ] Risk-event publication
+* [ ] Remaining PostgreSQL repositories
+* [ ] Persistence integration with the streaming processor
+* [ ] Metrics and observability
+* [ ] Analytics service hardening
+```
 
 ---
 
@@ -1200,19 +1412,17 @@ Integration tests              ✅
 
 Phase 3.7 will build enforceable risk controls on top of the Phase 3.6 risk foundation.
 
+Phase 3.7 — Risk Limits and Risk Events
+
+**Status:** ✅ Complete
+
+Phase 3.7 will build enforceable risk controls...
+
 ### Planned
 
 * Maximum position limits
 * Maximum order-quantity limits
-* Maximum loss limits
-* Maximum drawdown limits
-* Risk-threshold configuration
-* Risk-violation detection
-* Risk-event domain model
-* Risk-event serialization
-* Risk-event publication
-* Risk-event test coverage
-* Downstream risk-event handling
+  ...
 
 ### Target Flow
 
@@ -1611,34 +1821,34 @@ Nginx
 
 # Overall Progress Summary
 
-| Phase      | Component                          | Status       |
-| ---------- | ---------------------------------- | ------------ |
-| Phase 1    | C++ Order Book & Matching Engine   | ✅ Complete  |
-| Phase 2.1  | C++ TCP Transport                  | ✅ Complete  |
-| Phase 2.2  | Client Connection Handling         | ✅ Complete  |
-| Phase 2.3  | Heartbeat & Liveness               | ✅ Complete  |
-| Phase 2.4  | Message Framing                    | ✅ Complete  |
-| Phase 2.5  | JSON Serialization                 | ✅ Complete  |
-| Phase 2.6  | Reconnection                       | ✅ Complete  |
-| Phase 2.7  | Graceful Shutdown                  | ✅ Complete  |
-| Phase 2.8  | Raw TCP Verification               | ✅ Complete  |
-| Phase 3.1  | Analytics Foundation               | ✅ Complete  |
-| Phase 3.2  | Domain Models                      | ✅ Complete  |
-| Phase 3.3  | Technical Indicators               | ✅ Complete  |
-| Phase 3.4  | Socket Ingestion                   | ✅ Complete  |
-| Phase 3.5  | Streaming Analytics                | ✅ Complete  |
-| Phase 3.6  | Risk Analytics                     | ✅ Complete  |
-| Phase 3.7  | Risk Limits & Risk Events          | ✅ Complete  |
-| Phase 3.8  | Persistence                        | ⏳ Planned   |
-| Phase 3.9  | Metrics & Observability            | ⏳ Planned   |
-| Phase 3.10 | Analytics Hardening                | ⏳ Planned   |
-| Phase 4    | Node.js Gateway                    | ⏳ Planned   |
-| Phase 5    | React Dashboard                    | ⏳ Planned   |
-| Phase 6    | Persistence & Historical Analytics | ⏳ Planned   |
-| Phase 7    | Authentication & Security          | ⏳ Planned   |
-| Phase 8    | Observability                      | ⏳ Planned   |
-| Phase 9    | Deployment & Infrastructure        | ⏳ Planned   |
-| Phase 10   | Performance & Production Hardening | ⏳ Planned   |
+| Phase      | Component                          | Status      |
+| ---------- | ---------------------------------- | ----------- |
+| Phase 1    | C++ Order Book & Matching Engine   | ✅ Complete |
+| Phase 2.1  | C++ TCP Transport                  | ✅ Complete |
+| Phase 2.2  | Client Connection Handling         | ✅ Complete |
+| Phase 2.3  | Heartbeat & Liveness               | ✅ Complete |
+| Phase 2.4  | Message Framing                    | ✅ Complete |
+| Phase 2.5  | JSON Serialization                 | ✅ Complete |
+| Phase 2.6  | Reconnection                       | ✅ Complete |
+| Phase 2.7  | Graceful Shutdown                  | ✅ Complete |
+| Phase 2.8  | Raw TCP Verification               | ✅ Complete |
+| Phase 3.1  | Analytics Foundation               | ✅ Complete |
+| Phase 3.2  | Domain Models                      | ✅ Complete |
+| Phase 3.3  | Technical Indicators               | ✅ Complete |
+| Phase 3.4  | Socket Ingestion                   | ✅ Complete |
+| Phase 3.5  | Streaming Analytics                | ✅ Complete |
+| Phase 3.6  | Risk Analytics                     | ✅ Complete |
+| Phase 3.7  | Risk Limits & Risk Events          | ✅ Complete |
+| Phase 3.8  | Persistence                        | ✅ Complete |
+| Phase 3.9  | Metrics & Observability            | ⏳ Planned  |
+| Phase 3.10 | Analytics Hardening                | ⏳ Planned  |
+| Phase 4    | Node.js Gateway                    | ⏳ Planned  |
+| Phase 5    | React Dashboard                    | ⏳ Planned  |
+| Phase 6    | Persistence & Historical Analytics | ⏳ Planned  |
+| Phase 7    | Authentication & Security          | ⏳ Planned  |
+| Phase 8    | Observability                      | ⏳ Planned  |
+| Phase 9    | Deployment & Infrastructure        | ⏳ Planned  |
+| Phase 10   | Performance & Production Hardening | ⏳ Planned  |
 
 ---
 
@@ -1706,7 +1916,7 @@ AnalyticsPublisher
 
 ### Next Implementation Milestone
 
-> Phase 3.8 — Persistence
+> Phase 3.9 — Metrics and Observability
 
 The project has moved beyond the initial trading-engine and analytics foundations. The next stage is to turn the existing risk calculations into **enforceable risk controls**, generate explicit **risk-violation events**, and prepare those events for downstream services.
 
@@ -1716,9 +1926,9 @@ The project has moved beyond the initial trading-engine and analytics foundation
 
 **Overall Status:** 🚧 **In Progress**
 
-**Latest Completed Milestone:** Phase 3.6 — Risk Analytics
+**Latest Completed Milestone:** Phase 3.8 — PostgreSQL Schema & Integration Tests
 
-**Next Milestone:** Phase 3.7 — Risk Limits and Risk Events
+**Next Milestone:** Phase 3.9 — Metrics and Observability
 
 **Current validated foundation:**
 
