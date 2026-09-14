@@ -5,11 +5,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 import psycopg
 
-_MIGRATION_NAME = re.compile(r"^(?P<version>\d+)_[a-z0-9_]+\.sql$")
+_MIGRATION_NAME = re.compile(
+    r"^(?P<version>\d+)_[a-z0-9_]+\.sql$"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,31 +46,49 @@ class MigrationRunner:
 
         for path in sorted(self._migrations_path.glob("*.sql")):
             match = _MIGRATION_NAME.fullmatch(path.name)
+
             if match is None:
                 continue
 
             version = match.group("version")
+
             if version in seen_versions:
-                raise ValueError(f"duplicate migration version: {version}")
+                raise ValueError(
+                    f"duplicate migration version: {version}"
+                )
 
             seen_versions.add(version)
-            migrations.append(Migration(version=version, path=path))
+            migrations.append(
+                Migration(
+                    version=version,
+                    path=path,
+                )
+            )
 
-        return tuple(sorted(migrations, key=lambda migration: int(migration.version)))
+        return tuple(
+            sorted(
+                migrations,
+                key=lambda migration: int(migration.version),
+            )
+        )
 
     def run(self) -> tuple[str, ...]:
-        """Apply pending migrations and return their versions."""
+        """Apply pending migrations atomically."""
 
-        self._ensure_migration_table()
-        applied = self._applied_versions()
         newly_applied: list[str] = []
 
-        for migration in self.discover():
-            if migration.version in applied:
-                continue
+        with self._connection.transaction():
+            self._ensure_migration_table()
+            applied = self._applied_versions()
 
-            sql = migration.path.read_text(encoding="utf-8")
-            with self._connection.transaction():
+            for migration in self.discover():
+                if migration.version in applied:
+                    continue
+
+                sql = migration.path.read_text(
+                    encoding="utf-8",
+                )
+
                 with self._connection.cursor() as cursor:
                     cursor.execute(sql)
                     cursor.execute(
@@ -80,26 +99,38 @@ class MigrationRunner:
                         (migration.version,),
                     )
 
-            newly_applied.append(migration.version)
+                newly_applied.append(migration.version)
 
         return tuple(newly_applied)
 
     def _ensure_migration_table(self) -> None:
-        with self._connection.transaction():
-            with self._connection.cursor() as cursor:
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS schema_migrations (
-                        version TEXT PRIMARY KEY,
-                        applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
-                    )
-                    """
+        """Create the migration tracking table if necessary."""
+
+        with self._connection.cursor() as cursor:
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS schema_migrations (
+                    version TEXT PRIMARY KEY,
+                    applied_at TIMESTAMPTZ NOT NULL
+                        DEFAULT CURRENT_TIMESTAMP
                 )
+                """
+            )
 
     def _applied_versions(self) -> set[str]:
+        """Return migration versions already applied."""
+
         with self._connection.cursor() as cursor:
-            cursor.execute("SELECT version FROM schema_migrations")
-            return {row[0] for row in cursor.fetchall()}
+            cursor.execute(
+                "SELECT version FROM schema_migrations"
+            )
+            return {
+                row[0]
+                for row in cursor.fetchall()
+            }
 
 
-__all__ = ["Migration", "MigrationRunner"]
+__all__ = [
+    "Migration",
+    "MigrationRunner",
+]
