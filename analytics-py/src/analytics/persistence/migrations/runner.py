@@ -46,12 +46,10 @@ class MigrationRunner:
 
         for path in sorted(self._migrations_path.glob("*.sql")):
             match = _MIGRATION_NAME.fullmatch(path.name)
-
             if match is None:
                 continue
 
             version = match.group("version")
-
             if version in seen_versions:
                 raise ValueError(
                     f"duplicate migration version: {version}"
@@ -85,9 +83,7 @@ class MigrationRunner:
                 if migration.version in applied:
                     continue
 
-                sql = migration.path.read_text(
-                    encoding="utf-8",
-                )
+                sql = migration.path.read_text(encoding="utf-8")
 
                 with self._connection.cursor() as cursor:
                     cursor.execute(sql)
@@ -121,16 +117,8 @@ class MigrationRunner:
         """Return migration versions already applied."""
 
         with self._connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT version FROM schema_migrations"
-            )
-            return {
-                row[0]
-                for row in cursor.fetchall()
-            }
+            cursor.execute("SELECT version FROM schema_migrations")
+            return {row[0] for row in cursor.fetchall()}
 
 
-__all__ = [
-    "Migration",
-    "MigrationRunner",
-]
+__all__ = ["Migration", "MigrationRunner"]
