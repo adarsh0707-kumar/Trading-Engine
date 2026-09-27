@@ -102,6 +102,15 @@ def repositories(postgres_connection) -> PostgresRepositories:
     )
 
 
+class FailingRiskRepository:
+    """Risk repository that fails after earlier persistence operations."""
+
+    def save_risk_state(self, *, symbol: str, snapshot) -> None:
+        raise RuntimeError("simulated risk persistence failure")
+
+    def save_event(self, *, event) -> None:
+        raise AssertionError("save_event should not be reached")
+
 def test_trade_flows_from_transport_to_postgresql(
     repositories: PostgresRepositories,
 ) -> None:
@@ -170,3 +179,48 @@ def test_trade_flows_from_transport_to_postgresql(
 
     assert risk_state == position
     assert risk_events == ()
+
+
+def test_persistence_rolls_back_when_repository_write_fails(
+    repositories: PostgresRepositories,
+) -> None:
+    """A failure during persistence should roll back earlier PostgreSQL writes."""
+
+    service_repositories = PostgresRepositories(
+        connection=repositories.connection,
+        trades=repositories.trades,
+        analytics=repositories.analytics,
+        positions=repositories.positions,
+        risk=FailingRiskRepository(),
+    )
+
+    service = AnalyticsService(
+        Settings(),
+        repositories=service_repositories,
+        publish_sink=lambda _payload: None,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="simulated risk persistence failure",
+    ):
+        service._handle_message(
+            '{"type":"TRADE",'
+            '"request_id":"event-rollback-001",'
+            '"timestamp":"2026-09-27T10:05:00+00:00",'
+            '"payload":"{'
+            '\\"symbol\\":\\"MSFT\\",'
+            '\\"price\\":\\"200\\",'
+            '\\"quantity\\":5,'
+            '\\"taker_order_id\\":\\"order-taker-rollback\\",'
+            '\\"maker_order_id\\":\\"order-maker-rollback\\",'
+            '\\"taker_side\\":\\"BUY\\"'
+            '}"'
+            '}',
+        )
+
+    # The transaction must be rolled back, so none of the earlier writes remain.
+    assert repositories.trades.get_by_id("event-rollback-001") is None
+    assert repositories.analytics.list_by_symbol("MSFT") == ()
+    assert repositories.positions.get_by_symbol(symbol="MSFT") is None
+    assert repositories.risk.get_latest_state(symbol="MSFT") is None

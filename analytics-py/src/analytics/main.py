@@ -112,25 +112,23 @@ class AnalyticsService:
         )
 
     def _persist(self, result: ProcessedTrade) -> None:
-        """Persist one complete processed trade when persistence is enabled."""
+        """Persist one complete processed trade in a single transaction."""
         if self.repositories is None:
             return
 
-        self.repositories.trades.save(result.trade)
-        self.repositories.analytics.save(result.analytics)
-
-        self.repositories.positions.save(
-            symbol=result.trade.symbol,
-            snapshot=result.risk_snapshot,
-        )
-
-        self.repositories.risk.save_risk_state(
-            symbol=result.trade.symbol,
-            snapshot=result.risk_snapshot,
-        )
-
-        for event in result.risk_events:
-            self.repositories.risk.save_event(event=event)
+        with self.repositories.connection.transaction():
+            self.repositories.trades.save(result.trade)
+            self.repositories.analytics.save(result.analytics)
+            self.repositories.positions.save(
+                symbol=result.trade.symbol,
+                snapshot=result.risk_snapshot,
+            )
+            self.repositories.risk.save_risk_state(
+                symbol=result.trade.symbol,
+                snapshot=result.risk_snapshot,
+            )
+            for event in result.risk_events:
+                self.repositories.risk.save_event(event=event)
 
     def _handle_connect(self) -> None:
         """Handle successful connection to the trading engine."""
