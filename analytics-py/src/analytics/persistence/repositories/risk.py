@@ -14,6 +14,7 @@ class RiskRepository(Protocol):
 
     def save_risk_state(
         self,
+        *,
         symbol: str,
         snapshot: RiskSnapshot,
     ) -> None:
@@ -22,6 +23,7 @@ class RiskRepository(Protocol):
 
     def save_event(
         self,
+        *,
         event: RiskEvent,
     ) -> None:
         """Persist one immutable risk event."""
@@ -29,6 +31,7 @@ class RiskRepository(Protocol):
 
     def get_latest_state(
         self,
+        *,
         symbol: str,
     ) -> RiskSnapshot | None:
         """Return the latest persisted risk state for a symbol."""
@@ -36,6 +39,7 @@ class RiskRepository(Protocol):
 
     def list_events(
         self,
+        *,
         symbol: str,
     ) -> tuple[RiskEvent, ...]:
         """Return persisted risk events for a symbol."""
@@ -43,6 +47,7 @@ class RiskRepository(Protocol):
 
     def list_events_by_time_range(
         self,
+        *,
         symbol: str,
         start: datetime,
         end: datetime,

@@ -12,6 +12,7 @@ class PositionRepository(Protocol):
 
     def save(
         self,
+        *,
         symbol: str,
         snapshot: RiskSnapshot,
     ) -> None:
@@ -20,6 +21,7 @@ class PositionRepository(Protocol):
 
     def get_by_symbol(
         self,
+        *,
         symbol: str,
     ) -> RiskSnapshot | None:
         """Return the latest position state for a symbol."""

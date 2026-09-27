@@ -6,6 +6,7 @@ import inspect
 from datetime import datetime
 from typing import get_type_hints
 
+from inspect import Parameter
 
 from analytics.persistence.repositories import (
     AnalyticsRepository,
@@ -221,3 +222,70 @@ def test_persistence_package_exports() -> None:
     assert repositories.AnalyticsRepository is AnalyticsRepository
     assert repositories.PositionRepository is PositionRepository
     assert repositories.RiskRepository is RiskRepository
+
+def test_position_repository_requires_keyword_arguments() -> None:
+    """PositionRepository uses keyword-only arguments."""
+
+    save_signature = inspect.signature(PositionRepository.save)
+    get_signature = inspect.signature(PositionRepository.get_by_symbol)
+
+    assert save_signature.parameters["symbol"].kind is Parameter.KEYWORD_ONLY
+    assert save_signature.parameters["snapshot"].kind is Parameter.KEYWORD_ONLY
+    assert get_signature.parameters["symbol"].kind is Parameter.KEYWORD_ONLY
+
+
+def test_risk_repository_requires_keyword_arguments() -> None:
+    """RiskRepository uses keyword-only arguments."""
+
+    save_state_signature = inspect.signature(
+        RiskRepository.save_risk_state,
+    )
+    save_event_signature = inspect.signature(
+        RiskRepository.save_event,
+    )
+    latest_state_signature = inspect.signature(
+        RiskRepository.get_latest_state,
+    )
+    list_events_signature = inspect.signature(
+        RiskRepository.list_events,
+    )
+    list_range_signature = inspect.signature(
+        RiskRepository.list_events_by_time_range,
+    )
+
+    assert (
+        save_state_signature.parameters["symbol"].kind
+        is Parameter.KEYWORD_ONLY
+    )
+    assert (
+        save_state_signature.parameters["snapshot"].kind
+        is Parameter.KEYWORD_ONLY
+    )
+
+    assert (
+        save_event_signature.parameters["event"].kind
+        is Parameter.KEYWORD_ONLY
+    )
+
+    assert (
+        latest_state_signature.parameters["symbol"].kind
+        is Parameter.KEYWORD_ONLY
+    )
+
+    assert (
+        list_events_signature.parameters["symbol"].kind
+        is Parameter.KEYWORD_ONLY
+    )
+
+    assert (
+        list_range_signature.parameters["symbol"].kind
+        is Parameter.KEYWORD_ONLY
+    )
+    assert (
+        list_range_signature.parameters["start"].kind
+        is Parameter.KEYWORD_ONLY
+    )
+    assert (
+        list_range_signature.parameters["end"].kind
+        is Parameter.KEYWORD_ONLY
+    )
