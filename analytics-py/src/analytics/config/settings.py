@@ -21,6 +21,8 @@ class Settings:
 
     max_payload_size: int = 1024 * 1024
 
+    database_url: str | None = None
+
     @classmethod
     def from_environment(cls) -> Settings:
         """Create settings from environment variables."""
@@ -64,6 +66,9 @@ class Settings:
                     "TRADING_ENGINE_MAX_PAYLOAD_SIZE",
                     str(1024 * 1024),
                 )
+            ),
+            database_url=os.getenv(
+                "TRADING_ENGINE_DATABASE_URL",
             ),
         )
 
