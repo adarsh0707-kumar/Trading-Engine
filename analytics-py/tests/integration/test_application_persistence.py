@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
+from unittest.mock import Mock
 from uuid import uuid4
 
 import psycopg
@@ -23,9 +25,7 @@ from analytics.persistence.postgres import (
 
 
 DATABASE_URL_ENV = "TRADING_ENGINE_TEST_DATABASE_URL"
-MIGRATIONS_PATH = (
-    Path(__file__).resolve().parents[2] / "migrations"
-)
+MIGRATIONS_PATH = Path(__file__).resolve().parents[2] / "migrations"
 
 
 def _database_url() -> str:
@@ -111,6 +111,7 @@ class FailingRiskRepository:
     def save_event(self, *, event) -> None:
         raise AssertionError("save_event should not be reached")
 
+
 def test_trade_flows_from_transport_to_postgresql(
     repositories: PostgresRepositories,
 ) -> None:
@@ -183,8 +184,11 @@ def test_trade_flows_from_transport_to_postgresql(
 
 def test_persistence_rolls_back_when_repository_write_fails(
     repositories: PostgresRepositories,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """A failure during persistence should roll back earlier PostgreSQL writes."""
+    """A persistence failure rolls back writes and prevents publishing."""
+
+    publish_sink = Mock()
 
     service_repositories = PostgresRepositories(
         connection=repositories.connection,
@@ -197,27 +201,33 @@ def test_persistence_rolls_back_when_repository_write_fails(
     service = AnalyticsService(
         Settings(),
         repositories=service_repositories,
-        publish_sink=lambda _payload: None,
+        publish_sink=publish_sink,
     )
 
-    with pytest.raises(
-        RuntimeError,
-        match="simulated risk persistence failure",
-    ):
-        service._handle_message(
-            '{"type":"TRADE",'
-            '"request_id":"event-rollback-001",'
-            '"timestamp":"2026-09-27T10:05:00+00:00",'
-            '"payload":"{'
-            '\\"symbol\\":\\"MSFT\\",'
-            '\\"price\\":\\"200\\",'
-            '\\"quantity\\":5,'
-            '\\"taker_order_id\\":\\"order-taker-rollback\\",'
-            '\\"maker_order_id\\":\\"order-maker-rollback\\",'
-            '\\"taker_side\\":\\"BUY\\"'
-            '}"'
-            '}',
-        )
+    message = (
+        '{"type":"TRADE",'
+        '"request_id":"event-rollback-001",'
+        '"timestamp":"2026-09-27T10:05:00+00:00",'
+        '"payload":"{'
+        '\\"symbol\\":\\"MSFT\\",'
+        '\\"price\\":\\"200\\",'
+        '\\"quantity\\":5,'
+        '\\"taker_order_id\\":\\"order-taker-rollback\\",'
+        '\\"maker_order_id\\":\\"order-maker-rollback\\",'
+        '\\"taker_side\\":\\"BUY\\"'
+        '}"'
+        '}'
+    )
+
+    with caplog.at_level(logging.ERROR):
+        service._handle_message(message)
+
+    assert (
+        "failed to persist trade event-rollback-001: "
+        "failed to persist processed trade"
+    ) in caplog.text
+
+    publish_sink.assert_not_called()
 
     # The transaction must be rolled back, so none of the earlier writes remain.
     assert repositories.trades.get_by_id("event-rollback-001") is None
