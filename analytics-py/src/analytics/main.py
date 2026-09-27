@@ -9,7 +9,11 @@ from typing import Callable
 
 from analytics.config.settings import Settings
 from analytics.ingestion import MessageParseError, MessageParser, SocketClient
-from analytics.models import Trade
+from analytics.models import ProcessedTrade, Trade
+from analytics.persistence.postgres import (
+    PostgresRepositories,
+    create_postgres_repositories,
+)
 from analytics.pipeline import AnalyticsPublisher, StreamingProcessor
 
 
@@ -17,15 +21,25 @@ logger = logging.getLogger(__name__)
 
 
 class AnalyticsService:
-    """Wire ingestion, parsing, processing, and publishing together."""
+    """Wire ingestion, processing, publishing, and optional persistence."""
 
     def __init__(
         self,
         settings: Settings,
         *,
         publish_sink: Callable[[str], None] | None = None,
+        repositories: PostgresRepositories | None = None,
     ) -> None:
         self.settings = settings
+        self._owns_repositories = False
+
+        if repositories is None and settings.database_url is not None:
+            repositories = create_postgres_repositories(
+                settings.database_url,
+            )
+            self._owns_repositories = True
+
+        self.repositories = repositories
 
         self.parser = MessageParser()
         self.processor = StreamingProcessor()
@@ -59,12 +73,16 @@ class AnalyticsService:
         self.client.start()
 
     def stop(self) -> None:
-        """Stop the analytics service."""
+        """Stop the analytics service and owned persistence resources."""
         logger.info("stopping analytics service")
         self.client.stop()
 
+        if self._owns_repositories and self.repositories is not None:
+            self.repositories.close()
+            self._owns_repositories = False
+
     def _handle_message(self, message: str) -> None:
-        """Parse and process one complete transport message."""
+        """Parse, process, persist, and publish one transport message."""
         try:
             event = self.parser.parse(message)
         except MessageParseError as exc:
@@ -73,8 +91,13 @@ class AnalyticsService:
 
         if isinstance(event, Trade):
             try:
-                result = self.processor.process_trade(event)
-                self.publisher.publish(result)
+                result = self.processor.process_trade_with_risk_events(
+                    event,
+                )
+
+                self._persist(result)
+
+                self.publisher.publish(result.analytics)
             except (TypeError, ValueError) as exc:
                 logger.warning(
                     "failed to process trade %s: %s",
@@ -87,6 +110,27 @@ class AnalyticsService:
             "ignoring %s event for current analytics pipeline",
             event.event_type,
         )
+
+    def _persist(self, result: ProcessedTrade) -> None:
+        """Persist one complete processed trade when persistence is enabled."""
+        if self.repositories is None:
+            return
+
+        self.repositories.trades.save(result.trade)
+        self.repositories.analytics.save(result.analytics)
+
+        self.repositories.positions.save(
+            symbol=result.trade.symbol,
+            snapshot=result.risk_snapshot,
+        )
+
+        self.repositories.risk.save_risk_state(
+            symbol=result.trade.symbol,
+            snapshot=result.risk_snapshot,
+        )
+
+        for event in result.risk_events:
+            self.repositories.risk.save_event(event=event)
 
     def _handle_connect(self) -> None:
         """Handle successful connection to the trading engine."""
