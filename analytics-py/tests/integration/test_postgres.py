@@ -180,6 +180,8 @@ def test_real_migration_creates_expected_schema(
         ("001",),
         ("002",),
         ("003",),
+        ("004",),
+        ("005",),
     ]
 
     assert columns == [
@@ -228,7 +230,7 @@ def test_migration_is_idempotent(migrated_connection) -> None:
         )
         count = cursor.fetchone()[0]
 
-    assert count == 3
+    assert count == 5
 
 
 def test_repository_saves_and_reads_trade(repository) -> None:
@@ -428,7 +430,7 @@ def test_failed_migration_is_rolled_back(
 ) -> None:
     """A failed migration does not leave partial schema changes."""
 
-    failed_migration = tmp_path / "004_broken.sql"
+    failed_migration = tmp_path / "006_broken.sql"
 
     failed_migration.write_text(
         """
@@ -478,4 +480,6 @@ def test_failed_migration_is_rolled_back(
         ("001",),
         ("002",),
         ("003",),
+        ("004",),
+        ("005",),
     ]
