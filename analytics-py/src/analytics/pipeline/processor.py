@@ -162,7 +162,9 @@ class StreamingProcessor:
             )
 
         return ProcessedTrade(
+            trade=trade,
             analytics=analytics,
+            risk_snapshot=risk,
             risk_events=risk_events,
         )
 
