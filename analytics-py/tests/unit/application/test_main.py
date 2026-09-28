@@ -628,3 +628,153 @@ def test_persist_logs_failure_context(
     assert f"event_id={result.trade.event_id}" in caplog.text
     assert f"symbol={result.trade.symbol}" in caplog.text
     assert "duration_seconds=" in caplog.text
+
+
+def test_service_metrics_can_be_injected() -> None:
+    """The service should use caller-provided service metrics."""
+
+    from analytics.observability import ServiceMetrics
+
+    metrics = ServiceMetrics()
+
+
+    service = AnalyticsService(
+        Settings(),
+        publish_sink=Mock(),
+        service_metrics=metrics,
+    )
+
+    assert service.service_metrics is metrics
+
+
+def test_parse_error_updates_service_metrics() -> None:
+    """Malformed messages should increment the parse error counter."""
+
+    from analytics.observability import ServiceMetrics
+
+    metrics = ServiceMetrics()
+    service = AnalyticsService(
+        Settings(),
+        publish_sink=Mock(),
+        service_metrics=metrics,
+    )
+
+    service._handle_message("{not-valid-json")
+
+    snapshot = metrics.snapshot()
+
+    assert snapshot.parse_error_count == 1
+    assert snapshot.trade_attempt_count == 0
+    assert snapshot.published_analytics_count == 0
+
+
+def test_ignored_event_updates_service_metrics() -> None:
+    """Valid non-trade events should increment the ignored counter."""
+
+    from analytics.observability import ServiceMetrics
+
+    metrics = ServiceMetrics()
+    service = AnalyticsService(
+        Settings(),
+        publish_sink=Mock(),
+        service_metrics=metrics,
+    )
+
+    service._handle_message(
+        '{"type":"MARKET_TICK",'
+        '"request_id":"tick-001",'
+        '"timestamp":"2026-09-27T10:00:00+00:00",'
+        '"payload":"{'
+        '\\"symbol\\":\\"BTCUSD\\",'
+        '\\"price\\":\\"100.00\\",'
+        '\\"quantity\\":1'
+        '}"}',
+    )
+
+    snapshot = metrics.snapshot()
+
+    assert snapshot.ignored_event_count == 1
+    assert snapshot.trade_attempt_count == 0
+
+
+def test_successful_trade_updates_service_metrics() -> None:
+    """A successful trade should update processing and publish metrics."""
+
+    from analytics.observability import ServiceMetrics
+
+    metrics = ServiceMetrics()
+    publish_sink = Mock()
+
+    service = AnalyticsService(
+        Settings(),
+        publish_sink=publish_sink,
+        service_metrics=metrics,
+    )
+
+    service._handle_message(
+        '{"type":"TRADE",'
+        '"request_id":"event-metrics-001",'
+        '"timestamp":"2026-09-27T10:00:00+00:00",'
+        '"payload":"{'
+        '\\"symbol\\":\\"AAPL\\",'
+        '\\"price\\":\\"100\\",'
+        '\\"quantity\\":8,'
+        '\\"taker_order_id\\":\\"order-taker-metrics-001\\",'
+        '\\"maker_order_id\\":\\"order-maker-metrics-001\\",'
+        '\\"taker_side\\":\\"BUY\\"'
+        '}"'
+        '}',
+    )
+
+    snapshot = metrics.snapshot()
+
+    assert snapshot.processed_trade_count == 1
+    assert snapshot.processing_failure_count == 0
+    assert snapshot.published_analytics_count == 1
+    assert snapshot.trade_attempt_count == 1
+    assert snapshot.total_processing_duration_seconds > 0.0
+    assert snapshot.average_processing_duration_seconds > 0.0
+
+
+def test_persistence_failure_updates_service_failure_metrics() -> None:
+    """A persistence failure should count as a failed trade pipeline."""
+
+    from analytics.observability import ServiceMetrics
+
+    repositories = _transactional_repositories()
+    repositories.analytics.save.side_effect = RuntimeError(
+        "database unavailable",
+    )
+
+    metrics = ServiceMetrics()
+    publish_sink = Mock()
+
+    service = AnalyticsService(
+        Settings(),
+        repositories=repositories,
+        publish_sink=publish_sink,
+        service_metrics=metrics,
+    )
+
+    service._handle_message(
+        '{"type":"TRADE",'
+        '"request_id":"event-metrics-failure-001",'
+        '"timestamp":"2026-09-27T10:00:00+00:00",'
+        '"payload":"{'
+        '\\"symbol\\":\\"AAPL\\",'
+        '\\"price\\":\\"100\\",'
+        '\\"quantity\\":8,'
+        '\\"taker_order_id\\":\\"order-taker-metrics-failure\\",'
+        '\\"maker_order_id\\":\\"order-maker-metrics-failure\\",'
+        '\\"taker_side\\":\\"BUY\\"'
+        '}"'
+        '}',
+    )
+
+    snapshot = metrics.snapshot()
+
+    assert snapshot.processed_trade_count == 0
+    assert snapshot.processing_failure_count == 1
+    assert snapshot.published_analytics_count == 0
+    assert snapshot.trade_attempt_count == 1
+    assert snapshot.total_processing_duration_seconds > 0.0
