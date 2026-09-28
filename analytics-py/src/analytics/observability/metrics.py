@@ -294,11 +294,96 @@ class ProcessingLatencyMetrics:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class TradeThroughputSnapshot:
+    """Immutable snapshot of recent trade throughput."""
+
+    trade_count: int
+    window_seconds: float
+    trades_per_second: float
+    total_trade_count: int
+
+
+class TradeThroughputMetrics:
+    """Thread-safe in-memory throughput measurements for processed trades."""
+
+    def __init__(self, *, window_seconds: float = 60.0) -> None:
+        if not isinstance(window_seconds, (int, float)):
+            raise TypeError("window_seconds must be numeric")
+
+        if window_seconds <= 0:
+            raise ValueError("window_seconds must be positive")
+
+        self._lock = Lock()
+        self._window_seconds = float(window_seconds)
+        self._timestamps: list[float] = []
+        self._total_trade_count = 0
+
+    def record_trade(self, timestamp_seconds: float | None = None) -> None:
+        """Record one successfully processed trade."""
+        if timestamp_seconds is None:
+            from time import perf_counter
+
+            timestamp_seconds = perf_counter()
+
+        if not isinstance(timestamp_seconds, (int, float)):
+            raise TypeError("timestamp_seconds must be numeric")
+
+        with self._lock:
+            self._timestamps.append(float(timestamp_seconds))
+            self._total_trade_count += 1
+            self._prune(float(timestamp_seconds))
+
+    def snapshot(self, timestamp_seconds: float | None = None) -> TradeThroughputSnapshot:
+        """Return throughput for the configured recent time window."""
+        if timestamp_seconds is None:
+            from time import perf_counter
+
+            timestamp_seconds = perf_counter()
+
+        if not isinstance(timestamp_seconds, (int, float)):
+            raise TypeError("timestamp_seconds must be numeric")
+
+        now = float(timestamp_seconds)
+
+        with self._lock:
+            self._prune(now)
+            count = len(self._timestamps)
+
+        return TradeThroughputSnapshot(
+            trade_count=count,
+            window_seconds=self._window_seconds,
+            trades_per_second=count / self._window_seconds,
+            total_trade_count=self._total_trade_count,
+        )
+
+    def reset(self) -> None:
+        """Reset all throughput measurements."""
+        with self._lock:
+            self._timestamps.clear()
+            self._total_trade_count = 0
+
+    def _prune(self, now: float) -> None:
+        """Drop timestamps outside the configured measurement window."""
+        cutoff = now - self._window_seconds
+
+        first_valid = 0
+        for timestamp in self._timestamps:
+            if timestamp >= cutoff:
+                break
+            first_valid += 1
+
+        if first_valid:
+            del self._timestamps[:first_valid]
+
+
 __all__ = [
     "PersistenceMetrics",
     "PersistenceMetricsSnapshot",
     "ProcessingLatencyMetrics",
     "ProcessingLatencySnapshot",
     "ServiceMetrics",
+    "TradeThroughputMetrics",
+    "TradeThroughputSnapshot",
     "ServiceMetricsSnapshot",
 ]
