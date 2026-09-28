@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import signal
-from threading import Event
+from threading import Event, Lock
 from time import perf_counter
 from typing import Callable
 
@@ -53,6 +53,9 @@ class AnalyticsService:
     ) -> None:
         self.settings = settings
         self._owns_repositories = False
+        self._lifecycle_lock = Lock()
+        self._started = False
+        self._shutdown_complete = False
 
         if repositories is None and settings.database_url is not None:
             repositories = create_postgres_repositories(
@@ -130,7 +133,15 @@ class AnalyticsService:
         logger.info("Prometheus metrics server stopped")
 
     def start(self) -> None:
-        """Start the analytics service."""
+        """Start the analytics service exactly once until it is stopped."""
+        with self._lifecycle_lock:
+            if self._started:
+                logger.debug("analytics service is already started")
+                return
+
+            self._started = True
+            self._shutdown_complete = False
+
         self.health_metrics.mark_started()
         logger.info(
             "starting analytics service: engine=%s:%d",
@@ -138,18 +149,62 @@ class AnalyticsService:
             self.settings.engine_port,
         )
 
-        self.client.start()
+        try:
+            self.client.start()
+        except Exception:
+            self.health_metrics.mark_stopped()
+            with self._lifecycle_lock:
+                self._started = False
+                self._shutdown_complete = False
+            logger.exception("failed to start analytics service")
+            raise
 
     def stop(self) -> None:
-        """Stop the analytics service and owned persistence resources."""
+        """Stop the service and clean up owned resources deterministically."""
+        with self._lifecycle_lock:
+            if self._shutdown_complete:
+                logger.debug("analytics service is already stopped")
+                return
+
+            was_started = self._started
+            self._started = False
+            self._shutdown_complete = True
+
+        if not was_started:
+            logger.debug("analytics service was not started; cleaning up")
+
         logger.info("stopping analytics service")
-        self.client.stop()
-        self.stop_metrics_server()
+
+        cleanup_error: Exception | None = None
+
+        try:
+            self.client.stop()
+        except Exception as exc:
+            cleanup_error = exc
+            logger.exception("failed to stop analytics socket client")
+
+        try:
+            self.stop_metrics_server()
+        except Exception as exc:
+            if cleanup_error is None:
+                cleanup_error = exc
+            logger.exception("failed to stop Prometheus metrics server")
+
         self.health_metrics.mark_stopped()
 
         if self._owns_repositories and self.repositories is not None:
-            self.repositories.close()
+            repositories = self.repositories
             self._owns_repositories = False
+
+            try:
+                repositories.close()
+            except Exception as exc:
+                if cleanup_error is None:
+                    cleanup_error = exc
+                logger.exception("failed to close owned repositories")
+
+        if cleanup_error is not None:
+            raise cleanup_error
 
     def check_persistence_health(self) -> bool | None:
         """Check configured PostgreSQL persistence health."""
@@ -166,7 +221,6 @@ class AnalyticsService:
             logger.error("persistence health check failed")
 
         return healthy
-
 
     def _handle_message(self, message: str) -> None:
         """Parse, process, persist, and publish one transport message."""
