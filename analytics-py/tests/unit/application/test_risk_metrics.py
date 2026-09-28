@@ -1,5 +1,6 @@
 """Application tests for risk metrics instrumentation."""
 
+from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import Mock
 
@@ -7,10 +8,9 @@ from analytics.config.settings import Settings
 from analytics.main import AnalyticsService
 from analytics.models import AnalyticsResult, ProcessedTrade, RiskEvent, Trade
 from analytics.models.risk_event import RiskEventType
-from analytics.models.risk_limit import RiskLimit, RiskLimitStatus, RiskLimitType
+from analytics.models.risk_limit import RiskLimitStatus, RiskLimitType
 from analytics.observability import RiskMetrics
 from analytics.risk.risk_manager import RiskSnapshot
-from datetime import datetime, timezone
 
 
 def make_trade() -> Trade:
