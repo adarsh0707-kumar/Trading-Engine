@@ -1,6 +1,10 @@
 """Observability primitives for the analytics service."""
 
 from analytics.observability.health import check_postgres_health
+from analytics.observability.health_metrics import (
+    ServiceHealthMetrics,
+    ServiceHealthSnapshot,
+)
 from analytics.observability.metrics import (
     ErrorMetrics,
     ErrorMetricsSnapshot,
@@ -33,6 +37,8 @@ __all__ = [
     "RiskMetricsSnapshot",
     "ServiceMetrics",
     "ServiceMetricsSnapshot",
+    "ServiceHealthMetrics",
+    "ServiceHealthSnapshot",
     "TradeThroughputMetrics",
     "TradeThroughputSnapshot",
     "check_postgres_health",

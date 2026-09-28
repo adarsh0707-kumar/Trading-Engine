@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest Completed Milestone:** Phase 3.8 — PostgreSQL Persistence & Observability
+**Latest Completed Milestone:** Phase 3.9 — Metrics and Observability
 
-**Next Milestone:** Phase 3.9 — Metrics and Observability
+**Next Milestone:** Phase 3.10 — Analytics Service Hardening
 
 ### Current validated path
 
@@ -256,7 +256,7 @@ Phase 3.8 is complete. No planned Phase 3.8 persistence items remain.
 
 ### Phase 3.9 — Metrics and Observability
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Planned:
 
@@ -470,7 +470,7 @@ Planned:
 | 3.6 | Risk Analytics | ✅ Complete |
 | 3.7 | Risk Limits & Risk Events | ✅ Complete |
 | 3.8 | PostgreSQL Persistence & Observability | ✅ Complete |
-| 3.9 | Metrics & Observability | ⏳ Planned |
+| 3.9 | Metrics & Observability | ✅ Complete |
 | 3.10 | Analytics Service Hardening | ⏳ Planned |
 | 4 | Node.js Gateway | ⏳ Planned |
 | 5 | React Dashboard | ⏳ Planned |
@@ -517,7 +517,7 @@ Planned:
 - [ ] Error counters
 - [ ] Prometheus integration
 - [ ] Grafana dashboards
-- [ ] Service-wide health/readiness metrics
+- [X] Service-wide health/readiness metrics
 
 ---
 

@@ -18,6 +18,47 @@ The project follows a phased implementation roadmap covering:
 
 ---
 
+## 2026-09-28 — Phase 3.9 — Metrics and Observability
+
+### Status
+
+**Status:** ✅ Complete
+
+Phase 3.9 expands observability from persistence-specific monitoring to service-wide operational metrics.
+
+### Implemented
+
+* Analytics service counters and processing duration metrics.
+* Processing latency percentiles.
+* Trade throughput metrics.
+* Risk state and risk-event metrics.
+* Error counters by category.
+* Prometheus exposition and exporter lifecycle.
+* Version-controlled Grafana dashboard provisioning.
+* Service liveness and readiness state.
+* Trading-engine connection health.
+* Inbound message count and last-message timestamp.
+* Automated tests for service health and Prometheus exposition.
+
+### Service Health
+
+Readiness is cleared when the trading-engine connection is lost or the service stops. Health state is exposed through Prometheus metrics for operational monitoring.
+
+### Phase 3.9 Validation
+
+- Service metrics: PASS
+- Processing latency: PASS
+- Trade throughput: PASS
+- Risk metrics: PASS
+- Error counters: PASS
+- Prometheus integration: PASS
+- Grafana dashboard: PASS
+- Service health metrics: PASS
+
+**Phase 3.9 exit status:** ✅ Complete
+
+---
+
 # Status Legend
 
 * ✅ Complete

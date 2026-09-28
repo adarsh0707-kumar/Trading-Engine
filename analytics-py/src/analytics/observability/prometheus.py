@@ -13,6 +13,7 @@ from prometheus_client.core import (
 )
 from prometheus_client.registry import Collector
 
+from analytics.observability.health_metrics import ServiceHealthMetrics
 from analytics.observability.metrics import (
     ErrorMetrics,
     PersistenceMetrics,
@@ -35,6 +36,7 @@ class AnalyticsPrometheusCollector(Collector):
         risk_metrics: RiskMetrics,
         error_metrics: ErrorMetrics,
         persistence_metrics: PersistenceMetrics,
+        health_metrics: ServiceHealthMetrics | None = None,
         persistence_health: Callable[[], bool | None] | None = None,
     ) -> None:
         self._service_metrics = service_metrics
@@ -43,6 +45,7 @@ class AnalyticsPrometheusCollector(Collector):
         self._risk_metrics = risk_metrics
         self._error_metrics = error_metrics
         self._persistence_metrics = persistence_metrics
+        self._health_metrics = health_metrics
         self._persistence_health = persistence_health
 
     def collect(self):
@@ -192,6 +195,34 @@ class AnalyticsPrometheusCollector(Collector):
         persistence = self._persistence_metrics.snapshot()
         yield self._persistence_family(persistence)
 
+        if self._health_metrics is not None:
+            health = self._health_metrics.snapshot()
+            yield GaugeMetricFamily(
+                "trading_engine_analytics_service_live",
+                "Analytics service liveness: 1 live, 0 stopped.",
+                value=1.0 if health.live else 0.0,
+            )
+            yield GaugeMetricFamily(
+                "trading_engine_analytics_service_ready",
+                "Analytics service readiness: 1 ready, 0 not ready.",
+                value=1.0 if health.ready else 0.0,
+            )
+            yield GaugeMetricFamily(
+                "trading_engine_analytics_engine_connected",
+                "Trading-engine connection state: 1 connected, 0 disconnected.",
+                value=1.0 if health.engine_connected else 0.0,
+            )
+            yield CounterMetricFamily(
+                "trading_engine_analytics_messages_received_total",
+                "Total inbound messages received by the analytics service.",
+                value=health.messages_received,
+            )
+            yield GaugeMetricFamily(
+                "trading_engine_analytics_last_message_timestamp_seconds",
+                "Timestamp of the most recently received inbound message.",
+                value=health.last_message_timestamp or 0.0,
+            )
+
         if self._persistence_health is not None:
             healthy = self._persistence_health()
             yield GaugeMetricFamily(
@@ -245,6 +276,7 @@ class PrometheusExporter:
         risk_metrics: RiskMetrics,
         error_metrics: ErrorMetrics,
         persistence_metrics: PersistenceMetrics,
+        health_metrics: ServiceHealthMetrics | None = None,
         persistence_health: Callable[[], bool | None] | None = None,
         registry: CollectorRegistry | None = None,
     ) -> None:
@@ -256,6 +288,7 @@ class PrometheusExporter:
             risk_metrics=risk_metrics,
             error_metrics=error_metrics,
             persistence_metrics=persistence_metrics,
+            health_metrics=health_metrics,
             persistence_health=persistence_health,
         )
         self.registry.register(self._collector)
