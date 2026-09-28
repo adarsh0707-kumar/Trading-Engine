@@ -18,6 +18,7 @@ def test_prometheus_exposes_backpressure_counters() -> None:
     backpressure = BackpressureMetrics()
     backpressure.record_enqueued()
     backpressure.record_rejected()
+    backpressure.set_queue_depth(3)
 
     registry = CollectorRegistry()
     exporter = PrometheusExporter(
@@ -38,5 +39,6 @@ def test_prometheus_exposes_backpressure_counters() -> None:
         for sample in metric.samples
     }
 
+    assert samples["trading_engine_analytics_backpressure_queue_depth"] == 3
     assert samples["trading_engine_analytics_backpressure_enqueued_total"] == 1
     assert samples["trading_engine_analytics_backpressure_rejected_total"] == 1
