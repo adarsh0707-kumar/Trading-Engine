@@ -153,8 +153,13 @@ class AnalyticsService:
         )
 
         try:
+            self._message_worker.start()
             self.client.start()
         except Exception:
+            try:
+                self._message_worker.stop(drain=True)
+            except Exception:
+                logger.exception("failed to stop backpressure worker after startup failure")
             self.health_metrics.mark_stopped()
             with self._lifecycle_lock:
                 self._started = False
@@ -185,6 +190,13 @@ class AnalyticsService:
         except Exception as exc:
             cleanup_error = exc
             logger.exception("failed to stop analytics socket client")
+
+        try:
+            self._message_worker.stop(drain=True)
+        except Exception as exc:
+            if cleanup_error is None:
+                cleanup_error = exc
+            logger.exception("failed to stop backpressure worker")
 
         try:
             self.stop_metrics_server()
