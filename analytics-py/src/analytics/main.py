@@ -12,6 +12,7 @@ from analytics.config.settings import Settings
 from analytics.ingestion import MessageParseError, MessageParser, SocketClient
 from analytics.models import ProcessedTrade, Trade
 from analytics.observability import (
+    ErrorMetrics,
     PersistenceMetrics,
     ProcessingLatencyMetrics,
     RiskMetrics,
@@ -44,6 +45,7 @@ class AnalyticsService:
         processing_latency_metrics: ProcessingLatencyMetrics | None = None,
         trade_throughput_metrics: TradeThroughputMetrics | None = None,
         risk_metrics: RiskMetrics | None = None,
+        error_metrics: ErrorMetrics | None = None,
     ) -> None:
         self.settings = settings
         self._owns_repositories = False
@@ -66,6 +68,7 @@ class AnalyticsService:
             trade_throughput_metrics or TradeThroughputMetrics()
         )
         self.risk_metrics = risk_metrics or RiskMetrics()
+        self.error_metrics = error_metrics or ErrorMetrics()
 
         self.parser = MessageParser()
         self.processor = StreamingProcessor()
@@ -130,6 +133,7 @@ class AnalyticsService:
             event = self.parser.parse(message)
         except MessageParseError as exc:
             self.service_metrics.record_parse_error()
+            self.error_metrics.record_parse_error()
             logger.warning("failed to parse incoming message: %s", exc)
             return
 
@@ -143,7 +147,17 @@ class AnalyticsService:
 
                 self._persist(result)
 
-                self.publisher.publish(result.analytics)
+                try:
+                    self.publisher.publish(result.analytics)
+                except Exception as exc:
+                    self.error_metrics.record_publish_error()
+                    logger.error(
+                        "failed to publish analytics for trade %s: %s",
+                        event.event_id,
+                        exc,
+                    )
+                    raise
+
                 self.service_metrics.record_published_analytics()
                 self.trade_throughput_metrics.record_trade()
                 self.risk_metrics.record_snapshot(
@@ -161,6 +175,7 @@ class AnalyticsService:
                         self.risk_metrics.record_breached_event()
 
             except PersistenceError as exc:
+                self.error_metrics.record_persistence_error()
                 duration_seconds = perf_counter() - started_at
                 self.service_metrics.record_trade_failure(
                     duration_seconds,
@@ -173,6 +188,7 @@ class AnalyticsService:
                 )
 
             except (TypeError, ValueError) as exc:
+                self.error_metrics.record_processing_error()
                 duration_seconds = perf_counter() - started_at
                 self.service_metrics.record_trade_failure(
                     duration_seconds,

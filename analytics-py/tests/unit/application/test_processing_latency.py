@@ -8,7 +8,7 @@ import pytest
 
 from analytics.config.settings import Settings
 from analytics.main import AnalyticsService
-from analytics.models import Trade
+from analytics.models import AnalyticsResult, Trade
 from analytics.observability import ProcessingLatencyMetrics
 
 
@@ -55,8 +55,24 @@ def test_successful_trade_records_processing_latency() -> None:
     )
 
     service.parser.parse = Mock(return_value=_trade())
+    trade = _trade()
     result = Mock()
-    result.analytics = object()
+    result.analytics = AnalyticsResult(
+        event_id=trade.event_id,
+        event_type="ANALYTICS_UPDATE",
+        symbol=trade.symbol,
+        price=trade.price,
+        vwap=Decimal("100"),
+        sma=None,
+        ema=None,
+        position=8,
+        realized_pnl=Decimal("0"),
+        unrealized_pnl=Decimal("0"),
+        equity=Decimal("10000"),
+        peak_equity=Decimal("10000"),
+        drawdown=Decimal("0"),
+        timestamp=trade.timestamp,
+    )
     service.processor.process_trade_with_risk_events = Mock(
         return_value=result,
     )
