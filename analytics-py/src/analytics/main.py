@@ -15,6 +15,7 @@ from analytics.observability import (
     PersistenceMetrics,
     ProcessingLatencyMetrics,
     ServiceMetrics,
+    TradeThroughputMetrics,
     check_postgres_health,
 )
 from analytics.persistence.errors import PersistenceError
@@ -40,6 +41,7 @@ class AnalyticsService:
         persistence_metrics: PersistenceMetrics | None = None,
         service_metrics: ServiceMetrics | None = None,
         processing_latency_metrics: ProcessingLatencyMetrics | None = None,
+        trade_throughput_metrics: TradeThroughputMetrics | None = None,
     ) -> None:
         self.settings = settings
         self._owns_repositories = False
@@ -57,6 +59,9 @@ class AnalyticsService:
         self.service_metrics = service_metrics or ServiceMetrics()
         self.processing_latency_metrics = (
             processing_latency_metrics or ProcessingLatencyMetrics()
+        )
+        self.trade_throughput_metrics = (
+            trade_throughput_metrics or TradeThroughputMetrics()
         )
 
         self.parser = MessageParser()
@@ -137,6 +142,7 @@ class AnalyticsService:
 
                 self.publisher.publish(result.analytics)
                 self.service_metrics.record_published_analytics()
+                self.trade_throughput_metrics.record_trade()
 
             except PersistenceError as exc:
                 duration_seconds = perf_counter() - started_at
