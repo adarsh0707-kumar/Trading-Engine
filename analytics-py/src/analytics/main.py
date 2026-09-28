@@ -254,6 +254,14 @@ class AnalyticsService:
         self.backpressure_metrics.record_rejected()
         logger.warning("analytics inbound queue is full; rejecting message")
 
+    def _process_queued_message(self, message: str) -> None:
+        try:
+            self._process_message(message)
+        finally:
+            self.backpressure_metrics.set_queue_depth(
+                self._message_queue.snapshot().queue_depth,
+            )
+
     def _process_message(self, message: str) -> None:
         """Parse, process, persist, and publish one queued message."""
 
