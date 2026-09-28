@@ -238,7 +238,24 @@ class AnalyticsService:
         return healthy
 
     def _handle_message(self, message: str) -> None:
-        """Parse, process, persist, and publish one transport message."""
+        """Enqueue one inbound message under bounded backpressure."""
+        self.health_metrics.record_message(perf_counter())
+        accepted = self._message_queue.put(
+            message,
+            timeout=self.settings.backpressure_enqueue_timeout,
+        )
+        self.backpressure_metrics.set_queue_depth(
+            self._message_queue.snapshot().queue_depth,
+        )
+        if accepted:
+            self.backpressure_metrics.record_enqueued()
+            return
+
+        self.backpressure_metrics.record_rejected()
+        logger.warning("analytics inbound queue is full; rejecting message")
+
+    def _process_message(self, message: str) -> None:
+        """Parse, process, persist, and publish one queued message."""
         self.health_metrics.record_message(perf_counter())
 
         try:
