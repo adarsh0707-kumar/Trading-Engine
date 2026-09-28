@@ -217,6 +217,11 @@ class AnalyticsPrometheusCollector(Collector):
                 "Total inbound messages received by the analytics service.",
                 value=health.messages_received,
             )
+            yield GaugeMetricFamily(
+                "trading_engine_analytics_last_message_timestamp_seconds",
+                "Timestamp of the most recently received inbound message.",
+                value=health.last_message_timestamp or 0.0,
+            )
 
         if self._persistence_health is not None:
             healthy = self._persistence_health()
