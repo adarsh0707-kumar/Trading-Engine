@@ -8,26 +8,32 @@ from analytics.observability.metrics import (
     PersistenceMetricsSnapshot,
     ProcessingLatencyMetrics,
     ProcessingLatencySnapshot,
+    RiskMetrics,
+    RiskMetricsSnapshot,
     ServiceMetrics,
     ServiceMetricsSnapshot,
     TradeThroughputMetrics,
     TradeThroughputSnapshot,
-    RiskMetrics,
-    RiskMetricsSnapshot,
+)
+from analytics.observability.prometheus import (
+    AnalyticsPrometheusCollector,
+    PrometheusExporter,
 )
 
 __all__ = [
+    "AnalyticsPrometheusCollector",
     "ErrorMetrics",
     "ErrorMetricsSnapshot",
     "PersistenceMetrics",
     "PersistenceMetricsSnapshot",
     "ProcessingLatencyMetrics",
     "ProcessingLatencySnapshot",
+    "PrometheusExporter",
+    "RiskMetrics",
+    "RiskMetricsSnapshot",
     "ServiceMetrics",
     "ServiceMetricsSnapshot",
     "TradeThroughputMetrics",
     "TradeThroughputSnapshot",
-    "RiskMetrics",
-    "RiskMetricsSnapshot",
     "check_postgres_health",
 ]
