@@ -1048,9 +1048,15 @@ Replace the current:
 ```md
 ### Remaining
 
+* [X] Risk limits
+* [X] Risk events
 * [ ] Risk-event publication
-* [ ] Remaining PostgreSQL repositories
-* [ ] Persistence integration with the streaming processor
+* [X] PostgreSQL persistence
+* [X] Persistence integration with the streaming processor
+* [X] Persistence transaction boundary
+* [X] Persistence failure handling
+* [X] Persistence observability and health checks
+* [X] Migration lifecycle
 * [ ] Metrics and observability
 * [ ] Analytics service hardening
 ```
@@ -1788,7 +1794,7 @@ Nginx
 | Phase 3.5  | Streaming Analytics                | ✅ Complete |
 | Phase 3.6  | Risk Analytics                     | ✅ Complete |
 | Phase 3.7  | Risk Limits & Risk Events          | ✅ Complete |
-| Phase 3.8  | Persistence                        | ✅ Complete |
+| Phase 3.8  | PostgreSQL Persistence & Observability | ✅ Complete |
 | Phase 3.9  | Metrics & Observability            | ⏳ Planned  |
 | Phase 3.10 | Analytics Hardening                | ⏳ Planned  |
 | Phase 4    | Node.js Gateway                    | ⏳ Planned  |
@@ -1828,6 +1834,8 @@ Phase 3.3 — Technical Indicators
 Phase 3.4 — Socket Ingestion
 Phase 3.5 — Streaming Analytics
 Phase 3.6 — Risk Analytics
+Phase 3.7 — Risk Limits & Risk Events
+Phase 3.8 — PostgreSQL Persistence & Observability
 ```
 
 Current analytics pipeline:
@@ -1867,7 +1875,7 @@ AnalyticsPublisher
 
 > Phase 3.9 — Metrics and Observability
 
-The project has moved beyond the initial trading-engine and analytics foundations. The next stage is to turn the existing risk calculations into **enforceable risk controls**, generate explicit **risk-violation events**, and prepare those events for downstream services.
+The project has completed the PostgreSQL persistence milestone. The next stage is to expand service-wide metrics and operational observability across analytics processing, throughput, risk evaluation, errors, and health.
 
 ---
 
@@ -1895,4 +1903,4 @@ Portfolio Risk Analytics
 Deterministic Analytics Publishing
 ```
 
-The core trading and analytics foundation is now implemented and tested. Future phases will extend this foundation into risk enforcement, persistence, observability, gateway APIs, real-time visualization, deployment, CI/CD, and production hardening.
+The core trading, analytics, risk, persistence, and persistence-observability foundation is implemented and tested. Future phases will extend this foundation into service-wide observability, gateway APIs, real-time visualization, deployment, CI/CD, and production hardening.

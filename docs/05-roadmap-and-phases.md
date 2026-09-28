@@ -175,7 +175,7 @@ The Python analytics service is the current active development area.
 
 ## Phase 3.8 — PostgreSQL Persistence & Observability
 
-**Status:** ✅ Complete**
+**Status:** ✅ Complete
 
 Implemented:
 
