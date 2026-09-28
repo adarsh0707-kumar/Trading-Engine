@@ -23,9 +23,14 @@ class Settings:
 
     database_url: str | None = None
 
+    metrics_host: str = "0.0.0.0"
+    metrics_port: int | None = None
+
     @classmethod
     def from_environment(cls) -> Settings:
         """Create settings from environment variables."""
+
+        metrics_port_value = os.getenv("TRADING_ENGINE_METRICS_PORT")
 
         return cls(
             engine_host=os.getenv(
@@ -69,6 +74,15 @@ class Settings:
             ),
             database_url=os.getenv(
                 "TRADING_ENGINE_DATABASE_URL",
+            ),
+            metrics_host=os.getenv(
+                "TRADING_ENGINE_METRICS_HOST",
+                "0.0.0.0",
+            ),
+            metrics_port=(
+                int(metrics_port_value)
+                if metrics_port_value
+                else None
             ),
         )
 
