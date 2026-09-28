@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from queue import Full, Queue
-from threading import Event, Lock, Thread
+from queue import Empty, Full, Queue
+from threading import Event, Lock, Thread, current_thread
 from typing import Callable
 
 
@@ -116,7 +116,7 @@ class BackpressureWorker:
 
         self._stop_event.set()
         thread = self._thread
-        if thread is not None and thread is not Thread.current_thread():
+        if thread is not None and thread is not current_thread():
             thread.join(timeout=2.0)
         self._thread = None
 
