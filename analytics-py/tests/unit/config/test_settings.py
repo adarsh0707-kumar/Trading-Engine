@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import math
 
+import pytest
+
 from analytics.config import ConfigurationError, Settings
 
 
