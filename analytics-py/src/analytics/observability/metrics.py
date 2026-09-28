@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from threading import Lock
 
 
@@ -377,6 +378,122 @@ class TradeThroughputMetrics:
             del self._timestamps[:first_valid]
 
 
+@dataclass(frozen=True, slots=True)
+class RiskMetricsSnapshot:
+    """Immutable snapshot of portfolio risk metrics."""
+
+    sample_count: int
+    current_position: int
+    max_abs_position: int
+    current_realized_pnl: Decimal
+    current_unrealized_pnl: Decimal
+    current_equity: Decimal
+    peak_equity: Decimal
+    current_drawdown: Decimal
+    max_drawdown: Decimal
+    warning_event_count: int
+    breached_event_count: int
+
+
+class RiskMetrics:
+    """Thread-safe in-memory measurements of portfolio risk state."""
+
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self._sample_count = 0
+        self._current_position = 0
+        self._max_abs_position = 0
+        self._current_realized_pnl = Decimal("0")
+        self._current_unrealized_pnl = Decimal("0")
+        self._current_equity = Decimal("0")
+        self._peak_equity = Decimal("0")
+        self._current_drawdown = Decimal("0")
+        self._max_drawdown = Decimal("0")
+        self._warning_event_count = 0
+        self._breached_event_count = 0
+
+    def record_snapshot(
+        self,
+        *,
+        position: int,
+        realized_pnl: Decimal,
+        unrealized_pnl: Decimal,
+        equity: Decimal,
+        peak_equity: Decimal,
+        drawdown: Decimal,
+    ) -> None:
+        """Record one portfolio risk snapshot."""
+        values = (
+            realized_pnl,
+            unrealized_pnl,
+            equity,
+            peak_equity,
+            drawdown,
+        )
+        if not all(isinstance(value, Decimal) for value in values):
+            raise TypeError("risk values must be Decimal")
+        if not isinstance(position, int):
+            raise TypeError("position must be an integer")
+        if drawdown < 0:
+            raise ValueError("drawdown must not be negative")
+
+        with self._lock:
+            self._sample_count += 1
+            self._current_position = position
+            self._max_abs_position = max(
+                self._max_abs_position,
+                abs(position),
+            )
+            self._current_realized_pnl = realized_pnl
+            self._current_unrealized_pnl = unrealized_pnl
+            self._current_equity = equity
+            self._peak_equity = peak_equity
+            self._current_drawdown = drawdown
+            self._max_drawdown = max(self._max_drawdown, drawdown)
+
+    def record_warning_event(self) -> None:
+        """Record one risk-limit warning event."""
+        with self._lock:
+            self._warning_event_count += 1
+
+    def record_breached_event(self) -> None:
+        """Record one risk-limit breach event."""
+        with self._lock:
+            self._breached_event_count += 1
+
+    def snapshot(self) -> RiskMetricsSnapshot:
+        """Return a consistent immutable risk metrics snapshot."""
+        with self._lock:
+            return RiskMetricsSnapshot(
+                sample_count=self._sample_count,
+                current_position=self._current_position,
+                max_abs_position=self._max_abs_position,
+                current_realized_pnl=self._current_realized_pnl,
+                current_unrealized_pnl=self._current_unrealized_pnl,
+                current_equity=self._current_equity,
+                peak_equity=self._peak_equity,
+                current_drawdown=self._current_drawdown,
+                max_drawdown=self._max_drawdown,
+                warning_event_count=self._warning_event_count,
+                breached_event_count=self._breached_event_count,
+            )
+
+    def reset(self) -> None:
+        """Reset all recorded risk metrics."""
+        with self._lock:
+            self._sample_count = 0
+            self._current_position = 0
+            self._max_abs_position = 0
+            self._current_realized_pnl = Decimal("0")
+            self._current_unrealized_pnl = Decimal("0")
+            self._current_equity = Decimal("0")
+            self._peak_equity = Decimal("0")
+            self._current_drawdown = Decimal("0")
+            self._max_drawdown = Decimal("0")
+            self._warning_event_count = 0
+            self._breached_event_count = 0
+
+
 __all__ = [
     "PersistenceMetrics",
     "PersistenceMetricsSnapshot",
@@ -385,5 +502,7 @@ __all__ = [
     "ServiceMetrics",
     "TradeThroughputMetrics",
     "TradeThroughputSnapshot",
+    "RiskMetrics",
+    "RiskMetricsSnapshot",
     "ServiceMetricsSnapshot",
 ]
