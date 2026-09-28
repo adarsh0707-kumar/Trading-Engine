@@ -2,7 +2,10 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal
-from unittest.mock import Mock
+
+
+from unittest.mock import MagicMock, Mock
+import pytest
 
 from analytics.config.settings import Settings
 from analytics.main import AnalyticsService
@@ -102,6 +105,17 @@ def _service(
 
     return service
 
+def _transactional_repositories() -> Mock:
+    """Create repository mocks with a working transaction context."""
+    repositories = Mock()
+
+    transaction = MagicMock()
+    transaction.__enter__.return_value = transaction
+    transaction.__exit__.return_value = False
+
+    repositories.connection.transaction.return_value = transaction
+
+    return repositories
 
 def test_database_disabled_does_not_create_repositories(
     monkeypatch,
@@ -161,7 +175,7 @@ def test_injected_repositories_are_not_owned() -> None:
 def test_persist_saves_complete_processed_trade() -> None:
     """Persistence should receive every required processed-trade value."""
 
-    repositories = Mock()
+    repositories = _transactional_repositories()
     result = _processed_trade()
 
     service = _service(repositories=repositories)
@@ -187,7 +201,7 @@ def test_persist_saves_complete_processed_trade() -> None:
 def test_persist_saves_all_risk_events() -> None:
     """Every generated risk event should be persisted."""
 
-    repositories = Mock()
+    repositories = _transactional_repositories()
     result = _processed_trade()
 
     event_one = Mock(spec=RiskEvent)
@@ -209,10 +223,72 @@ def test_persist_saves_all_risk_events() -> None:
     repositories.risk.save_event.assert_any_call(event=event_two)
 
 
+
+def test_persist_uses_database_transaction() -> None:
+    """Persistence should execute inside one database transaction."""
+
+    repositories = _transactional_repositories()
+    result = _processed_trade()
+    service = _service(repositories=repositories)
+
+    service._persist(result)
+
+    repositories.connection.transaction.assert_called_once_with()
+
+    transaction = repositories.connection.transaction.return_value
+    transaction.__enter__.assert_called_once_with()
+    transaction.__exit__.assert_called_once_with(None, None, None)
+
+
+def test_persist_performs_all_writes_inside_transaction() -> None:
+    """All repository writes should occur within the transaction context."""
+
+    repositories = _transactional_repositories()
+    result = _processed_trade()
+
+    transaction = repositories.connection.transaction.return_value
+
+    def assert_transaction_active(*_args, **_kwargs) -> None:
+        assert transaction.__enter__.called
+        assert not transaction.__exit__.called
+
+    repositories.trades.save.side_effect = assert_transaction_active
+    repositories.analytics.save.side_effect = assert_transaction_active
+    repositories.positions.save.side_effect = assert_transaction_active
+    repositories.risk.save_risk_state.side_effect = assert_transaction_active
+
+    service = _service(repositories=repositories)
+    service._persist(result)
+
+
+def test_persist_propagates_failure_from_transaction() -> None:
+    """A persistence failure should escape the transaction context."""
+
+    repositories = _transactional_repositories()
+    result = _processed_trade()
+
+    repositories.analytics.save.side_effect = RuntimeError(
+        "analytics persistence failed"
+    )
+
+    service = _service(repositories=repositories)
+
+    with pytest.raises(RuntimeError, match="analytics persistence failed"):
+        service._persist(result)
+
+    transaction = repositories.connection.transaction.return_value
+    transaction.__enter__.assert_called_once_with()
+
+    exit_args = transaction.__exit__.call_args.args
+    assert exit_args[0] is RuntimeError
+    assert isinstance(exit_args[1], RuntimeError)
+    assert exit_args[1].args == ("analytics persistence failed",)
+
+
 def test_handle_message_persists_and_publishes_trade() -> None:
     """A valid trade should be persisted before its analytics are published."""
 
-    repositories = Mock()
+    repositories = _transactional_repositories()
     publish_sink = Mock()
 
     service = AnalyticsService(
