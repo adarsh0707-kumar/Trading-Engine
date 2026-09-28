@@ -195,7 +195,7 @@ class AnalyticsPrometheusCollector(Collector):
 
         if self._backpressure_metrics is not None:
             backpressure = self._backpressure_metrics.snapshot()
-            yield GaugeMetricFamily(
+            yield CounterMetricFamily(
                 "trading_engine_analytics_backpressure_enqueued_total",
                 "Total inbound messages accepted by the bounded queue.",
                 value=backpressure.enqueued_count,
