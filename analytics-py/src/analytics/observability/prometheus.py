@@ -13,12 +13,12 @@ from prometheus_client.core import (
 )
 from prometheus_client.registry import Collector
 
+from analytics.observability.health_metrics import ServiceHealthMetrics
 from analytics.observability.metrics import (
     ErrorMetrics,
     PersistenceMetrics,
     ProcessingLatencyMetrics,
     RiskMetrics,
-    ServiceHealthMetrics,
     ServiceMetrics,
     TradeThroughputMetrics,
 )
