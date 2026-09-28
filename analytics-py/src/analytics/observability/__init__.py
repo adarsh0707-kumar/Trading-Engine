@@ -2,6 +2,8 @@
 
 from analytics.observability.health import check_postgres_health
 from analytics.observability.metrics import (
+    ErrorMetrics,
+    ErrorMetricsSnapshot,
     PersistenceMetrics,
     PersistenceMetricsSnapshot,
     ProcessingLatencyMetrics,
@@ -15,6 +17,8 @@ from analytics.observability.metrics import (
 )
 
 __all__ = [
+    "ErrorMetrics",
+    "ErrorMetricsSnapshot",
     "PersistenceMetrics",
     "PersistenceMetricsSnapshot",
     "ProcessingLatencyMetrics",
