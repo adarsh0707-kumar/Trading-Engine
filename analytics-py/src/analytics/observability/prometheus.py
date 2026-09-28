@@ -273,8 +273,8 @@ class PrometheusExporter:
         """Start the Prometheus HTTP exposition server."""
         if not isinstance(port, int):
             raise TypeError("port must be an integer")
-        if not 1 <= port <= 65535:
-            raise ValueError("port must be between 1 and 65535")
+        if not 0 <= port <= 65535:
+            raise ValueError("port must be between 0 and 65535")
 
         with self._lock:
             if self._server is not None:
