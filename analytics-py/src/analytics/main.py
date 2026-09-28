@@ -10,8 +10,10 @@ from typing import Callable
 
 from analytics.config.settings import Settings
 from analytics.ingestion import MessageParseError, MessageParser, SocketClient
+from analytics.ingestion.backpressure import BackpressureQueue, BackpressureWorker
 from analytics.models import ProcessedTrade, Trade
 from analytics.observability import (
+    BackpressureMetrics,
     ErrorMetrics,
     PersistenceMetrics,
     ProcessingLatencyMetrics,
@@ -76,17 +78,8 @@ class AnalyticsService:
         )
         self.risk_metrics = risk_metrics or RiskMetrics()
         self.error_metrics = error_metrics or ErrorMetrics()
+        self.backpressure_metrics = BackpressureMetrics()
         self.health_metrics = health_metrics or ServiceHealthMetrics()
-        self.prometheus_exporter = prometheus_exporter or PrometheusExporter(
-            service_metrics=self.service_metrics,
-            processing_latency_metrics=self.processing_latency_metrics,
-            trade_throughput_metrics=self.trade_throughput_metrics,
-            risk_metrics=self.risk_metrics,
-            error_metrics=self.error_metrics,
-            health_metrics=self.health_metrics,
-            persistence_metrics=self.persistence_metrics,
-            persistence_health=self.check_persistence_health,
-        )
 
         self.parser = MessageParser()
         self.processor = StreamingProcessor()
@@ -95,6 +88,25 @@ class AnalyticsService:
             publish_sink = self._default_publish_sink
 
         self.publisher = AnalyticsPublisher(publish_sink)
+        self._message_queue = BackpressureQueue(
+            capacity=settings.backpressure_queue_capacity,
+        )
+        self._message_worker = BackpressureWorker(
+            self._message_queue,
+            self._process_queued_message,
+        )
+
+        self.prometheus_exporter = prometheus_exporter or PrometheusExporter(
+            service_metrics=self.service_metrics,
+            processing_latency_metrics=self.processing_latency_metrics,
+            trade_throughput_metrics=self.trade_throughput_metrics,
+            risk_metrics=self.risk_metrics,
+            error_metrics=self.error_metrics,
+            backpressure_metrics=self.backpressure_metrics,
+            health_metrics=self.health_metrics,
+            persistence_metrics=self.persistence_metrics,
+            persistence_health=self.check_persistence_health,
+        )
 
         self.client = SocketClient(
             settings.engine_host,
@@ -150,8 +162,13 @@ class AnalyticsService:
         )
 
         try:
+            self._message_worker.start()
             self.client.start()
         except Exception:
+            try:
+                self._message_worker.stop(drain=True)
+            except Exception:
+                logger.exception("failed to stop backpressure worker after startup failure")
             self.health_metrics.mark_stopped()
             with self._lifecycle_lock:
                 self._started = False
@@ -182,6 +199,13 @@ class AnalyticsService:
         except Exception as exc:
             cleanup_error = exc
             logger.exception("failed to stop analytics socket client")
+
+        try:
+            self._message_worker.stop(drain=True)
+        except Exception as exc:
+            if cleanup_error is None:
+                cleanup_error = exc
+            logger.exception("failed to stop backpressure worker")
 
         try:
             self.stop_metrics_server()
@@ -223,8 +247,41 @@ class AnalyticsService:
         return healthy
 
     def _handle_message(self, message: str) -> None:
-        """Parse, process, persist, and publish one transport message."""
+        """Handle one inbound message with lifecycle-aware backpressure."""
         self.health_metrics.record_message(perf_counter())
+
+        # Direct calls before service startup retain the established synchronous
+        # contract used by tests and internal callers. SocketClient invokes this
+        # callback only after service.start(), so live traffic uses the bounded
+        # queue and dedicated worker below.
+        if not self._started:
+            self._process_message(message)
+            return
+
+        accepted = self._message_queue.put(
+            message,
+            timeout=self.settings.backpressure_enqueue_timeout,
+        )
+        self.backpressure_metrics.set_queue_depth(
+            self._message_queue.snapshot().queue_depth,
+        )
+        if accepted:
+            self.backpressure_metrics.record_enqueued()
+            return
+
+        self.backpressure_metrics.record_rejected()
+        logger.warning("analytics inbound queue is full; rejecting message")
+
+    def _process_queued_message(self, message: str) -> None:
+        try:
+            self._process_message(message)
+        finally:
+            self.backpressure_metrics.set_queue_depth(
+                self._message_queue.snapshot().queue_depth,
+            )
+
+    def _process_message(self, message: str) -> None:
+        """Parse, process, persist, and publish one queued message."""
 
         try:
             event = self.parser.parse(message)

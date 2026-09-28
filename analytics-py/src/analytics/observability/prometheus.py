@@ -13,6 +13,7 @@ from prometheus_client.core import (
 )
 from prometheus_client.registry import Collector
 
+from analytics.observability.backpressure import BackpressureMetrics
 from analytics.observability.health_metrics import ServiceHealthMetrics
 from analytics.observability.metrics import (
     ErrorMetrics,
@@ -36,6 +37,7 @@ class AnalyticsPrometheusCollector(Collector):
         risk_metrics: RiskMetrics,
         error_metrics: ErrorMetrics,
         persistence_metrics: PersistenceMetrics,
+        backpressure_metrics: BackpressureMetrics | None = None,
         health_metrics: ServiceHealthMetrics | None = None,
         persistence_health: Callable[[], bool | None] | None = None,
     ) -> None:
@@ -44,6 +46,7 @@ class AnalyticsPrometheusCollector(Collector):
         self._trade_throughput_metrics = trade_throughput_metrics
         self._risk_metrics = risk_metrics
         self._error_metrics = error_metrics
+        self._backpressure_metrics = backpressure_metrics
         self._persistence_metrics = persistence_metrics
         self._health_metrics = health_metrics
         self._persistence_health = persistence_health
@@ -189,6 +192,24 @@ class AnalyticsPrometheusCollector(Collector):
             value=risk.breached_event_count,
         )
 
+        if self._backpressure_metrics is not None:
+            backpressure = self._backpressure_metrics.snapshot()
+            yield GaugeMetricFamily(
+                "trading_engine_analytics_backpressure_queue_depth",
+                "Current inbound analytics queue depth.",
+                value=backpressure.queue_depth,
+            )
+            yield CounterMetricFamily(
+                "trading_engine_analytics_backpressure_enqueued_total",
+                "Total inbound messages accepted by the bounded queue.",
+                value=backpressure.enqueued_count,
+            )
+            yield CounterMetricFamily(
+                "trading_engine_analytics_backpressure_rejected_total",
+                "Total inbound messages rejected because the queue was full.",
+                value=backpressure.rejected_count,
+            )
+
         errors = self._error_metrics.snapshot()
         yield self._error_family(errors)
 
@@ -276,6 +297,7 @@ class PrometheusExporter:
         risk_metrics: RiskMetrics,
         error_metrics: ErrorMetrics,
         persistence_metrics: PersistenceMetrics,
+        backpressure_metrics: BackpressureMetrics | None = None,
         health_metrics: ServiceHealthMetrics | None = None,
         persistence_health: Callable[[], bool | None] | None = None,
         registry: CollectorRegistry | None = None,
@@ -288,6 +310,7 @@ class PrometheusExporter:
             risk_metrics=risk_metrics,
             error_metrics=error_metrics,
             persistence_metrics=persistence_metrics,
+            backpressure_metrics=backpressure_metrics,
             health_metrics=health_metrics,
             persistence_health=persistence_health,
         )

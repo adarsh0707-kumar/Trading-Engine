@@ -25,6 +25,8 @@ class Settings:
     reconnect_delay: float = 1.0
 
     max_payload_size: int = 1024 * 1024
+    backpressure_queue_capacity: int = 1000
+    backpressure_enqueue_timeout: float = 0.1
 
     database_url: str | None = None
 
@@ -44,6 +46,10 @@ class Settings:
             )
         if self.max_payload_size <= 0:
             raise ConfigurationError("max_payload_size must be greater than 0")
+        if isinstance(self.backpressure_queue_capacity, bool) or not isinstance(self.backpressure_queue_capacity, int) or self.backpressure_queue_capacity <= 0:
+            raise ConfigurationError("backpressure_queue_capacity must be an integer greater than 0")
+        if not isinstance(self.backpressure_enqueue_timeout, (int, float)) or isinstance(self.backpressure_enqueue_timeout, bool) or self.backpressure_enqueue_timeout < 0 or not math.isfinite(self.backpressure_enqueue_timeout):
+            raise ConfigurationError("backpressure_enqueue_timeout must be a finite number greater than or equal to 0")
         if self.database_url is not None and not self.database_url.strip():
             raise ConfigurationError("database_url must not be empty when provided")
         if not self.metrics_host.strip():
@@ -114,6 +120,8 @@ class Settings:
             database_url=os.getenv(
                 "TRADING_ENGINE_DATABASE_URL",
             ),
+            backpressure_queue_capacity=int(os.getenv("TRADING_ENGINE_BACKPRESSURE_QUEUE_CAPACITY", "1000")),
+            backpressure_enqueue_timeout=float(os.getenv("TRADING_ENGINE_BACKPRESSURE_ENQUEUE_TIMEOUT", "0.1")),
             metrics_host=os.getenv(
                 "TRADING_ENGINE_METRICS_HOST",
                 "0.0.0.0",
