@@ -36,3 +36,4 @@ def test_prometheus_exposes_service_health():
     assert "trading_engine_analytics_service_ready 1.0" in output
     assert "trading_engine_analytics_engine_connected 1.0" in output
     assert "trading_engine_analytics_messages_received_total 1.0" in output
+    assert "trading_engine_analytics_last_message_timestamp_seconds 10.0" in output
