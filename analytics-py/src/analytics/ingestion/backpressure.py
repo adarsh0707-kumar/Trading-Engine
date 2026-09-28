@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from queue import Empty, Full, Queue
 from threading import Event, Lock, Thread, current_thread
 from typing import Callable
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,5 +131,7 @@ class BackpressureWorker:
                 continue
             try:
                 self.handler(message)
+            except Exception:
+                logger.exception("backpressure worker failed to process message")
             finally:
                 self.queue.task_done()
