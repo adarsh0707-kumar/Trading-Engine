@@ -13,9 +13,9 @@ from prometheus_client.core import (
 )
 from prometheus_client.registry import Collector
 
+from analytics.observability.backpressure import BackpressureMetrics
 from analytics.observability.health_metrics import ServiceHealthMetrics
 from analytics.observability.metrics import (
-    BackpressureMetrics,
     ErrorMetrics,
     PersistenceMetrics,
     ProcessingLatencyMetrics,
@@ -36,9 +36,7 @@ class AnalyticsPrometheusCollector(Collector):
         trade_throughput_metrics: TradeThroughputMetrics,
         risk_metrics: RiskMetrics,
         error_metrics: ErrorMetrics,
-        backpressure_metrics: BackpressureMetrics | None = None,
         persistence_metrics: PersistenceMetrics,
-        backpressure_metrics: BackpressureMetrics | None = None,
         health_metrics: ServiceHealthMetrics | None = None,
         persistence_health: Callable[[], bool | None] | None = None,
     ) -> None:
