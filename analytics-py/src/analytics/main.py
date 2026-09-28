@@ -13,6 +13,7 @@ from analytics.ingestion import MessageParseError, MessageParser, SocketClient
 from analytics.models import ProcessedTrade, Trade
 from analytics.observability import (
     PersistenceMetrics,
+    ServiceMetrics,
     check_postgres_health,
 )
 from analytics.persistence.errors import PersistenceError
@@ -36,6 +37,7 @@ class AnalyticsService:
         publish_sink: Callable[[str], None] | None = None,
         repositories: PostgresRepositories | None = None,
         persistence_metrics: PersistenceMetrics | None = None,
+        service_metrics: ServiceMetrics | None = None,
     ) -> None:
         self.settings = settings
         self._owns_repositories = False
@@ -50,6 +52,7 @@ class AnalyticsService:
         self.persistence_metrics = (
             persistence_metrics or PersistenceMetrics()
         )
+        self.service_metrics = service_metrics or ServiceMetrics()
 
         self.parser = MessageParser()
         self.processor = StreamingProcessor()
@@ -113,10 +116,13 @@ class AnalyticsService:
         try:
             event = self.parser.parse(message)
         except MessageParseError as exc:
+            self.service_metrics.record_parse_error()
             logger.warning("failed to parse incoming message: %s", exc)
             return
 
         if isinstance(event, Trade):
+            started_at = perf_counter()
+
             try:
                 result = self.processor.process_trade_with_risk_events(
                     event,
@@ -125,20 +131,39 @@ class AnalyticsService:
                 self._persist(result)
 
                 self.publisher.publish(result.analytics)
+                self.service_metrics.record_published_analytics()
+
             except PersistenceError as exc:
+                duration_seconds = perf_counter() - started_at
+                self.service_metrics.record_trade_failure(
+                    duration_seconds,
+                )
                 logger.error(
                     "failed to persist trade %s: %s",
                     event.event_id,
                     exc,
                 )
+
             except (TypeError, ValueError) as exc:
+                duration_seconds = perf_counter() - started_at
+                self.service_metrics.record_trade_failure(
+                    duration_seconds,
+                )
                 logger.warning(
                     "failed to process trade %s: %s",
                     event.event_id,
                     exc,
                 )
+
+            else:
+                duration_seconds = perf_counter() - started_at
+                self.service_metrics.record_trade_success(
+                    duration_seconds,
+                )
+
             return
 
+        self.service_metrics.record_ignored_event()
         logger.debug(
             "ignoring %s event for current analytics pipeline",
             event.event_type,
