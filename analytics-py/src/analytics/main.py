@@ -18,6 +18,7 @@ from analytics.observability import (
     RiskMetrics,
     ServiceMetrics,
     TradeThroughputMetrics,
+    PrometheusExporter,
     check_postgres_health,
 )
 from analytics.persistence.errors import PersistenceError
@@ -46,6 +47,7 @@ class AnalyticsService:
         trade_throughput_metrics: TradeThroughputMetrics | None = None,
         risk_metrics: RiskMetrics | None = None,
         error_metrics: ErrorMetrics | None = None,
+        prometheus_exporter: PrometheusExporter | None = None,
     ) -> None:
         self.settings = settings
         self._owns_repositories = False
@@ -69,6 +71,15 @@ class AnalyticsService:
         )
         self.risk_metrics = risk_metrics or RiskMetrics()
         self.error_metrics = error_metrics or ErrorMetrics()
+        self.prometheus_exporter = prometheus_exporter or PrometheusExporter(
+            service_metrics=self.service_metrics,
+            processing_latency_metrics=self.processing_latency_metrics,
+            trade_throughput_metrics=self.trade_throughput_metrics,
+            risk_metrics=self.risk_metrics,
+            error_metrics=self.error_metrics,
+            persistence_metrics=self.persistence_metrics,
+            persistence_health=self.check_persistence_health,
+        )
 
         self.parser = MessageParser()
         self.processor = StreamingProcessor()
@@ -91,6 +102,29 @@ class AnalyticsService:
             on_disconnect=self._handle_disconnect,
         )
 
+    def start_metrics_server(self) -> None:
+        """Start Prometheus exposition when a metrics port is configured."""
+        if self.settings.metrics_port is None:
+            return
+
+        self.prometheus_exporter.start(
+            port=self.settings.metrics_port,
+            host=self.settings.metrics_host,
+        )
+        logger.info(
+            "Prometheus metrics server started: %s:%d",
+            self.settings.metrics_host,
+            self.settings.metrics_port,
+        )
+
+    def stop_metrics_server(self) -> None:
+        """Stop the Prometheus exposition server if it is running."""
+        if not self.prometheus_exporter.running:
+            return
+
+        self.prometheus_exporter.stop()
+        logger.info("Prometheus metrics server stopped")
+
     def start(self) -> None:
         """Start the analytics service."""
         logger.info(
@@ -105,6 +139,7 @@ class AnalyticsService:
         """Stop the analytics service and owned persistence resources."""
         logger.info("stopping analytics service")
         self.client.stop()
+        self.stop_metrics_server()
 
         if self._owns_repositories and self.repositories is not None:
             self.repositories.close()
@@ -308,6 +343,7 @@ def run(settings: Settings | None = None) -> None:
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
 
+    service.start_metrics_server()
     service.start()
 
     try:
