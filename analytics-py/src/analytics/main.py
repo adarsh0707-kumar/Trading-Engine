@@ -9,11 +9,12 @@ from time import perf_counter
 from typing import Callable
 
 from analytics.config.settings import Settings
-from analytics.ingestion import MessageParseError, MessageParser, SocketClient 
+from analytics.ingestion import MessageParseError, MessageParser, SocketClient
 from analytics.ingestion.backpressure import BackpressureQueue, BackpressureWorker
 from analytics.models import ProcessedTrade, Trade
 from analytics.observability import (
-    BackpressureMetrics,\n    ErrorMetrics,
+    BackpressureMetrics,
+    ErrorMetrics,
     PersistenceMetrics,
     ProcessingLatencyMetrics,
     RiskMetrics,
