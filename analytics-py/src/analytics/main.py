@@ -156,7 +156,7 @@ class AnalyticsService:
                         event.event_id,
                         exc,
                     )
-                    return
+                    raise
 
                 self.service_metrics.record_published_analytics()
                 self.trade_throughput_metrics.record_trade()
