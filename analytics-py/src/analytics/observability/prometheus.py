@@ -7,11 +7,11 @@ from typing import Callable
 
 from prometheus_client import CollectorRegistry, start_http_server
 from prometheus_client.core import (
-    Collector,
     CounterMetricFamily,
     GaugeMetricFamily,
     SummaryMetricFamily,
 )
+from prometheus_client.registry import Collector
 
 from analytics.observability.metrics import (
     ErrorMetrics,
