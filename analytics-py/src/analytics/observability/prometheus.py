@@ -334,6 +334,10 @@ class PrometheusExporter:
         server.server_close()
         if thread is not None:
             thread.join(timeout=2.0)
+            if thread.is_alive():
+                raise RuntimeError(
+                    "Prometheus exporter server thread did not stop cleanly"
+                )
 
 
 __all__ = ["AnalyticsPrometheusCollector", "PrometheusExporter"]
