@@ -22,8 +22,13 @@ option(
     OFF
 )
 
-if(ENABLE_SANITIZERS)
+option(
+    ENABLE_NETWORKING
+    "Build POSIX networking support and networking integration tests"
+    ON
+)
 
+if(ENABLE_SANITIZERS)
     add_compile_options(
         -fsanitize=address,undefined
         -g
@@ -33,7 +38,6 @@ if(ENABLE_SANITIZERS)
     add_link_options(
         -fsanitize=address,undefined
     )
-
 endif()
 
 include_directories(include)
@@ -57,13 +61,19 @@ add_library(
     src/market/MarketData.cpp
     src/market/MockMarketGenerator.cpp
 
-    src/network/Protocol.cpp
-    src/network/ClientConnection.cpp
-    src/network/SocketServer.cpp
-
     src/serialization/Message.cpp
     src/serialization/JsonSerializer.cpp
 )
+
+if(ENABLE_NETWORKING)
+    target_sources(
+        engine_core
+        PRIVATE
+        src/network/Protocol.cpp
+        src/network/ClientConnection.cpp
+        src/network/SocketServer.cpp
+    )
+endif()
 
 # ============================================================
 # Testing
@@ -251,61 +261,54 @@ add_test(
     COMMAND test_market_pipeline
 )
 
-
+# -------------------------
 # Phase 1.15 - Performance Benchmark
-add_executable(benchmark_matching_engine
+# -------------------------
+
+add_executable(
+    benchmark_matching_engine
     tests/performance/benchmark_matching_engine.cpp
 )
 
-target_link_libraries(benchmark_matching_engine
-    PRIVATE engine_core
-)
-
-# -------------------------
-# Serialization unit tests (Phase 2.1)
-# -------------------------
-
-add_executable(
-    test_serialization
-    tests/unit/test_serialization.cpp
-)
-
 target_link_libraries(
-    test_serialization
+    benchmark_matching_engine
     PRIVATE
     engine_core
 )
 
-add_test(
-    NAME test_serialization
-    COMMAND test_serialization
-)
-
 # -------------------------
-# Engine network integration tests (Phase 2.1)
+# Serialization unit tests
+# Phase 2.1
+#
+# Protocol.cpp is part of the networking layer, so this test
+# requires ENABLE_NETWORKING=ON.
 # -------------------------
 
-add_executable(
-    test_engine_network
-    tests/integration/test_engine_network.cpp
-)
+if(ENABLE_NETWORKING)
+    add_executable(
+        test_serialization
+        tests/unit/test_serialization.cpp
+    )
 
-target_link_libraries(
-    test_engine_network
-    PRIVATE
-    engine_core
-)
+    target_link_libraries(
+        test_serialization
+        PRIVATE
+        engine_core
+    )
 
-add_test(
-    NAME test_engine_network
-    COMMAND test_engine_network
-)
+    add_test(
+        NAME test_serialization
+        COMMAND test_serialization
+    )
+endif()
 
 # ============================================================
 # Phase 2.2 - Engine Runtime and Event Publishing
 # ============================================================
 
-target_sources(engine_core PRIVATE
+target_sources(
+    engine_core
+    PRIVATE
     src/utils/Time.cpp
     src/logging/Logger.cpp
     src/engine/EngineConfig.cpp
@@ -313,85 +316,118 @@ target_sources(engine_core PRIVATE
     src/engine/Engine.cpp
 )
 
-add_executable(
-    engine
-    src/main.cpp
-)
+# The engine executable depends on SocketServer and therefore
+# requires the networking implementation.
+if(ENABLE_NETWORKING)
+    add_executable(
+        engine
+        src/main.cpp
+    )
 
-target_link_libraries(
-    engine
-    PRIVATE
-    engine_core
-)
+    target_link_libraries(
+        engine
+        PRIVATE
+        engine_core
+    )
 
+    # -------------------------
+    # Engine network integration tests
+    # Phase 2.1
+    # -------------------------
 
-add_executable(
-    test_engine_event_publishing
-    tests/integration/test_engine_event_publishing.cpp
-)
+    add_executable(
+        test_engine_network
+        tests/integration/test_engine_network.cpp
+    )
 
-target_link_libraries(
-    test_engine_event_publishing
-    PRIVATE
-    engine_core
-)
+    target_link_libraries(
+        test_engine_network
+        PRIVATE
+        engine_core
+    )
 
-add_test(
-    NAME test_engine_event_publishing
-    COMMAND test_engine_event_publishing
-)
+    add_test(
+        NAME test_engine_network
+        COMMAND test_engine_network
+    )
 
+    # -------------------------
+    # Engine event publishing integration tests
+    # -------------------------
 
-add_executable(
-    test_connection_heartbeat
-    tests/integration/test_connection_heartbeat.cpp
-)
+    add_executable(
+        test_engine_event_publishing
+        tests/integration/test_engine_event_publishing.cpp
+    )
 
-target_link_libraries(
-    test_connection_heartbeat
-    PRIVATE
-    engine_core
-)
+    target_link_libraries(
+        test_engine_event_publishing
+        PRIVATE
+        engine_core
+    )
 
-add_test(
-    NAME test_connection_heartbeat
-    COMMAND test_connection_heartbeat
-)
+    add_test(
+        NAME test_engine_event_publishing
+        COMMAND test_engine_event_publishing
+    )
 
-# -------------------------
-# Client reconnection integration tests
-# -------------------------
-add_executable(
-    test_client_reconnects
-    tests/integration/test_client_reconnects.cpp
-)
+    # -------------------------
+    # Connection heartbeat integration tests
+    # -------------------------
 
-target_link_libraries(
-    test_client_reconnects
-    PRIVATE
-    engine_core
-)
+    add_executable(
+        test_connection_heartbeat
+        tests/integration/test_connection_heartbeat.cpp
+    )
 
-add_test(
-    NAME test_client_reconnects
-    COMMAND test_client_reconnects
-)
+    target_link_libraries(
+        test_connection_heartbeat
+        PRIVATE
+        engine_core
+    )
 
-# -------------------------
-# Graceful shutdown integration tests
-# -------------------------
-add_executable(
-    test_graceful_shutdown
-    tests/integration/test_graceful_shutdown.cpp
-)
+    add_test(
+        NAME test_connection_heartbeat
+        COMMAND test_connection_heartbeat
+    )
 
-target_link_libraries(
-    test_graceful_shutdown
-    PRIVATE
-    engine_core
-)
+    # -------------------------
+    # Client reconnection integration tests
+    # -------------------------
 
-add_test(
-    NAME test_graceful_shutdown
-    COMMAND test_graceful_shutdown
-)
+    add_executable(
+        test_client_reconnects
+        tests/integration/test_client_reconnects.cpp
+    )
+
+    target_link_libraries(
+        test_client_reconnects
+        PRIVATE
+        engine_core
+    )
+
+    add_test(
+        NAME test_client_reconnects
+        COMMAND test_client_reconnects
+    )
+
+    # -------------------------
+    # Graceful shutdown integration tests
+    # -------------------------
+
+    add_executable(
+        test_graceful_shutdown
+        tests/integration/test_graceful_shutdown.cpp
+    )
+
+    target_link_libraries(
+        test_graceful_shutdown
+        PRIVATE
+        engine_core
+    )
+
+    add_test(
+        NAME test_graceful_shutdown
+        COMMAND test_graceful_shutdown
+    )
+endif()
