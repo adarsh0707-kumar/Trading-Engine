@@ -57,12 +57,8 @@ class BackpressureQueue:
         """Return the next message, or None when the queue is empty."""
         try:
             return self._queue.get(timeout=timeout)
-        except Exception as exc:
-            from queue import Empty
-
-            if isinstance(exc, Empty):
-                return None
-            raise
+        except Empty:
+            return None
 
     def task_done(self) -> None:
         """Mark one dequeued message as processed."""
