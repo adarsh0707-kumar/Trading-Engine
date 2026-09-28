@@ -1,7 +1,7 @@
 """Observability primitives for the analytics service."""
 
 from analytics.observability.health import check_postgres_health
-from analytics.observability.health_metrics import (
+from analytics.observability.backpressure import (\n    BackpressureMetrics,\n    BackpressureMetricsSnapshot,\n)\nfrom analytics.observability.health_metrics import (
     ServiceHealthMetrics,
     ServiceHealthSnapshot,
 )
@@ -25,7 +25,7 @@ from analytics.observability.prometheus import (
 )
 
 __all__ = [
-    "AnalyticsPrometheusCollector",
+    "AnalyticsPrometheusCollector",\n    "BackpressureMetrics",\n    "BackpressureMetricsSnapshot",
     "ErrorMetrics",
     "ErrorMetricsSnapshot",
     "PersistenceMetrics",
