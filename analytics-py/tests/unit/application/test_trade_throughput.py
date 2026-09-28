@@ -1,6 +1,7 @@
+"""Application tests for trade throughput instrumentation."""
+
 from datetime import datetime, timezone
 from decimal import Decimal
-"""Application tests for trade throughput instrumentation."""
 
 from unittest.mock import Mock
 
@@ -34,7 +35,8 @@ def test_successful_trade_updates_throughput_metrics() -> None:
     result = Mock()
     result.analytics = object()
 
-    service.parser.parse = Mock(return_value=Trade(
+    service.parser.parse = Mock(
+        return_value=Trade(
         event_id="throughput-trade-001",
         event_type="TRADE",
         trade_id="throughput-trade-001",
@@ -43,7 +45,8 @@ def test_successful_trade_updates_throughput_metrics() -> None:
         price=Decimal("100"),
         timestamp=datetime.now(timezone.utc),
         taker_side="BUY",
-    ))
+        ),
+    )
     service.processor.process_trade_with_risk_events = Mock(
         return_value=result,
     )
