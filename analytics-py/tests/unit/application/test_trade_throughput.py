@@ -1,6 +1,11 @@
 """Application tests for trade throughput instrumentation."""
 
+from datetime import datetime, timezone
+from decimal import Decimal
+
 from unittest.mock import Mock
+
+from analytics.models import AnalyticsResult, Trade
 
 from analytics.config.settings import Settings
 from analytics.main import AnalyticsService
@@ -27,13 +32,35 @@ def test_successful_trade_updates_throughput_metrics() -> None:
         trade_throughput_metrics=metrics,
     )
 
-    result = Mock()
-    result.analytics = object()
-
-    service.parser.parse = Mock(return_value=Mock(
-        event_type="TRADE",
+    trade = Trade(
         event_id="throughput-trade-001",
-    ))
+        event_type="TRADE",
+        trade_id="throughput-trade-001",
+        symbol="AAPL",
+        quantity=10,
+        price=Decimal("100"),
+        timestamp=datetime.now(timezone.utc),
+        taker_side="BUY",
+    )
+    result = Mock()
+    result.analytics = AnalyticsResult(
+        event_id=trade.event_id,
+        event_type="ANALYTICS_UPDATE",
+        symbol=trade.symbol,
+        price=trade.price,
+        vwap=None,
+        sma=None,
+        ema=None,
+        position=10,
+        realized_pnl=Decimal("0"),
+        unrealized_pnl=Decimal("0"),
+        equity=Decimal("0"),
+        peak_equity=Decimal("0"),
+        drawdown=Decimal("0"),
+        timestamp=trade.timestamp,
+    )
+
+    service.parser.parse = Mock(return_value=trade)
     service.processor.process_trade_with_risk_events = Mock(
         return_value=result,
     )
@@ -55,9 +82,15 @@ def test_failed_trade_does_not_count_as_processed_throughput() -> None:
         trade_throughput_metrics=metrics,
     )
 
-    service.parser.parse = Mock(return_value=Mock(
-        event_type="TRADE",
+    service.parser.parse = Mock(return_value=Trade(
         event_id="throughput-failure-001",
+        event_type="TRADE",
+        trade_id="throughput-failure-001",
+        symbol="AAPL",
+        quantity=10,
+        price=Decimal("100"),
+        timestamp=datetime.now(timezone.utc),
+        taker_side="BUY",
     ))
     service.processor.process_trade_with_risk_events = Mock(
         side_effect=ValueError("invalid trade"),

@@ -10,6 +10,8 @@ from analytics.observability.metrics import (
     ServiceMetricsSnapshot,
     TradeThroughputMetrics,
     TradeThroughputSnapshot,
+    RiskMetrics,
+    RiskMetricsSnapshot,
 )
 
 __all__ = [
@@ -21,5 +23,7 @@ __all__ = [
     "ServiceMetricsSnapshot",
     "TradeThroughputMetrics",
     "TradeThroughputSnapshot",
+    "RiskMetrics",
+    "RiskMetricsSnapshot",
     "check_postgres_health",
 ]

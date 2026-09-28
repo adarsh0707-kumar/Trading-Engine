@@ -14,6 +14,7 @@ from analytics.models import ProcessedTrade, Trade
 from analytics.observability import (
     PersistenceMetrics,
     ProcessingLatencyMetrics,
+    RiskMetrics,
     ServiceMetrics,
     TradeThroughputMetrics,
     check_postgres_health,
@@ -42,6 +43,7 @@ class AnalyticsService:
         service_metrics: ServiceMetrics | None = None,
         processing_latency_metrics: ProcessingLatencyMetrics | None = None,
         trade_throughput_metrics: TradeThroughputMetrics | None = None,
+        risk_metrics: RiskMetrics | None = None,
     ) -> None:
         self.settings = settings
         self._owns_repositories = False
@@ -63,6 +65,7 @@ class AnalyticsService:
         self.trade_throughput_metrics = (
             trade_throughput_metrics or TradeThroughputMetrics()
         )
+        self.risk_metrics = risk_metrics or RiskMetrics()
 
         self.parser = MessageParser()
         self.processor = StreamingProcessor()
@@ -143,6 +146,19 @@ class AnalyticsService:
                 self.publisher.publish(result.analytics)
                 self.service_metrics.record_published_analytics()
                 self.trade_throughput_metrics.record_trade()
+                self.risk_metrics.record_snapshot(
+                    position=result.risk_snapshot.position,
+                    realized_pnl=result.risk_snapshot.realized_pnl,
+                    unrealized_pnl=result.risk_snapshot.unrealized_pnl,
+                    equity=result.risk_snapshot.equity,
+                    peak_equity=result.risk_snapshot.peak_equity,
+                    drawdown=result.risk_snapshot.drawdown,
+                )
+                for risk_event in result.risk_events:
+                    if risk_event.event_type == "RISK_LIMIT_WARNING":
+                        self.risk_metrics.record_warning_event()
+                    elif risk_event.event_type == "RISK_LIMIT_BREACHED":
+                        self.risk_metrics.record_breached_event()
 
             except PersistenceError as exc:
                 duration_seconds = perf_counter() - started_at
