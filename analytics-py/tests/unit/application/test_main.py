@@ -2,9 +2,8 @@
 
 from datetime import datetime, timezone
 from decimal import Decimal
-
-
 from unittest.mock import MagicMock, Mock
+
 import pytest
 
 from analytics.config.settings import Settings
@@ -15,6 +14,7 @@ from analytics.models import (
     RiskEvent,
     Trade,
 )
+from analytics.persistence.errors import PersistenceError
 from analytics.risk.risk_manager import RiskSnapshot
 
 
@@ -261,19 +261,22 @@ def test_persist_performs_all_writes_inside_transaction() -> None:
     service._persist(result)
 
 
-def test_persist_propagates_failure_from_transaction() -> None:
-    """A persistence failure should escape the transaction context."""
+
+def test_persist_wraps_failure_as_persistence_error() -> None:
+    """A persistence failure should become a PersistenceError."""
 
     repositories = _transactional_repositories()
     result = _processed_trade()
 
-    repositories.analytics.save.side_effect = RuntimeError(
-        "analytics persistence failed"
-    )
+    original_error = RuntimeError("analytics persistence failed")
+    repositories.analytics.save.side_effect = original_error
 
     service = _service(repositories=repositories)
 
-    with pytest.raises(RuntimeError, match="analytics persistence failed"):
+    with pytest.raises(
+        PersistenceError,
+        match="failed to persist processed trade",
+    ) as exc_info:
         service._persist(result)
 
     transaction = repositories.connection.transaction.return_value
@@ -281,9 +284,107 @@ def test_persist_propagates_failure_from_transaction() -> None:
 
     exit_args = transaction.__exit__.call_args.args
     assert exit_args[0] is RuntimeError
-    assert isinstance(exit_args[1], RuntimeError)
-    assert exit_args[1].args == ("analytics persistence failed",)
+    assert exit_args[1] is original_error
 
+    assert exc_info.value.__cause__ is original_error
+
+
+def test_handle_message_does_not_publish_after_persistence_failure(
+    caplog,
+) -> None:
+    """A failed persistence operation must not publish analytics."""
+
+    repositories = _transactional_repositories()
+    repositories.analytics.save.side_effect = RuntimeError(
+        "database unavailable"
+    )
+
+    publish_sink = Mock()
+
+    service = AnalyticsService(
+        Settings(),
+        repositories=repositories,
+        publish_sink=publish_sink,
+    )
+
+    message = (
+        '{"type":"TRADE",'
+        '"request_id":"event-persistence-failure-001",'
+        '"timestamp":"2026-09-27T10:00:00+00:00",'
+        '"payload":"{'
+        '\\"symbol\\":\\"AAPL\\",'
+        '\\"price\\":\\"100\\",'
+        '\\"quantity\\":8,'
+        '\\"taker_order_id\\":\\"order-taker-failure\\",'
+        '\\"maker_order_id\\":\\"order-maker-failure\\",'
+        '\\"taker_side\\":\\"BUY\\"'
+        '}"'
+        '}'
+    )
+
+    with caplog.at_level("ERROR"):
+        service._handle_message(message)
+
+    publish_sink.assert_not_called()
+
+    assert "failed to persist trade event-persistence-failure-001" in (
+        caplog.text
+    )
+
+
+def test_service_continues_after_persistence_failure() -> None:
+    """A persistence failure must not prevent later messages from processing."""
+
+    repositories = _transactional_repositories()
+
+    repositories.analytics.save.side_effect = [
+        RuntimeError("temporary database failure"),
+        None,
+    ]
+
+    publish_sink = Mock()
+
+    service = AnalyticsService(
+        Settings(),
+        repositories=repositories,
+        publish_sink=publish_sink,
+    )
+
+    first_message = (
+        '{"type":"TRADE",'
+        '"request_id":"event-failure-001",'
+        '"timestamp":"2026-09-27T10:00:00+00:00",'
+        '"payload":"{'
+        '\\"symbol\\":\\"AAPL\\",'
+        '\\"price\\":\\"100\\",'
+        '\\"quantity\\":8,'
+        '\\"taker_order_id\\":\\"order-taker-001\\",'
+        '\\"maker_order_id\\":\\"order-maker-001\\",'
+        '\\"taker_side\\":\\"BUY\\"'
+        '}"'
+        '}'
+    )
+
+    second_message = (
+        '{"type":"TRADE",'
+        '"request_id":"event-success-002",'
+        '"timestamp":"2026-09-27T10:01:00+00:00",'
+        '"payload":"{'
+        '\\"symbol\\":\\"MSFT\\",'
+        '\\"price\\":\\"200\\",'
+        '\\"quantity\\":5,'
+        '\\"taker_order_id\\":\\"order-taker-002\\",'
+        '\\"maker_order_id\\":\\"order-maker-002\\",'
+        '\\"taker_side\\":\\"BUY\\"'
+        '}"'
+        '}'
+    )
+
+    service._handle_message(first_message)
+    service._handle_message(second_message)
+
+    assert repositories.analytics.save.call_count == 2
+    assert publish_sink.call_count == 1
 
 def test_handle_message_persists_and_publishes_trade() -> None:
     """A valid trade should be persisted before its analytics are published."""

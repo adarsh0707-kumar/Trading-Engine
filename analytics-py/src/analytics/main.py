@@ -10,6 +10,7 @@ from typing import Callable
 from analytics.config.settings import Settings
 from analytics.ingestion import MessageParseError, MessageParser, SocketClient
 from analytics.models import ProcessedTrade, Trade
+from analytics.persistence.errors import PersistenceError
 from analytics.persistence.postgres import (
     PostgresRepositories,
     create_postgres_repositories,
@@ -98,6 +99,12 @@ class AnalyticsService:
                 self._persist(result)
 
                 self.publisher.publish(result.analytics)
+            except PersistenceError as exc:
+                logger.error(
+                    "failed to persist trade %s: %s",
+                    event.event_id,
+                    exc,
+                )
             except (TypeError, ValueError) as exc:
                 logger.warning(
                     "failed to process trade %s: %s",
@@ -116,19 +123,26 @@ class AnalyticsService:
         if self.repositories is None:
             return
 
-        with self.repositories.connection.transaction():
-            self.repositories.trades.save(result.trade)
-            self.repositories.analytics.save(result.analytics)
-            self.repositories.positions.save(
-                symbol=result.trade.symbol,
-                snapshot=result.risk_snapshot,
-            )
-            self.repositories.risk.save_risk_state(
-                symbol=result.trade.symbol,
-                snapshot=result.risk_snapshot,
-            )
-            for event in result.risk_events:
-                self.repositories.risk.save_event(event=event)
+        try:
+            with self.repositories.connection.transaction():
+                self.repositories.trades.save(result.trade)
+                self.repositories.analytics.save(result.analytics)
+                self.repositories.positions.save(
+                    symbol=result.trade.symbol,
+                    snapshot=result.risk_snapshot,
+                )
+                self.repositories.risk.save_risk_state(
+                    symbol=result.trade.symbol,
+                    snapshot=result.risk_snapshot,
+                )
+                for event in result.risk_events:
+                    self.repositories.risk.save_event(event=event)
+        except PersistenceError:
+            raise
+        except Exception as exc:
+            raise PersistenceError(
+                "failed to persist processed trade",
+            ) from exc
 
     def _handle_connect(self) -> None:
         """Handle successful connection to the trading engine."""
