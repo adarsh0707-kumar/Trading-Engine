@@ -154,6 +154,7 @@ class SocketClient:
 
         self._stop_event.set()
         self._close_socket()
+        self._mark_disconnected()
 
         thread = self._thread
 
@@ -164,6 +165,7 @@ class SocketClient:
             thread.join(timeout=max(self.receive_timeout + 1.0, 2.0))
 
         self._thread = None
+        self._buffer.clear()
 
     def is_running(self) -> bool:
         """Return whether the client ingestion loop is running."""
