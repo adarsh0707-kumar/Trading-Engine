@@ -55,6 +55,7 @@ class AnalyticsService:
         self._owns_repositories = False
         self._lifecycle_lock = Lock()
         self._started = False
+        self._shutdown_complete = False
 
         if repositories is None and settings.database_url is not None:
             repositories = create_postgres_repositories(
@@ -139,6 +140,7 @@ class AnalyticsService:
                 return
 
             self._started = True
+            self._shutdown_complete = False
 
         self.health_metrics.mark_started()
         logger.info(
@@ -153,17 +155,23 @@ class AnalyticsService:
             self.health_metrics.mark_stopped()
             with self._lifecycle_lock:
                 self._started = False
+                self._shutdown_complete = False
             logger.exception("failed to start analytics service")
             raise
 
     def stop(self) -> None:
         """Stop the service and clean up owned resources deterministically."""
         with self._lifecycle_lock:
+            if self._shutdown_complete:
+                logger.debug("analytics service is already stopped")
+                return
+
             was_started = self._started
             self._started = False
+            self._shutdown_complete = True
 
         if not was_started:
-            logger.debug("analytics service is already stopped")
+            logger.debug("analytics service was not started; cleaning up")
 
         logger.info("stopping analytics service")
 
