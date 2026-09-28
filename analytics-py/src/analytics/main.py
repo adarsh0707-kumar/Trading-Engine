@@ -13,6 +13,7 @@ from analytics.ingestion import MessageParseError, MessageParser, SocketClient
 from analytics.models import ProcessedTrade, Trade
 from analytics.observability import (
     PersistenceMetrics,
+    ProcessingLatencyMetrics,
     ServiceMetrics,
     check_postgres_health,
 )
@@ -38,6 +39,7 @@ class AnalyticsService:
         repositories: PostgresRepositories | None = None,
         persistence_metrics: PersistenceMetrics | None = None,
         service_metrics: ServiceMetrics | None = None,
+        processing_latency_metrics: ProcessingLatencyMetrics | None = None,
     ) -> None:
         self.settings = settings
         self._owns_repositories = False
@@ -53,6 +55,9 @@ class AnalyticsService:
             persistence_metrics or PersistenceMetrics()
         )
         self.service_metrics = service_metrics or ServiceMetrics()
+        self.processing_latency_metrics = (
+            processing_latency_metrics or ProcessingLatencyMetrics()
+        )
 
         self.parser = MessageParser()
         self.processor = StreamingProcessor()
@@ -138,6 +143,7 @@ class AnalyticsService:
                 self.service_metrics.record_trade_failure(
                     duration_seconds,
                 )
+                self.processing_latency_metrics.record(duration_seconds)
                 logger.error(
                     "failed to persist trade %s: %s",
                     event.event_id,
@@ -149,6 +155,7 @@ class AnalyticsService:
                 self.service_metrics.record_trade_failure(
                     duration_seconds,
                 )
+                self.processing_latency_metrics.record(duration_seconds)
                 logger.warning(
                     "failed to process trade %s: %s",
                     event.event_id,
@@ -160,6 +167,7 @@ class AnalyticsService:
                 self.service_metrics.record_trade_success(
                     duration_seconds,
                 )
+                self.processing_latency_metrics.record(duration_seconds)
 
             return
 
