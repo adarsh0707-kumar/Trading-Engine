@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 from analytics.config.settings import Settings
 from analytics.main import AnalyticsService
-from analytics.models import ProcessedTrade, RiskEvent, Trade
+from analytics.models import AnalyticsResult, ProcessedTrade, RiskEvent, Trade
 from analytics.models.risk_event import RiskEventType
 from analytics.models.risk_limit import RiskLimit, RiskLimitStatus, RiskLimitType
 from analytics.observability import RiskMetrics
@@ -37,7 +37,7 @@ def make_result() -> ProcessedTrade:
     )
     return ProcessedTrade(
         trade=trade,
-        analytics=Mock(),
+        analytics=AnalyticsResult(\n            event_id=trade.event_id,\n            event_type="ANALYTICS_UPDATE",\n            symbol=trade.symbol,\n            price=trade.price,\n            vwap=None,\n            sma=None,\n            ema=None,\n            position=snapshot.position,\n            realized_pnl=snapshot.realized_pnl,\n            unrealized_pnl=snapshot.unrealized_pnl,\n            equity=snapshot.equity,\n            peak_equity=snapshot.peak_equity,\n            drawdown=snapshot.drawdown,\n            timestamp=trade.timestamp,\n        ),
         risk_snapshot=snapshot,
         risk_events=(),
     )
