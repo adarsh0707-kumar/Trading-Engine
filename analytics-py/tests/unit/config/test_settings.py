@@ -46,3 +46,21 @@ def test_settings_reads_none_when_database_url_is_unset(
     settings = Settings.from_environment()
 
     assert settings.database_url is None
+
+def test_metrics_configuration_defaults_to_disabled(monkeypatch):
+    monkeypatch.delenv("TRADING_ENGINE_METRICS_PORT", raising=False)
+
+    settings = Settings.from_environment()
+
+    assert settings.metrics_port is None
+    assert settings.metrics_host == "0.0.0.0"
+
+
+def test_metrics_configuration_reads_environment(monkeypatch):
+    monkeypatch.setenv("TRADING_ENGINE_METRICS_HOST", "127.0.0.1")
+    monkeypatch.setenv("TRADING_ENGINE_METRICS_PORT", "9101")
+
+    settings = Settings.from_environment()
+
+    assert settings.metrics_host == "127.0.0.1"
+    assert settings.metrics_port == 9101
