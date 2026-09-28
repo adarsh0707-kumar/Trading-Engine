@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass
+
+
+class ConfigurationError(ValueError):
+    """Raised when analytics service configuration is invalid."""
 
 
 @dataclass(frozen=True)
@@ -25,6 +30,40 @@ class Settings:
 
     metrics_host: str = "0.0.0.0"
     metrics_port: int | None = None
+
+    def __post_init__(self) -> None:
+        """Validate all runtime settings at construction time."""
+        if not self.engine_host.strip():
+            raise ConfigurationError("engine_host must not be empty")
+        self._validate_port("engine_port", self.engine_port)
+        self._validate_positive_finite("connect_timeout", self.connect_timeout)
+        self._validate_positive_finite("receive_timeout", self.receive_timeout)
+        if self.reconnect_delay < 0 or not math.isfinite(self.reconnect_delay):
+            raise ConfigurationError(
+                "reconnect_delay must be a finite number greater than or equal to 0"
+            )
+        if self.max_payload_size <= 0:
+            raise ConfigurationError("max_payload_size must be greater than 0")
+        if self.database_url is not None and not self.database_url.strip():
+            raise ConfigurationError("database_url must not be empty when provided")
+        if not self.metrics_host.strip():
+            raise ConfigurationError("metrics_host must not be empty")
+        if self.metrics_port is not None:
+            self._validate_port("metrics_port", self.metrics_port)
+
+    @staticmethod
+    def _validate_port(name: str, value: int) -> None:
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ConfigurationError(f"{name} must be an integer between 1 and 65535")
+        if not 1 <= value <= 65535:
+            raise ConfigurationError(f"{name} must be between 1 and 65535")
+
+    @staticmethod
+    def _validate_positive_finite(name: str, value: float) -> None:
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            raise ConfigurationError(f"{name} must be a finite number greater than 0")
+        if value <= 0 or not math.isfinite(value):
+            raise ConfigurationError(f"{name} must be a finite number greater than 0")
 
     @classmethod
     def from_environment(cls) -> Settings:
@@ -87,4 +126,4 @@ class Settings:
         )
 
 
-__all__ = ["Settings"]
+__all__ = ["ConfigurationError", "Settings"]
