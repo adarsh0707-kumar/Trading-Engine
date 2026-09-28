@@ -37,6 +37,7 @@ class AnalyticsPrometheusCollector(Collector):
         risk_metrics: RiskMetrics,
         error_metrics: ErrorMetrics,
         persistence_metrics: PersistenceMetrics,
+        backpressure_metrics: BackpressureMetrics | None = None,
         health_metrics: ServiceHealthMetrics | None = None,
         persistence_health: Callable[[], bool | None] | None = None,
     ) -> None:
@@ -296,6 +297,7 @@ class PrometheusExporter:
         risk_metrics: RiskMetrics,
         error_metrics: ErrorMetrics,
         persistence_metrics: PersistenceMetrics,
+        backpressure_metrics: BackpressureMetrics | None = None,
         health_metrics: ServiceHealthMetrics | None = None,
         persistence_health: Callable[[], bool | None] | None = None,
         registry: CollectorRegistry | None = None,
