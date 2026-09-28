@@ -187,18 +187,10 @@ class AnalyticsPrometheusCollector(Collector):
         )
 
         errors = self._error_metrics.snapshot()
-        yield CounterMetricFamily(
-            "trading_engine_analytics_errors_total",
-            "Total service errors by category.",
-            labels=["type"],
-        )._add_metric if False else self._error_family(errors)
+        yield self._error_family(errors)
 
         persistence = self._persistence_metrics.snapshot()
-        yield CounterMetricFamily(
-            "trading_engine_analytics_persistence_operations_total",
-            "Total completed persistence operations by outcome.",
-            labels=["outcome"],
-        )._add_metric if False else self._persistence_family(persistence)
+        yield self._persistence_family(persistence)
 
         if self._persistence_health is not None:
             healthy = self._persistence_health()
