@@ -37,7 +37,22 @@ def make_result() -> ProcessedTrade:
     )
     return ProcessedTrade(
         trade=trade,
-        analytics=AnalyticsResult(\n            event_id=trade.event_id,\n            event_type="ANALYTICS_UPDATE",\n            symbol=trade.symbol,\n            price=trade.price,\n            vwap=None,\n            sma=None,\n            ema=None,\n            position=snapshot.position,\n            realized_pnl=snapshot.realized_pnl,\n            unrealized_pnl=snapshot.unrealized_pnl,\n            equity=snapshot.equity,\n            peak_equity=snapshot.peak_equity,\n            drawdown=snapshot.drawdown,\n            timestamp=trade.timestamp,\n        ),
+        analytics=AnalyticsResult(
+            event_id=trade.event_id,
+            event_type="ANALYTICS_UPDATE",
+            symbol=trade.symbol,
+            price=trade.price,
+            vwap=None,
+            sma=None,
+            ema=None,
+            position=snapshot.position,
+            realized_pnl=snapshot.realized_pnl,
+            unrealized_pnl=snapshot.unrealized_pnl,
+            equity=snapshot.equity,
+            peak_equity=snapshot.peak_equity,
+            drawdown=snapshot.drawdown,
+            timestamp=trade.timestamp,
+        ),
         risk_snapshot=snapshot,
         risk_events=(),
     )
