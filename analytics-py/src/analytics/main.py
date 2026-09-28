@@ -83,6 +83,7 @@ class AnalyticsService:
             trade_throughput_metrics=self.trade_throughput_metrics,
             risk_metrics=self.risk_metrics,
             error_metrics=self.error_metrics,
+            backpressure_metrics=self.backpressure_metrics,
             health_metrics=self.health_metrics,
             persistence_metrics=self.persistence_metrics,
             persistence_health=self.check_persistence_health,
