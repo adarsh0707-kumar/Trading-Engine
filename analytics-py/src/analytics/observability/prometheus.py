@@ -204,7 +204,7 @@ class AnalyticsPrometheusCollector(Collector):
                 "Total inbound messages accepted by the bounded queue.",
                 value=backpressure.enqueued_count,
             )
-            yield GaugeMetricFamily(
+            yield CounterMetricFamily(
                 "trading_engine_analytics_backpressure_rejected_total",
                 "Total inbound messages rejected because the queue was full.",
                 value=backpressure.rejected_count,
