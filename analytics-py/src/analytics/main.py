@@ -247,8 +247,17 @@ class AnalyticsService:
         return healthy
 
     def _handle_message(self, message: str) -> None:
-        """Enqueue one inbound message under bounded backpressure."""
+        """Handle one inbound message with lifecycle-aware backpressure."""
         self.health_metrics.record_message(perf_counter())
+
+        # Direct calls before service startup retain the established synchronous
+        # contract used by tests and internal callers. SocketClient invokes this
+        # callback only after service.start(), so live traffic uses the bounded
+        # queue and dedicated worker below.
+        if not self._started:
+            self._process_message(message)
+            return
+
         accepted = self._message_queue.put(
             message,
             timeout=self.settings.backpressure_enqueue_timeout,
