@@ -209,6 +209,78 @@ class ServiceMetrics:
 
 
 @dataclass(frozen=True, slots=True)
+class ErrorMetricsSnapshot:
+    """Immutable snapshot of service error counters."""
+
+    parse_error_count: int
+    processing_error_count: int
+    persistence_error_count: int
+    publish_error_count: int
+    unknown_error_count: int
+
+    @property
+    def total_error_count(self) -> int:
+        """Return the total number of recorded errors."""
+        return (
+            self.parse_error_count
+            + self.processing_error_count
+            + self.persistence_error_count
+            + self.publish_error_count
+            + self.unknown_error_count
+        )
+
+
+class ErrorMetrics:
+    """Thread-safe counters for errors crossing service boundaries."""
+
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self._parse_error_count = 0
+        self._processing_error_count = 0
+        self._persistence_error_count = 0
+        self._publish_error_count = 0
+        self._unknown_error_count = 0
+
+    def record_parse_error(self) -> None:
+        with self._lock:
+            self._parse_error_count += 1
+
+    def record_processing_error(self) -> None:
+        with self._lock:
+            self._processing_error_count += 1
+
+    def record_persistence_error(self) -> None:
+        with self._lock:
+            self._persistence_error_count += 1
+
+    def record_publish_error(self) -> None:
+        with self._lock:
+            self._publish_error_count += 1
+
+    def record_unknown_error(self) -> None:
+        with self._lock:
+            self._unknown_error_count += 1
+
+    def snapshot(self) -> ErrorMetricsSnapshot:
+        with self._lock:
+            return ErrorMetricsSnapshot(
+                parse_error_count=self._parse_error_count,
+                processing_error_count=self._processing_error_count,
+                persistence_error_count=self._persistence_error_count,
+                publish_error_count=self._publish_error_count,
+                unknown_error_count=self._unknown_error_count,
+            )
+
+    def reset(self) -> None:
+        with self._lock:
+            self._parse_error_count = 0
+            self._processing_error_count = 0
+            self._persistence_error_count = 0
+            self._publish_error_count = 0
+            self._unknown_error_count = 0
+
+
+@dataclass(frozen=True, slots=True)
 class ProcessingLatencySnapshot:
     """Immutable snapshot of analytics processing latency metrics."""
 
@@ -495,6 +567,8 @@ class RiskMetrics:
 
 
 __all__ = [
+    "ErrorMetrics",
+    "ErrorMetricsSnapshot",
     "PersistenceMetrics",
     "PersistenceMetricsSnapshot",
     "ProcessingLatencyMetrics",
