@@ -276,6 +276,7 @@ class PrometheusExporter:
         risk_metrics: RiskMetrics,
         error_metrics: ErrorMetrics,
         persistence_metrics: PersistenceMetrics,
+        health_metrics: ServiceHealthMetrics | None = None,
         persistence_health: Callable[[], bool | None] | None = None,
         registry: CollectorRegistry | None = None,
     ) -> None:
@@ -287,6 +288,7 @@ class PrometheusExporter:
             risk_metrics=risk_metrics,
             error_metrics=error_metrics,
             persistence_metrics=persistence_metrics,
+            health_metrics=health_metrics,
             persistence_health=persistence_health,
         )
         self.registry.register(self._collector)
