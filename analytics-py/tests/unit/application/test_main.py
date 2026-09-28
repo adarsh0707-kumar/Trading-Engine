@@ -8,6 +8,7 @@ import pytest
 
 from analytics.config.settings import Settings
 from analytics.main import AnalyticsService
+from analytics.observability import PersistenceMetrics
 from analytics.models import (
     AnalyticsResult,
     ProcessedTrade,
@@ -322,7 +323,7 @@ def test_handle_message_does_not_publish_after_persistence_failure(
         '}'
     )
 
-    with caplog.at_level("ERROR"):
+    with caplog.at_level("ERROR", logger="analytics.main"):
         service._handle_message(message)
 
     publish_sink.assert_not_called()
@@ -446,3 +447,184 @@ def test_stop_does_not_close_injected_repositories() -> None:
 
     service.client.stop.assert_called_once()
     repositories.close.assert_not_called()
+
+
+def test_check_persistence_health_returns_none_when_disabled() -> None:
+    """Health should be unknown when PostgreSQL persistence is disabled."""
+
+    service = _service()
+
+    assert service.check_persistence_health() is None
+
+
+def test_check_persistence_health_returns_true_when_postgres_is_healthy(
+    monkeypatch,
+) -> None:
+    """Health should report a healthy configured PostgreSQL connection."""
+
+    repositories = Mock()
+    monkeypatch.setattr(
+        "analytics.main.check_postgres_health",
+        Mock(return_value=True),
+    )
+
+    service = _service(repositories=repositories)
+
+    assert service.check_persistence_health() is True
+
+
+def test_check_persistence_health_returns_false_when_postgres_is_unhealthy(
+    monkeypatch,
+) -> None:
+    """Health should report an unhealthy configured PostgreSQL connection."""
+
+    repositories = Mock()
+    monkeypatch.setattr(
+        "analytics.main.check_postgres_health",
+        Mock(return_value=False),
+    )
+
+    service = _service(repositories=repositories)
+
+    assert service.check_persistence_health() is False
+
+
+def test_persist_records_success_metrics() -> None:
+    """Successful persistence should update success metrics."""
+
+    repositories = _transactional_repositories()
+    metrics = PersistenceMetrics()
+    result = _processed_trade()
+
+    service = AnalyticsService(
+        Settings(),
+        repositories=repositories,
+        persistence_metrics=metrics,
+    )
+
+    service._persist(result)
+
+    snapshot = metrics.snapshot()
+
+    assert snapshot.success_count == 1
+    assert snapshot.failure_count == 0
+    assert snapshot.total_duration_seconds > 0.0
+
+
+def test_persist_records_failure_metrics() -> None:
+    """Failed persistence should update failure metrics."""
+
+    repositories = _transactional_repositories()
+    metrics = PersistenceMetrics()
+    result = _processed_trade()
+
+    original_error = RuntimeError("database unavailable")
+    repositories.analytics.save.side_effect = original_error
+
+    service = AnalyticsService(
+        Settings(),
+        repositories=repositories,
+        persistence_metrics=metrics,
+    )
+
+    with pytest.raises(
+        PersistenceError,
+        match="failed to persist processed trade",
+    ):
+        service._persist(result)
+
+    snapshot = metrics.snapshot()
+
+    assert snapshot.success_count == 0
+    assert snapshot.failure_count == 1
+    assert snapshot.total_duration_seconds > 0.0
+
+
+def test_persist_records_success_and_failure_separately() -> None:
+    """Successes and failures should be tracked independently."""
+
+    repositories = _transactional_repositories()
+    metrics = PersistenceMetrics()
+    result = _processed_trade()
+
+    repositories.analytics.save.side_effect = [
+        RuntimeError("temporary database failure"),
+        None,
+    ]
+
+    service = AnalyticsService(
+        Settings(),
+        repositories=repositories,
+        persistence_metrics=metrics,
+    )
+
+    with pytest.raises(
+        PersistenceError,
+        match="failed to persist processed trade",
+    ):
+        service._persist(result)
+
+    service._persist(result)
+
+    snapshot = metrics.snapshot()
+
+    assert snapshot.success_count == 1
+    assert snapshot.failure_count == 1
+    assert snapshot.operation_count == 2
+    assert snapshot.total_duration_seconds > 0.0
+
+
+def test_persist_logs_success_context(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Successful persistence should log event context and duration."""
+
+    repositories = _transactional_repositories()
+    metrics = PersistenceMetrics()
+    result = _processed_trade()
+
+    service = AnalyticsService(
+        Settings(),
+        repositories=repositories,
+        persistence_metrics=metrics,
+    )
+
+    with caplog.at_level("INFO", logger="analytics.main"):
+        service._persist(result)
+
+    assert "persistence succeeded:" in caplog.text
+    assert f"event_id={result.trade.event_id}" in caplog.text
+    assert f"symbol={result.trade.symbol}" in caplog.text
+    assert "duration_seconds=" in caplog.text
+
+
+def test_persist_logs_failure_context(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Failed persistence should log event context and duration."""
+
+    repositories = _transactional_repositories()
+    metrics = PersistenceMetrics()
+    result = _processed_trade()
+
+    repositories.analytics.save.side_effect = RuntimeError(
+        "database unavailable",
+    )
+
+    service = AnalyticsService(
+        Settings(),
+        repositories=repositories,
+        persistence_metrics=metrics,
+    )
+
+    with caplog.at_level("ERROR", logger="analytics.main"):
+        with pytest.raises(
+            PersistenceError,
+            match="failed to persist processed trade",
+        ):
+            service._persist(result)
+
+    assert "persistence failed:" in caplog.text
+    assert f"event_id={result.trade.event_id}" in caplog.text
+    assert f"symbol={result.trade.symbol}" in caplog.text
+    assert "duration_seconds=" in caplog.text

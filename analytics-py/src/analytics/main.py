@@ -5,11 +5,16 @@ from __future__ import annotations
 import logging
 import signal
 from threading import Event
+from time import perf_counter
 from typing import Callable
 
 from analytics.config.settings import Settings
 from analytics.ingestion import MessageParseError, MessageParser, SocketClient
 from analytics.models import ProcessedTrade, Trade
+from analytics.observability import (
+    PersistenceMetrics,
+    check_postgres_health,
+)
 from analytics.persistence.errors import PersistenceError
 from analytics.persistence.postgres import (
     PostgresRepositories,
@@ -30,6 +35,7 @@ class AnalyticsService:
         *,
         publish_sink: Callable[[str], None] | None = None,
         repositories: PostgresRepositories | None = None,
+        persistence_metrics: PersistenceMetrics | None = None,
     ) -> None:
         self.settings = settings
         self._owns_repositories = False
@@ -41,6 +47,9 @@ class AnalyticsService:
             self._owns_repositories = True
 
         self.repositories = repositories
+        self.persistence_metrics = (
+            persistence_metrics or PersistenceMetrics()
+        )
 
         self.parser = MessageParser()
         self.processor = StreamingProcessor()
@@ -81,6 +90,23 @@ class AnalyticsService:
         if self._owns_repositories and self.repositories is not None:
             self.repositories.close()
             self._owns_repositories = False
+
+    def check_persistence_health(self) -> bool | None:
+        """Check configured PostgreSQL persistence health."""
+        if self.repositories is None:
+            return None
+
+        healthy = check_postgres_health(
+            self.repositories.connection,
+        )
+
+        if healthy:
+            logger.info("persistence health check succeeded")
+        else:
+            logger.error("persistence health check failed")
+
+        return healthy
+
 
     def _handle_message(self, message: str) -> None:
         """Parse, process, persist, and publish one transport message."""
@@ -123,6 +149,8 @@ class AnalyticsService:
         if self.repositories is None:
             return
 
+        started_at = perf_counter()
+
         try:
             with self.repositories.connection.transaction():
                 self.repositories.trades.save(result.trade)
@@ -138,11 +166,39 @@ class AnalyticsService:
                 for event in result.risk_events:
                     self.repositories.risk.save_event(event=event)
         except PersistenceError:
+            duration_seconds = perf_counter() - started_at
+            self.persistence_metrics.record_failure(duration_seconds)
+            logger.error(
+                "persistence failed: event_id=%s symbol=%s "
+                "duration_seconds=%.6f",
+                result.trade.event_id,
+                result.trade.symbol,
+                duration_seconds,
+            )
             raise
         except Exception as exc:
+            duration_seconds = perf_counter() - started_at
+            self.persistence_metrics.record_failure(duration_seconds)
+            logger.error(
+                "persistence failed: event_id=%s symbol=%s "
+                "duration_seconds=%.6f",
+                result.trade.event_id,
+                result.trade.symbol,
+                duration_seconds,
+            )
             raise PersistenceError(
                 "failed to persist processed trade",
             ) from exc
+
+        duration_seconds = perf_counter() - started_at
+        self.persistence_metrics.record_success(duration_seconds)
+        logger.info(
+            "persistence succeeded: event_id=%s symbol=%s "
+            "duration_seconds=%.6f",
+            result.trade.event_id,
+            result.trade.symbol,
+            duration_seconds,
+        )
 
     def _handle_connect(self) -> None:
         """Handle successful connection to the trading engine."""
