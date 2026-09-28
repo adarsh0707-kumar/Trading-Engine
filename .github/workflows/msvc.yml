@@ -51,28 +51,34 @@ jobs:
           cmakeBuildDirectory: ${{ env.build }}
           ruleset: NativeRecommendedRules.ruleset
 
-      - name: Inspect SARIF runs
+      - name: Normalize MSVC SARIF
         shell: pwsh
         run: |
           $sarifPath = "${{ steps.run-analysis.outputs.sarif }}"
           $sarif = Get-Content -Raw $sarifPath | ConvertFrom-Json
 
-          Write-Host "SARIF version: $($sarif.version)"
-          Write-Host "Number of runs: $($sarif.runs.Count)"
-
-          $index = 0
-          foreach ($run in $sarif.runs) {
-              $toolName = $run.tool.driver.name
-              $category = $run.automationDetails.id
-
-              Write-Host ""
-              Write-Host "Run $index"
-              Write-Host "  Tool: $toolName"
-              Write-Host "  Automation ID: $category"
-              Write-Host "  Results: $($run.results.Count)"
-
-              $index++
+          if ($sarif.runs.Count -eq 0) {
+              throw "MSVC Code Analysis produced a SARIF file with no runs."
           }
+
+          $runsWithResults = @(
+              $sarif.runs | Where-Object {
+                  $_.results -and $_.results.Count -gt 0
+              }
+          )
+
+          if ($runsWithResults.Count -gt 0) {
+              throw "MSVC SARIF contains $($runsWithResults.Count) runs with results. Do not discard findings."
+          }
+
+          Write-Host "MSVC SARIF contains $($sarif.runs.Count) empty runs."
+          Write-Host "Normalizing to a single empty PREfast run."
+
+          $sarif.runs = @($sarif.runs[0])
+
+          $sarif | ConvertTo-Json -Depth 100 | Set-Content -Path $sarifPath -Encoding utf8
+
+          Write-Host "Normalized SARIF runs: $($sarif.runs.Count)"
 
       - name: Upload SARIF to GitHub
         uses: github/codeql-action/upload-sarif@v4
