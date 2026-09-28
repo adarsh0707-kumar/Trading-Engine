@@ -1,5 +1,6 @@
 """Application tests for error-counter instrumentation."""
 
+import json
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import MagicMock, Mock
@@ -10,6 +11,22 @@ from analytics.config.settings import Settings
 from analytics.main import AnalyticsService
 from analytics.observability import ErrorMetrics
 import pytest
+
+
+def _trade_message(request_id: str) -> str:
+    return json.dumps({
+        "type": "TRADE",
+        "request_id": request_id,
+        "timestamp": "2026-09-27T10:00:00+00:00",
+        "payload": json.dumps({
+            "symbol": "AAPL",
+            "price": "100",
+            "quantity": 8,
+            "taker_order_id": "order-taker",
+            "maker_order_id": "order-maker",
+            "taker_side": "BUY",
+        }),
+    })
 
 
 def test_service_accepts_injected_error_metrics() -> None:
@@ -55,13 +72,8 @@ def test_processing_failure_updates_error_counter() -> None:
 
 def test_persistence_failure_updates_error_counter() -> None:
     metrics = ErrorMetrics()
-    repositories = Mock()
-    transaction = MagicMock()
-    transaction.__enter__.return_value = transaction
-    transaction.__exit__.return_value = False
-    repositories.connection.transaction.return_value = transaction
+    repositories = MagicMock()
     repositories.analytics.save.side_effect = RuntimeError("database unavailable")
-
     service = AnalyticsService(
         Settings(),
         repositories=repositories,
@@ -69,14 +81,7 @@ def test_persistence_failure_updates_error_counter() -> None:
         error_metrics=metrics,
     )
 
-    message = (
-        '{"type":"TRADE","request_id":"error-counter-persistence",'
-        '"timestamp":"2026-09-27T10:00:00+00:00",'
-        '"payload":"{\"symbol\":\"AAPL\",\"price\":\"100\",'
-        '\"quantity\":8,\"taker_order_id\":\"order-taker\",'
-        '\"maker_order_id\":\"order-maker\",\"taker_side\":\"BUY\"}"}'
-    )
-    service._handle_message(message)
+    service._handle_message(_trade_message("error-counter-persistence"))
 
     assert metrics.snapshot().persistence_error_count == 1
 
@@ -90,14 +95,8 @@ def test_publish_failure_updates_error_counter_and_does_not_publish_count() -> N
         error_metrics=metrics,
     )
 
-    message = (
-        '{"type":"TRADE","request_id":"error-counter-publish",'
-        '"timestamp":"2026-09-27T10:00:00+00:00",'
-        '"payload":"{\"symbol\":\"AAPL\",\"price\":\"100\",'
-        '\"quantity\":8,\"taker_order_id\":\"order-taker\",'
-        '\"maker_order_id\":\"order-maker\",\"taker_side\":\"BUY\"}"}'
-    )
-    service._handle_message(message)
+    with pytest.raises(RuntimeError, match="publisher unavailable"):
+        service._handle_message(_trade_message("error-counter-publish"))
 
-    snapshot = metrics.snapshot()
-    assert snapshot.publish_error_count == 1
+    assert metrics.snapshot().publish_error_count == 1
+
