@@ -2,7 +2,10 @@
 
 from analytics.observability.health import check_postgres_health
 from analytics.observability.backpressure import (
-    BackpressureMetrics,\n    BackpressureMetricsSnapshot,\n)\nfrom analytics.observability.health_metrics import (
+    BackpressureMetrics,
+    BackpressureMetricsSnapshot,
+)
+from analytics.observability.health_metrics import (
     ServiceHealthMetrics,
     ServiceHealthSnapshot,
 )
