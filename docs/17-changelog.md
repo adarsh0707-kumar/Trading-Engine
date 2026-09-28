@@ -27,202 +27,151 @@ The project follows a phased implementation roadmap covering:
 
 ---
 
-## 2026-09-14 — Phase 3.8 — PostgreSQL Schema & Integration Tests
+## 2026-09-28 — Phase 3.8 — PostgreSQL Persistence & Observability
 
 ### Status
 
-* ✅ PostgreSQL dependency (`psycopg[binary]`)
-* ✅ PostgreSQL migration runner
-* ✅ Transaction-safe migration execution
-* ✅ Migration discovery and deterministic ordering
-* ✅ Idempotent migration execution
-* ✅ Duplicate-version validation
-* ✅ Migration runner unit tests
-* ✅ Real PostgreSQL integration tests
-* ✅ PostgreSQL schema and index validation
-* ✅ PostgreSQL migration idempotency validation
-* ✅ PostgreSQL repository round-trip validation
-* ✅ PostgreSQL repository query validation
-* ✅ PostgreSQL repository upsert validation
-* ✅ PostgreSQL constraint validation
-* ✅ Failed migration rollback validation
-* ⏳ Remaining PostgreSQL repositories
-* ⏳ Persistence integration with the streaming processor
+**Status:** ✅ Complete
 
-### PostgreSQL Migration Runner
+Phase 3.8 is complete. PostgreSQL persistence is implemented end-to-end for trades, analytics results, positions, risk state, and risk events, with repository contracts, application wiring, transaction boundaries, failure handling, observability, health checks, and migration lifecycle management.
 
-Implemented the PostgreSQL migration infrastructure under:
+### Implemented
 
-`analytics-py/src/analytics/persistence/migrations/`
+* PostgreSQL connection configuration and connection factory.
+* Repository contracts aligned with application interfaces.
+* PostgreSQL analytics repository.
+* PostgreSQL position repository.
+* PostgreSQL risk repository.
+* Shared PostgreSQL repository factory.
+* Processed-trade persistence data-flow contract.
+* Analytics-service persistence wiring.
+* End-to-end PostgreSQL persistence coverage.
+* Atomic persistence transaction boundary.
+* Persistence failure handling with rollback and error propagation.
+* Thread-safe persistence success/failure metrics.
+* Persistence duration and failure logging.
+* PostgreSQL health checks.
+* Dedicated migration runner and bootstrap lifecycle.
+* Deterministic migration discovery and ordering.
+* Migration idempotency and duplicate-version validation.
+* Atomic migration execution.
+* Migration lifecycle integration tests.
 
-The migration runner:
+### Persistence Flow
 
-* Discovers `.sql` migration files from the configured migration directory.
-* Extracts and validates migration versions.
-* Applies migrations in deterministic version order.
-* Tracks applied migration versions in the database.
-* Skips migrations that have already been applied.
-* Rejects duplicate migration versions.
-* Executes the complete migration run inside a single database transaction.
-* Keeps migration execution atomic so failed migrations do not leave partial schema changes or migration records.
-* Returns the versions successfully applied during the current execution.
+```text
+TRADE
+  ↓
+Message Parser
+  ↓
+StreamingProcessor
+  ├── Indicators
+  └── Risk
+  ↓
+ProcessedTrade
+  ↓
+PostgreSQL Transaction
+  ├── trades
+  ├── analytics_results
+  ├── positions
+  ├── risk_state
+  └── risk_events
+  ↓
+Commit
+  ↓
+AnalyticsPublisher
+```
 
-### PostgreSQL Integration Tests
+Publishing remains outside the database transaction, so a publish failure cannot create a second persistence transaction or partial database state.
 
-Added real PostgreSQL integration coverage under:
+### Migration Lifecycle
 
-`analytics-py/tests/integration/test_postgres.py`
+```text
+Database URL
+    ↓
+PostgreSQL Connection
+    ↓
+MigrationRunner
+    ├── discover migrations
+    ├── validate versions
+    ├── apply pending migrations
+    └── record schema_migrations
+    ↓
+PostgresRepositories
+    ↓
+AnalyticsService
+```
 
-The integration suite uses an isolated PostgreSQL schema for each test module.
+Migrations are executed only by the migration-aware bootstrap path. Injected repositories do not implicitly mutate database schema.
 
-Coverage includes:
+### PostgreSQL Schema
 
-1. Real migration execution against PostgreSQL.
-2. Expected `trades` schema validation.
-3. Expected PostgreSQL indexes and constraints.
-4. Migration idempotency.
-5. PostgreSQL trade persistence and round-trip retrieval.
-6. Symbol-based trade queries and timestamp ordering.
-7. Inclusive timestamp-range queries.
-8. Trade upsert behavior.
-9. PostgreSQL constraint enforcement.
-10. Atomic rollback of failed migrations.
+Migrations currently cover:
+
+```text
+001_create_trades.sql
+002_create_analytics_results.sql
+003_create_positions.sql
+004_create_risk_state.sql
+005_create_risk_events.sql
+```
+
+### Repository Layer
+
+Implemented repositories:
+
+* `PostgresAnalyticsRepository`
+* `PostgresPositionRepository`
+* `PostgresRiskRepository`
+
+The repository factory exposes one shared PostgreSQL connection and a single lifecycle boundary for all repositories.
+
+### Reliability & Observability
+
+Phase 3.8 now includes:
+
+* Transaction rollback on persistence failure.
+* `PersistenceError` wrapping for unexpected persistence failures.
+* No publication after a failed persistence transaction.
+* Persistence success counters.
+* Persistence failure counters.
+* Total and average persistence duration.
+* PostgreSQL dependency health checks.
+* Structured persistence success/failure log context.
+* Clean repository ownership and shutdown behavior.
 
 ### Validation
 
-Migration runner unit tests:
-
 ```text
-8 passed
+Full analytics test suite        PASS — 312 passed
+PostgreSQL E2E coverage          PASS — 2 passed
+Migration lifecycle              PASS
+Repository contract coverage     PASS
+Persistence transaction coverage PASS
+Failure-handling coverage        PASS
+Observability/health coverage    PASS
 ```
 
-PostgreSQL integration tests:
+### Phase 3.8 Exit Criteria
 
-```text
-8 passed
-```
+* [X] PostgreSQL connection configuration implemented.
+* [X] Repository contracts aligned.
+* [X] Trade persistence implemented.
+* [X] Analytics-result persistence implemented.
+* [X] Position-state persistence implemented.
+* [X] Risk-state persistence implemented.
+* [X] Risk-event persistence implemented.
+* [X] Shared repository factory implemented.
+* [X] Application persistence wiring implemented.
+* [X] End-to-end PostgreSQL persistence validated.
+* [X] Atomic transaction boundary implemented.
+* [X] Persistence failure handling implemented.
+* [X] Persistence observability implemented.
+* [X] PostgreSQL health checks implemented.
+* [X] Migration lifecycle implemented.
+* [X] Full analytics test suite passing.
 
-Full analytics test suite:
-
-```text
-206 passed
-```
-
-Repository validation:
-
-```text
-Repository validation:
-```
-
-passes successfully.
-
-### Environment
-
-Integration tests use:
-
-```
-TRADING_ENGINE_TEST_DATABASE_URL
-```
-
-PostgreSQL credentials are kept outside the repository through the environment variable.
-
-Phase 3.8 Exit Criteria
-
-- [X] PostgreSQL migration runner implemented.
-- [X] Atomic migration execution implemented.
-- [X] Migration idempotency validated.
-- [X] Real PostgreSQL integration tests implemented.
-- [X] PostgreSQL schema and indexes validated.
-- [X] Repository persistence validated.
-- [X] Repository query behavior validated.
-- [X] Repository upsert behavior validated.
-- [X] PostgreSQL constraints validated.
-- [X] Failed migration rollback validated.
-- [X] Full analytics test suite passing.
-- [ ] Remaining PostgreSQL repositories.
-- [ ] Persistence integration with the streaming processor.
-
-Phase 3.8 PostgreSQL schema and integration-test milestone: ✅ Complete
-
-```
-
-**Also change these existing sections:**
-
-```md
-## Phase 3.7 — Risk Limits and Risk Events
-
-**Status:** ✅ Complete
-```
-
-Remove the old ### Planned wording and replace it with the already-completed Phase 3.7 implementation details if you want the changelog to stay consistent.
-
-In Overall Progress Summary, change:
-
-```markdown
-| Phase 3.8  | Persistence                        | ⏳ Planned   |
-```
-
-to:
-
-```markdown
-| Phase 3.8  | PostgreSQL Schema & Integration    | ✅ Complete  |
-```
-
-In Phase 3 completion, change:
-
-```markdown
-### Remaining
-
-* [ ] Risk limits
-* [ ] Risk events
-* [ ] Risk-event publication
-* [ ] Persistence
-* [ ] Metrics and observability
-* [ ] Analytics service hardening
-```
-
-to:
-
-```markdown
-### Remaining
-
-* [X] Risk limits
-* [X] Risk events
-* [ ] Risk-event publication
-* [X] PostgreSQL schema and migration layer
-* [X] PostgreSQL integration tests
-* [ ] Remaining persistence repositories
-* [ ] Persistence integration with the streaming processor
-* [ ] Metrics and observability
-* [ ] Analytics service hardening
-```
-
-And update the Current Overall Status section so the completed milestones include:
-
-```markdown
-Phase 3.1 — Analytics Foundation
-Phase 3.2 — Domain Models
-Phase 3.3 — Technical Indicators
-Phase 3.4 — Socket Ingestion
-Phase 3.5 — Streaming Analytics
-Phase 3.6 — Risk Analytics
-Phase 3.7 — Risk Limits & Risk Events
-Phase 3.8 — PostgreSQL Schema & Integration Tests
-```
-
-The Next Implementation Milestone should now be:
-
-```markdown
-> Phase 3.9 — Metrics and Observability
-```
-
-And the Project Status should become:
-
-```markdown
-**Latest Completed Milestone:** Phase 3.8 — PostgreSQL Schema & Integration Tests
-
-**Next Milestone:** Phase 3.9 — Metrics and Observability
-```
+**Phase 3.8 overall status:** ✅ Complete
 
 ---
 
@@ -834,9 +783,9 @@ GitHub Actions CI    PASS — 7/7 checks
 # Latest Milestone
 
 ```text
-Date:    2026-09-14
+Date:    2026-09-28
 Phase:   3.8
-Task:    PostgreSQL Schema & Integration Tests
+Task:    PostgreSQL Persistence & Observability
 Status:  ✅ Complete
 ```
 
@@ -1087,7 +1036,7 @@ Phase 3.4 — Socket Ingestion
 Phase 3.5 — Streaming Analytics
 Phase 3.6 — Risk Analytics
 Phase 3.7 — Risk Limits & Risk Events
-Phase 3.8 — PostgreSQL Schema & Integration Tests
+Phase 3.8 — PostgreSQL Persistence & Observability
 ```
 
 Remaining work focuses on risk controls, persistence, observability, hardening, and production-facing analytics behavior.
@@ -1926,7 +1875,7 @@ The project has moved beyond the initial trading-engine and analytics foundation
 
 **Overall Status:** 🚧 **In Progress**
 
-**Latest Completed Milestone:** Phase 3.8 — PostgreSQL Schema & Integration Tests
+**Latest Completed Milestone:** Phase 3.8 — PostgreSQL Persistence & Observability
 
 **Next Milestone:** Phase 3.9 — Metrics and Observability
 
