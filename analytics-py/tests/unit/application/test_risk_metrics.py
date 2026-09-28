@@ -16,11 +16,13 @@ from datetime import datetime, timezone
 def make_trade() -> Trade:
     return Trade(
         event_id="risk-metrics-001",
+        event_type="TRADE",
+        trade_id="risk-trade-001",
         symbol="AAPL",
         quantity=10,
         price=Decimal("100"),
-        side="BUY",
         timestamp=datetime.now(timezone.utc),
+        taker_side="BUY",
     )
 
 
