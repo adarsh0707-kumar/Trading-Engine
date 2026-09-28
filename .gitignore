@@ -385,7 +385,7 @@ docs/build/
 # ------------------------------------------------------------
 
 # If analytics later includes ML models
-models/
+/models/
 checkpoints/
 *.pt
 *.pth
