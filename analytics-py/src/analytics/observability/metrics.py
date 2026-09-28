@@ -207,9 +207,98 @@ class ServiceMetrics:
             )
 
 
+@dataclass(frozen=True, slots=True)
+class ProcessingLatencySnapshot:
+    """Immutable snapshot of analytics processing latency metrics."""
+
+    sample_count: int
+    total_duration_seconds: float
+    min_duration_seconds: float | None
+    max_duration_seconds: float | None
+    p50_duration_seconds: float | None
+    p95_duration_seconds: float | None
+    p99_duration_seconds: float | None
+
+    @property
+    def average_duration_seconds(self) -> float:
+        """Return average processing latency across recorded samples."""
+        if self.sample_count == 0:
+            return 0.0
+
+        return self.total_duration_seconds / self.sample_count
+
+
+class ProcessingLatencyMetrics:
+    """Thread-safe in-memory processing latency measurements."""
+
+    def __init__(self) -> None:
+        self._lock = Lock()
+        self._durations_seconds: list[float] = []
+
+    def record(self, duration_seconds: float) -> None:
+        """Record one non-negative processing duration."""
+        if not isinstance(duration_seconds, (int, float)):
+            raise TypeError("duration_seconds must be numeric")
+
+        if duration_seconds < 0:
+            raise ValueError("duration_seconds must not be negative")
+
+        with self._lock:
+            self._durations_seconds.append(float(duration_seconds))
+
+    def snapshot(self) -> ProcessingLatencySnapshot:
+        """Return latency aggregates and percentile measurements."""
+        with self._lock:
+            durations = tuple(sorted(self._durations_seconds))
+
+        if not durations:
+            return ProcessingLatencySnapshot(
+                sample_count=0,
+                total_duration_seconds=0.0,
+                min_duration_seconds=None,
+                max_duration_seconds=None,
+                p50_duration_seconds=None,
+                p95_duration_seconds=None,
+                p99_duration_seconds=None,
+            )
+
+        return ProcessingLatencySnapshot(
+            sample_count=len(durations),
+            total_duration_seconds=sum(durations),
+            min_duration_seconds=durations[0],
+            max_duration_seconds=durations[-1],
+            p50_duration_seconds=self._percentile(durations, 0.50),
+            p95_duration_seconds=self._percentile(durations, 0.95),
+            p99_duration_seconds=self._percentile(durations, 0.99),
+        )
+
+    def reset(self) -> None:
+        """Reset all recorded latency samples."""
+        with self._lock:
+            self._durations_seconds.clear()
+
+    @staticmethod
+    def _percentile(durations: tuple[float, ...], percentile: float) -> float:
+        """Return a linearly interpolated percentile."""
+        if len(durations) == 1:
+            return durations[0]
+
+        position = (len(durations) - 1) * percentile
+        lower = int(position)
+        upper = min(lower + 1, len(durations) - 1)
+        weight = position - lower
+
+        return (
+            durations[lower]
+            + (durations[upper] - durations[lower]) * weight
+        )
+
+
 __all__ = [
     "PersistenceMetrics",
     "PersistenceMetricsSnapshot",
+    "ProcessingLatencyMetrics",
+    "ProcessingLatencySnapshot",
     "ServiceMetrics",
     "ServiceMetricsSnapshot",
 ]
