@@ -256,7 +256,6 @@ class AnalyticsService:
 
     def _process_message(self, message: str) -> None:
         """Parse, process, persist, and publish one queued message."""
-        self.health_metrics.record_message(perf_counter())
 
         try:
             event = self.parser.parse(message)
