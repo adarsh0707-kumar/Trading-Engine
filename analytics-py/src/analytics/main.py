@@ -16,6 +16,7 @@ from analytics.observability import (
     PersistenceMetrics,
     ProcessingLatencyMetrics,
     RiskMetrics,
+    ServiceHealthMetrics,
     ServiceMetrics,
     TradeThroughputMetrics,
     PrometheusExporter,
@@ -47,6 +48,7 @@ class AnalyticsService:
         trade_throughput_metrics: TradeThroughputMetrics | None = None,
         risk_metrics: RiskMetrics | None = None,
         error_metrics: ErrorMetrics | None = None,
+        health_metrics: ServiceHealthMetrics | None = None,
         prometheus_exporter: PrometheusExporter | None = None,
     ) -> None:
         self.settings = settings
@@ -71,6 +73,7 @@ class AnalyticsService:
         )
         self.risk_metrics = risk_metrics or RiskMetrics()
         self.error_metrics = error_metrics or ErrorMetrics()
+        self.health_metrics = health_metrics or ServiceHealthMetrics()
         self.prometheus_exporter = prometheus_exporter or PrometheusExporter(
             service_metrics=self.service_metrics,
             processing_latency_metrics=self.processing_latency_metrics,
@@ -127,6 +130,7 @@ class AnalyticsService:
 
     def start(self) -> None:
         """Start the analytics service."""
+        self.health_metrics.mark_started()
         logger.info(
             "starting analytics service: engine=%s:%d",
             self.settings.engine_host,
@@ -140,6 +144,7 @@ class AnalyticsService:
         logger.info("stopping analytics service")
         self.client.stop()
         self.stop_metrics_server()
+        self.health_metrics.mark_stopped()
 
         if self._owns_repositories and self.repositories is not None:
             self.repositories.close()
@@ -164,6 +169,8 @@ class AnalyticsService:
 
     def _handle_message(self, message: str) -> None:
         """Parse, process, persist, and publish one transport message."""
+        self.health_metrics.record_message(perf_counter())
+
         try:
             event = self.parser.parse(message)
         except MessageParseError as exc:
@@ -308,6 +315,7 @@ class AnalyticsService:
 
     def _handle_connect(self) -> None:
         """Handle successful connection to the trading engine."""
+        self.health_metrics.mark_engine_connected()
         logger.info(
             "connected to trading engine at %s:%d",
             self.settings.engine_host,
@@ -316,6 +324,7 @@ class AnalyticsService:
 
     def _handle_disconnect(self) -> None:
         """Handle trading-engine disconnection."""
+        self.health_metrics.mark_engine_disconnected()
         logger.warning("disconnected from trading engine")
 
     @staticmethod
