@@ -78,7 +78,24 @@ class AnalyticsService:
         )
         self.risk_metrics = risk_metrics or RiskMetrics()
         self.error_metrics = error_metrics or ErrorMetrics()
+        self.backpressure_metrics = BackpressureMetrics()
         self.health_metrics = health_metrics or ServiceHealthMetrics()
+
+        self.parser = MessageParser()
+        self.processor = StreamingProcessor()
+
+        if publish_sink is None:
+            publish_sink = self._default_publish_sink
+
+        self.publisher = AnalyticsPublisher(publish_sink)
+        self._message_queue = BackpressureQueue(
+            capacity=settings.backpressure_queue_capacity,
+        )
+        self._message_worker = BackpressureWorker(
+            self._message_queue,
+            self._process_queued_message,
+        )
+
         self.prometheus_exporter = prometheus_exporter or PrometheusExporter(
             service_metrics=self.service_metrics,
             processing_latency_metrics=self.processing_latency_metrics,
@@ -90,14 +107,6 @@ class AnalyticsService:
             persistence_metrics=self.persistence_metrics,
             persistence_health=self.check_persistence_health,
         )
-
-        self.parser = MessageParser()
-        self.processor = StreamingProcessor()
-
-        if publish_sink is None:
-            publish_sink = self._default_publish_sink
-
-        self.publisher = AnalyticsPublisher(publish_sink)
 
         self.client = SocketClient(
             settings.engine_host,
