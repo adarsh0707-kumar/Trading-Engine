@@ -76,6 +76,52 @@ def test_process_trade_with_risk_events_returns_processed_trade() -> None:
     assert len(result.risk_events) == 1
 
 
+def test_processed_trade_preserves_original_trade() -> None:
+    """The processed result should retain the exact original Trade."""
+
+    processor = StreamingProcessor()
+
+    trade = _trade(
+        event_id="trade-persist",
+        trade_id="trade-id-persist",
+        quantity=7,
+    )
+
+    result = processor.process_trade_with_risk_events(trade)
+
+    assert result.trade is trade
+    assert result.trade.event_id == "trade-persist"
+    assert result.trade.trade_id == "trade-id-persist"
+
+
+def test_processed_trade_preserves_exact_risk_snapshot() -> None:
+    """The processed result should expose the exact RiskSnapshot."""
+
+    processor = StreamingProcessor()
+
+    result = processor.process_trade_with_risk_events(
+        _trade(quantity=8),
+    )
+
+    snapshot = result.risk_snapshot
+
+    assert snapshot.position == 8
+    assert snapshot.average_entry_price == Decimal("100")
+    assert snapshot.realized_pnl == Decimal("0")
+    assert snapshot.unrealized_pnl == Decimal("0")
+    assert snapshot.equity == Decimal("10000")
+    assert snapshot.peak_equity == Decimal("10000")
+    assert snapshot.drawdown == Decimal("0")
+
+    # The analytics result must reflect the same risk state.
+    assert result.analytics.position == snapshot.position
+    assert result.analytics.realized_pnl == snapshot.realized_pnl
+    assert result.analytics.unrealized_pnl == snapshot.unrealized_pnl
+    assert result.analytics.equity == snapshot.equity
+    assert result.analytics.peak_equity == snapshot.peak_equity
+    assert result.analytics.drawdown == snapshot.drawdown
+
+
 def test_process_trade_without_risk_config_returns_no_risk_events() -> None:
     """Risk events should be disabled when no risk configuration is supplied."""
 
