@@ -51,6 +51,29 @@ jobs:
           cmakeBuildDirectory: ${{ env.build }}
           ruleset: NativeRecommendedRules.ruleset
 
+      - name: Inspect SARIF runs
+        shell: pwsh
+        run: |
+          $sarifPath = "${{ steps.run-analysis.outputs.sarif }}"
+          $sarif = Get-Content -Raw $sarifPath | ConvertFrom-Json
+
+          Write-Host "SARIF version: $($sarif.version)"
+          Write-Host "Number of runs: $($sarif.runs.Count)"
+
+          $index = 0
+          foreach ($run in $sarif.runs) {
+              $toolName = $run.tool.driver.name
+              $category = $run.automationDetails.id
+
+              Write-Host ""
+              Write-Host "Run $index"
+              Write-Host "  Tool: $toolName"
+              Write-Host "  Automation ID: $category"
+              Write-Host "  Results: $($run.results.Count)"
+
+              $index++
+          }
+
       - name: Upload SARIF to GitHub
         uses: github/codeql-action/upload-sarif@v4
         with:
