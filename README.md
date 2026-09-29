@@ -458,6 +458,7 @@ Trading-Engine/
 │       ├── ADR-004-websocket-gateway.md
 │       ├── ADR-005-docker-compose.md
 │       └── ADR-006-shared-memory-future.md
+│       └── ADR-007-bun-gateway.md
 │
 ├── scripts/
 │   ├── build.sh
@@ -852,6 +853,8 @@ Install:
 - Bun
 - Docker
 - Docker Compose
+
+For the gateway, Bun is used for dependency installation, development, testing, building, and execution.
 
 ---
 
