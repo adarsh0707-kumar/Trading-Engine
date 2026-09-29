@@ -330,7 +330,7 @@ def test_handle_message_does_not_publish_after_persistence_failure(
     with caplog.at_level(logging.ERROR):
         service._handle_message(message)
 
-    assert "persistence failed after 3 attempts" in caplog.text
+    assert "persistence_failed attempts=3" in caplog.text
     assert "event_id=event-persistence-failure-001" in caplog.text
     assert "symbol=AAPL" in caplog.text
 
