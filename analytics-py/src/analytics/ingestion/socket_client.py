@@ -479,6 +479,11 @@ class SocketClient:
                 should_notify = True
 
         if should_notify:
+            logger.warning(
+                "engine_disconnected host=%s port=%d",
+                self.host,
+                self.port,
+            )
             self._notify_disconnect()
 
     def _notify_connect(self) -> None:
