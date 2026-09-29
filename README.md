@@ -1235,72 +1235,91 @@ Shared memory may be introduced later if profiling shows socket-based IPC to be 
 
 # Roadmap
 
-## Phase 1 — Foundation
+## Phase 1 — C++ Matching Engine
 
-- [X] Repository structure
-- [X] Documentation structure
-- [X] Architecture definition
-- [X] Initial ADRs
-- [ ] Build infrastructure
+**Status:** ✅ Complete
 
-## Phase 2 — C++ Engine
+Deterministic order-book and price-time-priority matching engine implemented and validated.
 
-- [ ] Order model
-- [ ] Order validation
-- [ ] Order book
-- [ ] Matching engine
-- [ ] Market simulator
-- [ ] Trade generation
-- [ ] Socket server
-- [ ] Engine tests
+## Phase 2 — C++ TCP Transport
+
+**Status:** ✅ Complete
+
+TCP transport, framing, client lifecycle, heartbeat, reconnection, serialization, and graceful shutdown implemented and tested.
 
 ## Phase 3 — Python Analytics
 
-- [ ] Event consumer
-- [ ] VWAP
-- [ ] SMA
-- [ ] EMA
-- [ ] PnL
-- [ ] Exposure
-- [ ] Drawdown
-- [ ] Analytics tests
+**Status:** ✅ Complete
+
+Completed:
+
+- Streaming analytics and technical indicators.
+- Portfolio risk analytics and P&L tracking.
+- Risk limits and risk events.
+- PostgreSQL persistence and migrations.
+- Metrics, Prometheus exposition, Grafana provisioning, and service health.
+- Lifecycle hardening and configuration validation.
+- Resource cleanup and bounded backpressure handling.
+- Failure recovery and bounded retries.
+- Operational logging.
+
+### Phase 3.10 Validation
+
+```text
+Analytics Python test suite    PASS — 447 passed
+GitHub Actions checks           PASS — 9/9
+```
 
 ## Phase 4 — Node.js Gateway
 
-- [ ] REST API
-- [ ] WebSocket server
-- [ ] Service clients
-- [ ] Validation
-- [ ] Rate limiting
-- [ ] Error handling
+**Status:** ⏳ Planned
+
+Next implementation milestone:
+
+- HTTP API.
+- WebSocket API.
+- C++ engine integration.
+- Python analytics integration.
+- Analytics event forwarding.
+- Client subscription management.
+- Request validation and API error handling.
+- Gateway tests.
 
 ## Phase 5 — React Dashboard
 
-- [ ] Dashboard layout
-- [ ] Market chart
-- [ ] Order book
-- [ ] Trade feed
-- [ ] Analytics cards
-- [ ] Engine controls
-- [ ] WebSocket integration
+**Status:** ⏳ Planned
 
-## Phase 6 — Integration
+Real-time market, order-book, trade, analytics, risk, and engine-status visualization.
 
-- [ ] Docker Compose
-- [ ] End-to-end pipeline
-- [ ] Integration tests
-- [ ] CI/CD
-- [ ] Logging
-- [ ] Benchmarking
+## Phase 6 — Historical Analytics
 
-## Phase 7 — Optimization
+**Status:** ⏳ Planned
 
-- [ ] Profiling
-- [ ] Performance benchmarks
-- [ ] IPC optimization
-- [ ] Memory optimization
-- [ ] Concurrency improvements
-- [ ] Optional shared memory transport
+Historical trade, analytics, position, and risk-event queries with indexing, retention, and reporting APIs.
+
+## Phase 7 — Authentication & Security
+
+**Status:** ⏳ Planned
+
+Authentication, authorization, token management, RBAC, input validation, rate limiting, audit logging, and security testing.
+
+## Phase 8 — Platform Observability
+
+**Status:** ⏳ Planned
+
+Platform-wide tracing, gateway/dashboard observability, error tracking, and resource monitoring.
+
+## Phase 9 — Deployment & Infrastructure
+
+**Status:** ⏳ Planned
+
+Docker orchestration, reverse proxy, service networking, health checks, deployment documentation, and operational runbook.
+
+## Phase 10 — Performance & Production Hardening
+
+**Status:** ⏳ Planned
+
+Benchmarking, load/stress testing, profiling, failure injection, capacity testing, regression testing, and deployment validation.
 
 ---
 
