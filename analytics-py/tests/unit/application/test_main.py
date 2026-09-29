@@ -596,7 +596,7 @@ def test_persist_logs_success_context(
     with caplog.at_level("INFO", logger="analytics.main"):
         service._persist(result)
 
-    assert "persistence succeeded:" in caplog.text
+    assert "persistence_succeeded" in caplog.text
     assert f"event_id={result.trade.event_id}" in caplog.text
     assert f"symbol={result.trade.symbol}" in caplog.text
     assert "duration_seconds=" in caplog.text
@@ -628,7 +628,7 @@ def test_persist_logs_failure_context(
         ):
             service._persist(result)
 
-    assert "persistence failed after 1 attempts:" in caplog.text
+    assert "persistence_failed attempts=1" in caplog.text
     assert f"event_id={result.trade.event_id}" in caplog.text
     assert f"symbol={result.trade.symbol}" in caplog.text
     assert "duration_seconds=" in caplog.text
