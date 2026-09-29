@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest Completed Milestone:** Phase 3.9 — Metrics and Observability
+**Latest Completed Milestone:** Phase 3.10 — Analytics Service Hardening
 
-**Next Milestone:** Phase 3.10 — Analytics Service Hardening
+**Next Milestone:** Phase 4 — Node.js Gateway
 
 ### Current validated path
 
@@ -86,9 +86,9 @@ Implemented:
 
 # Phase 3 — Python Analytics Service
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
-The Python analytics service is the current active development area.
+Phase 3 is complete. The Python analytics service now provides streaming analytics, portfolio risk analytics, PostgreSQL persistence, service-wide observability, and production-oriented hardening.
 
 ## Phase 3.1 — Analytics Foundation
 
