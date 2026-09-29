@@ -433,19 +433,22 @@ class AnalyticsService:
                 wrapped = PersistenceError("failed to persist processed trade")
                 if attempt >= self.settings.persistence_retry_attempts:
                     logger.error(
-                        "persistence failed after %d attempts: event_id=%s symbol=%s "
-                        "duration_seconds=%.6f",
+                        "persistence_failed attempts=%d event_id=%s symbol=%s "
+                        "duration_seconds=%.6f error=%s",
                         attempt + 1,
                         result.trade.event_id,
                         result.trade.symbol,
                         duration_seconds,
+                        exc,
                     )
                     raise wrapped from exc
                 logger.warning(
-                    "persistence attempt %d/%d failed; retrying event_id=%s: %s",
+                    "persistence_retry attempt=%d total_attempts=%d "
+                    "event_id=%s symbol=%s error=%s",
                     attempt + 1,
                     attempts,
                     result.trade.event_id,
+                    result.trade.symbol,
                     exc,
                 )
             else:
