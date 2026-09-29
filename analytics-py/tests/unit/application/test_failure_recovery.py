@@ -143,10 +143,18 @@ def test_publisher_retry_retries_only_publish_after_persistence() -> None:
     )
 
     service._process_message(
-        '{"type":"TRADE","request_id":"trade-recovery-002","event_id":"trade-recovery-002","symbol":"SIM",'
-        '"price":"101.25","quantity":10,"taker_side":"BUY",'
-        '"buy_order_id":"buy-002","sell_order_id":"sell-002",'
-        '"timestamp":"2026-09-12T18:30:00+00:00"}'
+        ('{"type":"TRADE",'
+        '"request_id":"trade-recovery-002",'
+        '"timestamp":"2026-09-12T18:30:00+00:00",'
+        '"payload":"{'
+        '\\\"symbol\\":\\\"SIM\\",'
+        '\\\"price\\":\\\"101.25\\",'
+        '\\\"quantity\\":10,'
+        '\\\"taker_order_id\\":\\\"buy-002\\",'
+        '\\\"maker_order_id\\":\\\"sell-002\\",'
+        '\\\"taker_side\\":\\\"BUY\\\"'
+        '}"'
+        '}')
     )
 
     assert attempts == 2
