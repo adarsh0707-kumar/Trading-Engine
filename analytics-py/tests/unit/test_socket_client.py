@@ -208,3 +208,56 @@ def test_socketpair_receive_fragmented_frame() -> None:
     thread.join(timeout=1.0)
 
     assert messages == [payload]
+
+
+def test_message_callback_failure_does_not_stop_receive_loop() -> None:
+    server_socket, client_socket = socket.socketpair()
+    received: list[str] = []
+
+    def on_message(payload: str) -> None:
+        received.append(payload)
+        if len(received) == 1:
+            raise RuntimeError("simulated callback failure")
+
+    client = SocketClient("127.0.0.1", 9000, reconnect=False, on_message=on_message)
+    client._socket = client_socket
+    client._connected = True
+    client._running = True
+
+    thread = threading.Thread(target=client._receive_loop, daemon=True)
+    thread.start()
+
+    first = '{"type":"TRADE","request_id":"first"}'
+    second = '{"type":"TRADE","request_id":"second"}'
+    server_socket.sendall(SocketClient.frame(first) + SocketClient.frame(second))
+
+    deadline = time.monotonic() + 1.0
+    while len(received) < 2 and time.monotonic() < deadline:
+        time.sleep(0.01)
+
+    client._stop_event.set()
+    server_socket.close()
+    client_socket.close()
+    thread.join(timeout=1.0)
+
+    assert received == [first, second]
+    assert not thread.is_alive()
+
+
+def test_disconnect_callback_failure_does_not_break_shutdown() -> None:
+    def on_disconnect() -> None:
+        raise RuntimeError("simulated disconnect callback failure")
+
+    client = SocketClient(
+        "127.0.0.1",
+        9000,
+        reconnect=False,
+        on_disconnect=on_disconnect,
+    )
+    client._connected = True
+    client._running = True
+
+    client.stop()
+
+    assert not client.is_running()
+    assert not client.is_connected()
