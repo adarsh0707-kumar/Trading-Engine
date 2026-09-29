@@ -18,6 +18,51 @@ The project follows a phased implementation roadmap covering:
 
 ---
 
+## 2026-09-29 — Phase 4 Planning — TypeScript Gateway on Bun
+
+### Status
+
+**Status:** ⏳ Planned
+
+Phase 4 has been expanded into a detailed implementation plan before gateway development begins.
+
+### Technology decisions
+
+- TypeScript is the gateway implementation language.
+- Bun is the gateway runtime and package manager.
+- Bun test is the default gateway test runner.
+- Fastify is the planned HTTP framework.
+- ws is the planned WebSocket transport.
+- Zod is the planned runtime validation layer.
+- Pino is the planned operational logging library.
+- Prometheus-compatible metrics are planned for gateway observability.
+- The existing C++ engine protocol and JSON contracts remain the initial upstream contract.
+
+### Planned sub-phases
+
+- 4.1 Gateway foundation and architecture.
+- 4.2 Configuration and environment management.
+- 4.3 C++ engine TCP client.
+- 4.4 Engine protocol and event normalization.
+- 4.5 REST API.
+- 4.6 WebSocket gateway.
+- 4.7 Python analytics integration.
+- 4.8 Error handling, resilience, and backpressure.
+- 4.9 Security boundaries and input hardening.
+- 4.10 Operational logging and metrics.
+- 4.11 Testing and integration validation.
+- 4.12 Phase integration and exit criteria.
+
+The detailed scope, responsibilities, dependencies, failure cases, tests, and completion criteria are maintained in docs/05-roadmap-and-phases.md.
+
+### Phase 4 planning outcome
+
+The gateway will act as the application and client-transport boundary. It will not duplicate C++ matching logic or Python analytics calculations. The C++ engine remains authoritative for engine/trade state, while Python Analytics remains authoritative for analytics and risk state.
+
+Bun is the standard gateway workflow for local development and CI; npm is not the default package manager for Phase 4.
+
+---
+
 ## 2026-09-29 — Phase 3.10 — Analytics Service Hardening
 
 ### Status
