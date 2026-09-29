@@ -9,6 +9,33 @@ import pytest
 from analytics.config import ConfigurationError, Settings
 
 
+def test_settings_default_logging_configuration() -> None:
+    """Logging should use the standard operational defaults."""
+
+    settings = Settings()
+
+    assert settings.log_level == "INFO"
+    assert "%(levelname)s" in settings.log_format
+    assert "%(message)s" in settings.log_format
+
+
+def test_settings_reads_logging_configuration_from_environment(
+    monkeypatch,
+) -> None:
+    """Settings should read logging configuration from the environment."""
+
+    monkeypatch.setenv("TRADING_ENGINE_LOG_LEVEL", "DEBUG")
+    monkeypatch.setenv(
+        "TRADING_ENGINE_LOG_FORMAT",
+        "%(levelname)s %(message)s",
+    )
+
+    settings = Settings.from_environment()
+
+    assert settings.log_level == "DEBUG"
+    assert settings.log_format == "%(levelname)s %(message)s"
+
+
 def test_settings_default_database_url_is_none() -> None:
     """Database persistence is opt-in by default."""
 
@@ -85,6 +112,8 @@ def test_metrics_configuration_reads_environment(monkeypatch):
         ("reconnect_delay", math.inf, "reconnect_delay must be a finite number greater than or equal to 0"),
         ("max_payload_size", 0, "max_payload_size must be greater than 0"),
         ("database_url", "   ", "database_url must not be empty when provided"),
+        ("log_level", "   ", "log_level must not be empty"),
+        ("log_format", "", "log_format must not be empty"),
         ("metrics_host", " ", "metrics_host must not be empty"),
         ("metrics_port", 0, "metrics_port must be between 1 and 65535"),
         ("metrics_port", 65536, "metrics_port must be between 1 and 65535"),

@@ -222,10 +222,9 @@ def test_persistence_rolls_back_when_repository_write_fails(
     with caplog.at_level(logging.ERROR):
         service._handle_message(message)
 
-    assert (
-        "failed to persist trade event-rollback-001: "
-        "failed to persist processed trade"
-    ) in caplog.text
+    assert "persistence_failed attempts=3" in caplog.text
+    assert "event_id=event-rollback-001" in caplog.text
+    assert "symbol=MSFT" in caplog.text
 
     publish_sink.assert_not_called()
 

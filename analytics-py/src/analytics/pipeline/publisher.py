@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections.abc import Callable
 from typing import Any
 
 from analytics.models import AnalyticsResult
+
+
+logger = logging.getLogger(__name__)
 
 
 class AnalyticsPublisher:
@@ -52,9 +56,27 @@ class AnalyticsPublisher:
             try:
                 self._sink(payload)
                 return
-            except Exception:
+            except Exception as exc:
                 if attempt >= self._retry_attempts:
+                    logger.error(
+                        "analytics_publish_failed event_id=%s symbol=%s "
+                        "attempt=%d total_attempts=%d error=%s",
+                        result.event_id,
+                        result.symbol,
+                        attempt + 1,
+                        attempts,
+                        exc,
+                    )
                     raise
+                logger.warning(
+                    "analytics_publish_retry event_id=%s symbol=%s "
+                    "attempt=%d total_attempts=%d error=%s",
+                    result.event_id,
+                    result.symbol,
+                    attempt + 1,
+                    attempts,
+                    exc,
+                )
                 if self._retry_delay:
                     time.sleep(self._retry_delay)
 

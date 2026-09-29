@@ -33,6 +33,12 @@ class Settings:
     publish_retry_attempts: int = 2
     publish_retry_delay: float = 0.1
 
+    log_level: str = "INFO"
+    log_format: str = (
+        "%(asctime)s %(levelname)s %(name)s "
+        "[%(threadName)s] %(message)s"
+    )
+
     database_url: str | None = None
 
     metrics_host: str = "0.0.0.0"
@@ -63,6 +69,10 @@ class Settings:
             raise ConfigurationError("publish_retry_attempts must be an integer greater than or equal to 0")
         if not isinstance(self.publish_retry_delay, (int, float)) or isinstance(self.publish_retry_delay, bool) or self.publish_retry_delay < 0 or not math.isfinite(self.publish_retry_delay):
             raise ConfigurationError("publish_retry_delay must be a finite number greater than or equal to 0")
+        if not self.log_level.strip():
+            raise ConfigurationError("log_level must not be empty")
+        if not self.log_format:
+            raise ConfigurationError("log_format must not be empty")
         if self.database_url is not None and not self.database_url.strip():
             raise ConfigurationError("database_url must not be empty when provided")
         if not self.metrics_host.strip():
@@ -139,6 +149,12 @@ class Settings:
             persistence_retry_delay=float(os.getenv("TRADING_ENGINE_PERSISTENCE_RETRY_DELAY", "0.1")),
             publish_retry_attempts=int(os.getenv("TRADING_ENGINE_PUBLISH_RETRY_ATTEMPTS", "2")),
             publish_retry_delay=float(os.getenv("TRADING_ENGINE_PUBLISH_RETRY_DELAY", "0.1")),
+            log_level=os.getenv("TRADING_ENGINE_LOG_LEVEL", "INFO"),
+            log_format=os.getenv(
+                "TRADING_ENGINE_LOG_FORMAT",
+                "%(asctime)s %(levelname)s %(name)s "
+                "[%(threadName)s] %(message)s",
+            ),
             metrics_host=os.getenv(
                 "TRADING_ENGINE_METRICS_HOST",
                 "0.0.0.0",

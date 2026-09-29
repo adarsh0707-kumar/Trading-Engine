@@ -1,5 +1,6 @@
 """Tests for the analytics application service."""
 
+import logging
 from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import MagicMock, Mock
@@ -326,14 +327,14 @@ def test_handle_message_does_not_publish_after_persistence_failure(
         '}'
     )
 
-    with caplog.at_level("ERROR", logger="analytics.main"):
+    with caplog.at_level(logging.ERROR):
         service._handle_message(message)
 
-    publish_sink.assert_not_called()
+    assert "persistence_failed attempts=3" in caplog.text
+    assert "event_id=event-persistence-failure-001" in caplog.text
+    assert "symbol=AAPL" in caplog.text
 
-    assert "failed to persist trade event-persistence-failure-001" in (
-        caplog.text
-    )
+    publish_sink.assert_not_called()
 
 
 def test_service_continues_after_persistence_failure() -> None:
@@ -596,7 +597,7 @@ def test_persist_logs_success_context(
     with caplog.at_level("INFO", logger="analytics.main"):
         service._persist(result)
 
-    assert "persistence succeeded:" in caplog.text
+    assert "persistence_succeeded" in caplog.text
     assert f"event_id={result.trade.event_id}" in caplog.text
     assert f"symbol={result.trade.symbol}" in caplog.text
     assert "duration_seconds=" in caplog.text
@@ -628,7 +629,7 @@ def test_persist_logs_failure_context(
         ):
             service._persist(result)
 
-    assert "persistence failed after 1 attempts:" in caplog.text
+    assert "persistence_failed attempts=1" in caplog.text
     assert f"event_id={result.trade.event_id}" in caplog.text
     assert f"symbol={result.trade.symbol}" in caplog.text
     assert "duration_seconds=" in caplog.text

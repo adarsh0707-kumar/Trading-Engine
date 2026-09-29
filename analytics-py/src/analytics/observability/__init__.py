@@ -9,6 +9,13 @@ from analytics.observability.health_metrics import (
     ServiceHealthMetrics,
     ServiceHealthSnapshot,
 )
+from analytics.observability.logging_config import (
+    DEFAULT_LOG_FORMAT,
+    DEFAULT_LOG_LEVEL,
+    LoggingConfigurationError,
+    configure_logging,
+    get_configured_log_level,
+)
 from analytics.observability.metrics import (
     ErrorMetrics,
     ErrorMetricsSnapshot,
@@ -48,4 +55,9 @@ __all__ = [
     "TradeThroughputMetrics",
     "TradeThroughputSnapshot",
     "check_postgres_health",
+    "DEFAULT_LOG_FORMAT",
+    "DEFAULT_LOG_LEVEL",
+    "LoggingConfigurationError",
+    "configure_logging",
+    "get_configured_log_level",
 ]

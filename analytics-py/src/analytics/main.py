@@ -23,6 +23,7 @@ from analytics.observability import (
     TradeThroughputMetrics,
     PrometheusExporter,
     check_postgres_health,
+    configure_logging,
 )
 from analytics.persistence.errors import PersistenceError
 from analytics.persistence.postgres import (
@@ -152,7 +153,7 @@ class AnalyticsService:
         """Start the analytics service exactly once until it is stopped."""
         with self._lifecycle_lock:
             if self._started:
-                logger.debug("analytics service is already started")
+                logger.debug("service_start_ignored reason=already_started")
                 return
 
             self._started = True
@@ -160,7 +161,7 @@ class AnalyticsService:
 
         self.health_metrics.mark_started()
         logger.info(
-            "starting analytics service: engine=%s:%d",
+            "service_start engine_host=%s engine_port=%d",
             self.settings.engine_host,
             self.settings.engine_port,
         )
@@ -184,7 +185,7 @@ class AnalyticsService:
         """Stop the service and clean up owned resources deterministically."""
         with self._lifecycle_lock:
             if self._shutdown_complete:
-                logger.debug("analytics service is already stopped")
+                logger.debug("service_stop_ignored reason=already_stopped")
                 return
 
             was_started = self._started
@@ -192,9 +193,9 @@ class AnalyticsService:
             self._shutdown_complete = True
 
         if not was_started:
-            logger.debug("analytics service was not started; cleaning up")
+            logger.debug("service_stop_cleanup reason=service_not_started")
 
-        logger.info("stopping analytics service")
+        logger.info("service_stop")
 
         cleanup_error: Exception | None = None
 
@@ -274,7 +275,11 @@ class AnalyticsService:
             return
 
         self.backpressure_metrics.record_rejected()
-        logger.warning("analytics inbound queue is full; rejecting message")
+        logger.warning(
+            "backpressure_message_rejected queue_depth=%d queue_capacity=%d",
+            self._message_queue.snapshot().queue_depth,
+            self.settings.backpressure_queue_capacity,
+        )
 
     def _process_queued_message(self, message: str) -> None:
         try:
@@ -292,7 +297,7 @@ class AnalyticsService:
         except MessageParseError as exc:
             self.service_metrics.record_parse_error()
             self.error_metrics.record_parse_error()
-            logger.warning("failed to parse incoming message: %s", exc)
+            logger.warning("message_parse_failed error=%s", exc)
             return
 
         if isinstance(event, Trade):
@@ -310,8 +315,9 @@ class AnalyticsService:
                 except Exception as exc:
                     self.error_metrics.record_publish_error()
                     logger.error(
-                        "failed to publish analytics for trade %s: %s",
+                        "analytics_publish_failed event_id=%s symbol=%s error=%s",
                         event.event_id,
+                        event.symbol,
                         exc,
                     )
                     raise
@@ -340,8 +346,9 @@ class AnalyticsService:
                 )
                 self.processing_latency_metrics.record(duration_seconds)
                 logger.error(
-                    "failed to persist trade %s: %s",
+                    "trade_pipeline_persistence_failed event_id=%s symbol=%s error=%s",
                     event.event_id,
+                    event.symbol,
                     exc,
                 )
 
@@ -353,8 +360,9 @@ class AnalyticsService:
                 )
                 self.processing_latency_metrics.record(duration_seconds)
                 logger.warning(
-                    "failed to process trade %s: %s",
+                    "trade_processing_failed event_id=%s symbol=%s error=%s",
                     event.event_id,
+                    event.symbol,
                     exc,
                 )
 
@@ -401,19 +409,22 @@ class AnalyticsService:
                 self.persistence_metrics.record_failure(duration_seconds)
                 if attempt >= self.settings.persistence_retry_attempts:
                     logger.error(
-                        "persistence failed after %d attempts: event_id=%s symbol=%s "
-                        "duration_seconds=%.6f",
+                        "persistence_failed attempts=%d event_id=%s symbol=%s "
+                        "duration_seconds=%.6f error=%s",
                         attempt + 1,
                         result.trade.event_id,
                         result.trade.symbol,
                         duration_seconds,
+                        exc,
                     )
                     raise
                 logger.warning(
-                    "persistence attempt %d/%d failed; retrying event_id=%s: %s",
+                    "persistence_retry attempt=%d total_attempts=%d "
+                    "event_id=%s symbol=%s error=%s",
                     attempt + 1,
                     attempts,
                     result.trade.event_id,
+                    result.trade.symbol,
                     exc,
                 )
             except Exception as exc:
@@ -422,26 +433,29 @@ class AnalyticsService:
                 wrapped = PersistenceError("failed to persist processed trade")
                 if attempt >= self.settings.persistence_retry_attempts:
                     logger.error(
-                        "persistence failed after %d attempts: event_id=%s symbol=%s "
-                        "duration_seconds=%.6f",
+                        "persistence_failed attempts=%d event_id=%s symbol=%s "
+                        "duration_seconds=%.6f error=%s",
                         attempt + 1,
                         result.trade.event_id,
                         result.trade.symbol,
                         duration_seconds,
+                        exc,
                     )
                     raise wrapped from exc
                 logger.warning(
-                    "persistence attempt %d/%d failed; retrying event_id=%s: %s",
+                    "persistence_retry attempt=%d total_attempts=%d "
+                    "event_id=%s symbol=%s error=%s",
                     attempt + 1,
                     attempts,
                     result.trade.event_id,
+                    result.trade.symbol,
                     exc,
                 )
             else:
                 duration_seconds = perf_counter() - started_at
                 self.persistence_metrics.record_success(duration_seconds)
                 logger.info(
-                    "persistence succeeded: event_id=%s symbol=%s "
+                    "persistence_succeeded event_id=%s symbol=%s "
                     "attempt=%d duration_seconds=%.6f",
                     result.trade.event_id,
                     result.trade.symbol,
@@ -459,7 +473,7 @@ class AnalyticsService:
         """Handle successful connection to the trading engine."""
         self.health_metrics.mark_engine_connected()
         logger.info(
-            "connected to trading engine at %s:%d",
+            "engine_connected host=%s port=%d",
             self.settings.engine_host,
             self.settings.engine_port,
         )
@@ -467,7 +481,7 @@ class AnalyticsService:
     def _handle_disconnect(self) -> None:
         """Handle trading-engine disconnection."""
         self.health_metrics.mark_engine_disconnected()
-        logger.warning("disconnected from trading engine")
+        logger.warning("engine_disconnected host=%s port=%d", self.settings.engine_host, self.settings.engine_port)
 
     @staticmethod
     def _default_publish_sink(payload: str) -> None:
@@ -479,9 +493,9 @@ def run(settings: Settings | None = None) -> None:
     """Run the analytics service until interrupted."""
     settings = settings or Settings.from_environment()
 
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    configure_logging(
+        level=settings.log_level,
+        log_format=settings.log_format,
     )
 
     service = AnalyticsService(settings)
