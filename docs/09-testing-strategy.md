@@ -154,7 +154,7 @@ Verify that C++ output conforms to the shared event schema.
 
 Verify Python output conforms to the analytics schema.
 
-Verify Node transforms events without dropping required fields.
+Verify the TypeScript/Bun gateway transforms events without dropping required fields.
 
 ---
 
@@ -179,20 +179,41 @@ The application must implement framing.
 
 ---
 
-## 8. Node API Tests
+## 8. Node / Bun Gateway API Tests
 
-Test:
+The gateway test suite uses Bun's built-in test runner.
+
+Test the Phase 4 HTTP contract:
 
 ```text
-GET /health
-GET /simulation/status
-POST /simulation/start
-POST /simulation/stop
-PATCH /simulation/config
-GET /metrics/current
+GET /api/health
+GET /api/ready
+GET /api/status
+GET /api/market
+GET /api/orderbook
+GET /api/trades
+GET /api/analytics
+POST /api/engine/start
+POST /api/engine/stop
+POST /api/engine/reset
 ```
 
-Verify status codes and JSON structures.
+Verify:
+
+- status codes,
+- response schemas,
+- validation failures,
+- upstream timeout/error mapping,
+- readiness behavior,
+- request-size limits,
+- malformed input handling.
+
+Run the gateway suite with:
+
+```bash
+cd gateway-node
+bun test
+```
 
 ---
 
