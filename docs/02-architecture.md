@@ -44,7 +44,7 @@ The initial socket transport can later be replaced by Protobuf/gRPC or a message
 |---|---|---|
 | Engine | Orders, book, matching, event generation | C++17 |
 | Analytics | Indicators and risk | Python 3 |
-| Gateway | REST, WebSocket, auth, fan-out | Node.js/Express |
+| Gateway | REST, WebSocket, routing, fan-out | TypeScript + Bun + Fastify + ws |
 | Dashboard | Visualization and controls | React/TypeScript |
 | Orchestration | Network and lifecycle | Docker Compose |
 
@@ -217,27 +217,89 @@ Example enriched event:
 
 ## 9. Node Gateway
 
-The gateway provides the browser-facing contract.
+The gateway provides the browser-facing contract between the completed engine/analytics services and the React dashboard.
+
+### Technology
+
+The Phase 4 gateway is implemented with:
+
+- TypeScript for application code and explicit contracts.
+- Bun as the runtime and package manager.
+- Fastify for the HTTP server and REST routing.
+- ws for WebSocket transport.
+- Zod for runtime validation of external and upstream data.
+- Pino for operational logging.
+- Prometheus-compatible metrics for gateway observability.
+- The existing JSON schemas and engine protocol as the initial service contracts.
+
+Bun is the standard local development, test, and execution environment for gateway-node. npm is not the default package manager.
+
+### Responsibilities
+
+The gateway owns:
+
+- REST API routing.
+- WebSocket connection and subscription management.
+- C++ engine TCP client integration.
+- Python analytics integration.
+- Event normalization and serialization.
+- Request validation.
+- Error mapping.
+- Connection/reconnection lifecycle.
+- Client backpressure protection.
+- Gateway health/readiness.
+- Gateway logging and metrics.
+
+The gateway does not own matching-engine state or analytics calculations. The C++ engine remains authoritative for trading state, while Python remains authoritative for analytics and risk calculations.
 
 ### REST
 
 Used for:
 
-- health checks,
-- lifecycle control,
-- configuration,
-- summaries.
+- health and readiness checks,
+- engine/analytics status,
+- current market and order-book snapshots,
+- recent trades,
+- latest analytics,
+- simulation controls.
+
+Routes should remain thin. Application services own business coordination, while upstream clients own network communication.
 
 ### WebSocket
 
 Used for:
 
 - live trade events,
-- price updates,
-- analytics,
-- status changes.
+- market updates,
+- order-book updates,
+- analytics updates,
+- engine-status changes.
 
-The gateway should not become the source of truth for order-book state. It is a transport and presentation boundary.
+Clients subscribe to explicitly supported event categories. Per-client queues and bounded backpressure prevent one slow browser from blocking the gateway or other clients.
+
+### Gateway flow
+
+```text
+C++ Engine
+    │
+    │ existing TCP protocol
+    ▼
+Engine Client
+    │
+    ├───────────────┐
+    ▼               ▼
+Event Normalizer  Engine State
+    │
+    ▼
+Gateway Event Bus
+    ├── REST snapshots
+    └── WebSocket subscriptions
+             ▲
+             │
+      Python Analytics
+```
+
+The gateway is a transport and application boundary, not a replacement for the engine or analytics services.
 
 ---
 
@@ -412,6 +474,12 @@ The C++ matching engine is intentionally treated as stateful. Horizontal scaling
 **Decision:** start with sockets.
 
 **Reason:** easier debugging and lower implementation complexity. Shared memory becomes a measurable optimization rather than premature complexity.
+
+### ADR-007 — Bun for the Node Gateway
+
+**Decision:** Use Bun as the runtime and package manager for gateway-node, with TypeScript as the implementation language.
+
+**Reason:** Bun provides one fast toolchain for installing dependencies, running TypeScript, executing tests, and running the gateway. This keeps local development and CI consistent while avoiding a separate npm-based workflow.
 
 ### ADR-005 — Docker Compose
 
