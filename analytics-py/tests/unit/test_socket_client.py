@@ -208,3 +208,182 @@ def test_socketpair_receive_fragmented_frame() -> None:
     thread.join(timeout=1.0)
 
     assert messages == [payload]
+
+
+def test_message_callback_failure_does_not_stop_receive_loop() -> None:
+    server_socket, client_socket = socket.socketpair()
+    received: list[str] = []
+
+    def on_message(payload: str) -> None:
+        received.append(payload)
+        if len(received) == 1:
+            raise RuntimeError("simulated callback failure")
+
+    client = SocketClient("127.0.0.1", 9000, reconnect=False, on_message=on_message)
+    client._socket = client_socket
+    client._connected = True
+    client._running = True
+
+    thread = threading.Thread(target=client._receive_loop, daemon=True)
+    thread.start()
+
+    first = '{"type":"TRADE","request_id":"first"}'
+    second = '{"type":"TRADE","request_id":"second"}'
+    server_socket.sendall(SocketClient.frame(first) + SocketClient.frame(second))
+
+    deadline = time.monotonic() + 1.0
+    while len(received) < 2 and time.monotonic() < deadline:
+        time.sleep(0.01)
+
+    client._stop_event.set()
+    server_socket.close()
+    client_socket.close()
+    thread.join(timeout=1.0)
+
+    assert received == [first, second]
+    assert not thread.is_alive()
+
+
+def test_disconnect_callback_failure_does_not_break_shutdown() -> None:
+    def on_disconnect() -> None:
+        raise RuntimeError("simulated disconnect callback failure")
+
+    client = SocketClient(
+        "127.0.0.1",
+        9000,
+        reconnect=False,
+        on_disconnect=on_disconnect,
+    )
+    client._connected = True
+    client._running = True
+
+    client.stop()
+
+    assert not client.is_running()
+    assert not client.is_connected()
+
+
+class _FakeSocket:
+    def __init__(self, receives: list[bytes]) -> None:
+        self._receives = iter(receives)
+        self.closed = False
+
+    def settimeout(self, timeout: float) -> None:
+        del timeout
+
+    def recv(self, size: int) -> bytes:
+        del size
+        try:
+            return next(self._receives)
+        except StopIteration:
+            return b""
+
+    def send(self, data: bytes) -> int:
+        return len(data)
+
+    def shutdown(self, how: int) -> None:
+        del how
+        if self.closed:
+            raise OSError("socket already closed")
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def test_reconnects_after_unexpected_disconnect(monkeypatch) -> None:
+    first_socket = _FakeSocket([b""])
+    second_payload = '{"type":"TRADE","request_id":"recovered"}'
+    second_socket = _FakeSocket([SocketClient.frame(second_payload)])
+
+    sockets = iter([first_socket, second_socket])
+    connect_calls: list[tuple[str, int]] = []
+    messages: list[str] = []
+    connected = threading.Event()
+
+    def create_connection(address: tuple[str, int], timeout: float):
+        del timeout
+        connect_calls.append(address)
+        try:
+            return next(sockets)
+        except StopIteration as exc:
+            raise AssertionError("unexpected extra reconnect") from exc
+
+    def on_message(payload: str) -> None:
+        messages.append(payload)
+        client.stop()
+
+    client = SocketClient(
+        "127.0.0.1",
+        9000,
+        reconnect=True,
+        reconnect_delay=0.01,
+        on_connect=connected.set,
+        on_message=on_message,
+    )
+
+    monkeypatch.setattr(socket, "create_connection", create_connection)
+
+    client.start()
+
+    deadline = time.monotonic() + 2.0
+    while not messages and time.monotonic() < deadline:
+        time.sleep(0.01)
+
+    client.stop()
+
+    assert messages == [second_payload]
+    assert connect_calls == [
+        ("127.0.0.1", 9000),
+        ("127.0.0.1", 9000),
+    ]
+    assert connected.is_set()
+    assert not client.is_running()
+    assert not client.is_connected()
+    assert first_socket.closed
+    assert second_socket.closed
+
+
+def test_retries_connection_failure_before_connecting(monkeypatch) -> None:
+    payload = '{"type":"TRADE","request_id":"after-connect-retry"}'
+    recovered_socket = _FakeSocket([SocketClient.frame(payload)])
+
+    attempts = 0
+    messages: list[str] = []
+
+    def create_connection(address: tuple[str, int], timeout: float):
+        nonlocal attempts
+        del address, timeout
+        attempts += 1
+
+        if attempts == 1:
+            raise OSError("simulated connection refusal")
+
+        return recovered_socket
+
+    def on_message(received: str) -> None:
+        messages.append(received)
+        client.stop()
+
+    client = SocketClient(
+        "127.0.0.1",
+        9000,
+        reconnect=True,
+        reconnect_delay=0.01,
+        on_message=on_message,
+    )
+
+    monkeypatch.setattr(socket, "create_connection", create_connection)
+
+    client.start()
+
+    deadline = time.monotonic() + 2.0
+    while not messages and time.monotonic() < deadline:
+        time.sleep(0.01)
+
+    client.stop()
+
+    assert attempts == 2
+    assert messages == [payload]
+    assert not client.is_running()
+    assert not client.is_connected()
+    assert recovered_socket.closed

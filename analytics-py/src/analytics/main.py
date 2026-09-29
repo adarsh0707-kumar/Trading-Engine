@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import signal
 from threading import Event, Lock
-from time import perf_counter
+from time import perf_counter, sleep
 from typing import Callable
 
 from analytics.config.settings import Settings
@@ -87,7 +87,11 @@ class AnalyticsService:
         if publish_sink is None:
             publish_sink = self._default_publish_sink
 
-        self.publisher = AnalyticsPublisher(publish_sink)
+        self.publisher = AnalyticsPublisher(
+            publish_sink,
+            retry_attempts=settings.publish_retry_attempts,
+            retry_delay=settings.publish_retry_delay,
+        )
         self._message_queue = BackpressureQueue(
             capacity=settings.backpressure_queue_capacity,
         )
@@ -375,55 +379,81 @@ class AnalyticsService:
             return
 
         started_at = perf_counter()
+        attempts = self.settings.persistence_retry_attempts + 1
 
-        try:
-            with self.repositories.connection.transaction():
-                self.repositories.trades.save(result.trade)
-                self.repositories.analytics.save(result.analytics)
-                self.repositories.positions.save(
-                    symbol=result.trade.symbol,
-                    snapshot=result.risk_snapshot,
+        for attempt in range(attempts):
+            try:
+                with self.repositories.connection.transaction():
+                    self.repositories.trades.save(result.trade)
+                    self.repositories.analytics.save(result.analytics)
+                    self.repositories.positions.save(
+                        symbol=result.trade.symbol,
+                        snapshot=result.risk_snapshot,
+                    )
+                    self.repositories.risk.save_risk_state(
+                        symbol=result.trade.symbol,
+                        snapshot=result.risk_snapshot,
+                    )
+                    for event in result.risk_events:
+                        self.repositories.risk.save_event(event=event)
+            except PersistenceError as exc:
+                duration_seconds = perf_counter() - started_at
+                self.persistence_metrics.record_failure(duration_seconds)
+                if attempt >= self.settings.persistence_retry_attempts:
+                    logger.error(
+                        "persistence failed after %d attempts: event_id=%s symbol=%s "
+                        "duration_seconds=%.6f",
+                        attempt + 1,
+                        result.trade.event_id,
+                        result.trade.symbol,
+                        duration_seconds,
+                    )
+                    raise
+                logger.warning(
+                    "persistence attempt %d/%d failed; retrying event_id=%s: %s",
+                    attempt + 1,
+                    attempts,
+                    result.trade.event_id,
+                    exc,
                 )
-                self.repositories.risk.save_risk_state(
-                    symbol=result.trade.symbol,
-                    snapshot=result.risk_snapshot,
+            except Exception as exc:
+                duration_seconds = perf_counter() - started_at
+                self.persistence_metrics.record_failure(duration_seconds)
+                wrapped = PersistenceError("failed to persist processed trade")
+                if attempt >= self.settings.persistence_retry_attempts:
+                    logger.error(
+                        "persistence failed after %d attempts: event_id=%s symbol=%s "
+                        "duration_seconds=%.6f",
+                        attempt + 1,
+                        result.trade.event_id,
+                        result.trade.symbol,
+                        duration_seconds,
+                    )
+                    raise wrapped from exc
+                logger.warning(
+                    "persistence attempt %d/%d failed; retrying event_id=%s: %s",
+                    attempt + 1,
+                    attempts,
+                    result.trade.event_id,
+                    exc,
                 )
-                for event in result.risk_events:
-                    self.repositories.risk.save_event(event=event)
-        except PersistenceError:
-            duration_seconds = perf_counter() - started_at
-            self.persistence_metrics.record_failure(duration_seconds)
-            logger.error(
-                "persistence failed: event_id=%s symbol=%s "
-                "duration_seconds=%.6f",
-                result.trade.event_id,
-                result.trade.symbol,
-                duration_seconds,
-            )
-            raise
-        except Exception as exc:
-            duration_seconds = perf_counter() - started_at
-            self.persistence_metrics.record_failure(duration_seconds)
-            logger.error(
-                "persistence failed: event_id=%s symbol=%s "
-                "duration_seconds=%.6f",
-                result.trade.event_id,
-                result.trade.symbol,
-                duration_seconds,
-            )
-            raise PersistenceError(
-                "failed to persist processed trade",
-            ) from exc
+            else:
+                duration_seconds = perf_counter() - started_at
+                self.persistence_metrics.record_success(duration_seconds)
+                logger.info(
+                    "persistence succeeded: event_id=%s symbol=%s "
+                    "attempt=%d duration_seconds=%.6f",
+                    result.trade.event_id,
+                    result.trade.symbol,
+                    attempt + 1,
+                    duration_seconds,
+                )
+                return
 
-        duration_seconds = perf_counter() - started_at
-        self.persistence_metrics.record_success(duration_seconds)
-        logger.info(
-            "persistence succeeded: event_id=%s symbol=%s "
-            "duration_seconds=%.6f",
-            result.trade.event_id,
-            result.trade.symbol,
-            duration_seconds,
-        )
+            if self.settings.persistence_retry_delay:
+                sleep(self.settings.persistence_retry_delay)
+
+        raise AssertionError("persistence retry loop exited unexpectedly")
 
     def _handle_connect(self) -> None:
         """Handle successful connection to the trading engine."""
