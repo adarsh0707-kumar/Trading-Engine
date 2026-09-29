@@ -266,8 +266,7 @@ class SocketClient:
             self.port,
         )
 
-        if self.on_connect is not None:
-            self.on_connect()
+        self._notify_connect()
 
     def _receive_loop(self) -> None:
         """Receive TCP data and extract complete protocol frames."""
@@ -348,8 +347,7 @@ class SocketClient:
             self._handle_heartbeat(payload)
             return
 
-        if self.on_message is not None:
-            self.on_message(payload)
+        self._notify_message(payload)
 
     @staticmethod
     def _is_heartbeat(payload: str) -> bool:
@@ -476,8 +474,43 @@ class SocketClient:
                 self._connected = False
                 should_notify = True
 
-        if should_notify and self.on_disconnect is not None:
+        if should_notify:
+            self._notify_disconnect()
+
+    def _notify_connect(self) -> None:
+        """Invoke the connect callback without terminating transport recovery."""
+
+        if self.on_connect is None:
+            return
+
+        try:
+            self.on_connect()
+        except Exception:
+            logger.exception("Socket connect callback failed; continuing recovery")
+
+    def _notify_message(self, payload: str) -> None:
+        """Invoke the message callback without killing the receive loop."""
+
+        if self.on_message is None:
+            return
+
+        try:
+            self.on_message(payload)
+        except Exception:
+            logger.exception(
+                "Socket message callback failed; continuing message ingestion"
+            )
+
+    def _notify_disconnect(self) -> None:
+        """Invoke the disconnect callback without terminating cleanup."""
+
+        if self.on_disconnect is None:
+            return
+
+        try:
             self.on_disconnect()
+        except Exception:
+            logger.exception("Socket disconnect callback failed during cleanup")
 
     def _close_socket(self) -> None:
         """Close the current socket safely."""
