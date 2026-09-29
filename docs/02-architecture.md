@@ -475,14 +475,16 @@ The C++ matching engine is intentionally treated as stateful. Horizontal scaling
 
 **Reason:** easier debugging and lower implementation complexity. Shared memory becomes a measurable optimization rather than premature complexity.
 
+### ADR-005 — Docker Compose
+
+**Decision:** Compose for local orchestration.
+
+**Reason:** simple multi-service startup and reproducibility.
+
+
 ### ADR-007 — Bun for the Node Gateway
 
 **Decision:** Use Bun as the runtime and package manager for gateway-node, with TypeScript as the implementation language.
 
 **Reason:** Bun provides one fast toolchain for installing dependencies, running TypeScript, executing tests, and running the gateway. This keeps local development and CI consistent while avoiding a separate npm-based workflow.
 
-### ADR-005 — Docker Compose
-
-**Decision:** Compose for local orchestration.
-
-**Reason:** simple multi-service startup and reproducibility.
