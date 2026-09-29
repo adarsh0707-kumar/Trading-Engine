@@ -37,15 +37,16 @@ class _Connection:
 
 
 class _Repository:
-    def __init__(self, connection: _Connection) -> None:
+    def __init__(self, connection: _Connection, fail_first: bool = False) -> None:
         self.connection = connection
         self.calls = 0
+        self.fail_first = fail_first
 
 
 class _TradeRepository(_Repository):
     def save(self, trade: Trade) -> None:
         self.calls += 1
-        if self.calls == 1:
+        if self.fail_first and self.calls == 1:
             raise RuntimeError("temporary database failure")
 
 
@@ -65,7 +66,7 @@ class _RiskRepository(_Repository):
 def _repositories(connection: _Connection) -> PostgresRepositories:
     return PostgresRepositories(
         connection=connection,
-        trades=_TradeRepository(connection),
+        trades=_TradeRepository(connection, fail_first=True),
         analytics=_RecordingRepository(connection),
         positions=_RecordingRepository(connection),
         risk=_RiskRepository(connection),
@@ -75,6 +76,7 @@ def _repositories(connection: _Connection) -> PostgresRepositories:
 def _trade() -> Trade:
     return Trade(
         event_id="trade-recovery-001",
+        trade_id="trade-001",
         event_type="TRADE",
         symbol="SIM",
         price=Decimal("101.25"),
@@ -111,8 +113,14 @@ def test_persistence_retry_reuses_transaction_boundary_without_replaying_publish
 def test_publisher_retry_retries_only_publish_after_persistence() -> None:
     connection = _Connection()
     repositories = _repositories(connection)
-    # Make persistence succeed without a retry so this test isolates publish recovery.
-    repositories.trades = _RecordingRepository(connection)
+    # Build a fresh repository set whose trade repository succeeds immediately.
+    repositories = PostgresRepositories(
+        connection=connection,
+        trades=_TradeRepository(connection),
+        analytics=_RecordingRepository(connection),
+        positions=_RecordingRepository(connection),
+        risk=_RiskRepository(connection),
+    )
 
     attempts = 0
     published: list[str] = []
