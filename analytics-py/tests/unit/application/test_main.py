@@ -272,7 +272,10 @@ def test_persist_wraps_failure_as_persistence_error() -> None:
     original_error = RuntimeError("analytics persistence failed")
     repositories.analytics.save.side_effect = original_error
 
-    service = _service(repositories=repositories)
+    service = _service(
+        settings=Settings(persistence_retry_attempts=0),
+        repositories=repositories,
+    )
 
     with pytest.raises(
         PersistenceError,
@@ -341,12 +344,13 @@ def test_service_continues_after_persistence_failure() -> None:
     repositories.analytics.save.side_effect = [
         RuntimeError("temporary database failure"),
         None,
+        None,
     ]
 
     publish_sink = Mock()
 
     service = AnalyticsService(
-        Settings(),
+        Settings(persistence_retry_attempts=1),
         repositories=repositories,
         publish_sink=publish_sink,
     )
@@ -384,8 +388,8 @@ def test_service_continues_after_persistence_failure() -> None:
     service._handle_message(first_message)
     service._handle_message(second_message)
 
-    assert repositories.analytics.save.call_count == 2
-    assert publish_sink.call_count == 1
+    assert repositories.analytics.save.call_count == 3
+    assert publish_sink.call_count == 2
 
 def test_handle_message_persists_and_publishes_trade() -> None:
     """A valid trade should be persisted before its analytics are published."""
@@ -522,7 +526,7 @@ def test_persist_records_failure_metrics() -> None:
     repositories.analytics.save.side_effect = original_error
 
     service = AnalyticsService(
-        Settings(),
+        Settings(persistence_retry_attempts=0),
         repositories=repositories,
         persistence_metrics=metrics,
     )
@@ -553,7 +557,7 @@ def test_persist_records_success_and_failure_separately() -> None:
     ]
 
     service = AnalyticsService(
-        Settings(),
+        Settings(persistence_retry_attempts=0),
         repositories=repositories,
         persistence_metrics=metrics,
     )
@@ -612,7 +616,7 @@ def test_persist_logs_failure_context(
     )
 
     service = AnalyticsService(
-        Settings(),
+        Settings(persistence_retry_attempts=0),
         repositories=repositories,
         persistence_metrics=metrics,
     )
