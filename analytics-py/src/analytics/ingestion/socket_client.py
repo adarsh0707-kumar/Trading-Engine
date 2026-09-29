@@ -210,13 +210,17 @@ class SocketClient:
             except OSError as exc:
                 if not self._stop_event.is_set():
                     logger.warning(
-                        "Socket connection error: %s",
+                        "engine_connection_error host=%s port=%d error=%s",
+                        self.host,
+                        self.port,
                         exc,
                     )
 
             except SocketProtocolError as exc:
                 logger.error(
-                    "Socket protocol error: %s",
+                    "engine_protocol_error host=%s port=%d error=%s",
+                    self.host,
+                    self.port,
                     exc,
                 )
 
@@ -236,7 +240,7 @@ class SocketClient:
         """Establish a TCP connection to the trading engine."""
 
         logger.info(
-            "Connecting to trading engine at %s:%d",
+            "engine_connect_attempt host=%s port=%d",
             self.host,
             self.port,
         )
@@ -261,7 +265,7 @@ class SocketClient:
         self._buffer.clear()
 
         logger.info(
-            "Connected to trading engine at %s:%d",
+            "engine_connected host=%s port=%d",
             self.host,
             self.port,
         )
