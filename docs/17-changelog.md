@@ -18,6 +18,115 @@ The project follows a phased implementation roadmap covering:
 
 ---
 
+## 2026-09-29 — Phase 3.10 — Analytics Service Hardening
+
+### Status
+
+**Status:** ✅ Complete
+
+Phase 3.10 hardens the Python analytics service for reliable long-running operation across lifecycle management, configuration validation, resource cleanup, backpressure, failure recovery, and operational logging.
+
+### 3.10.1 — Service Lifecycle Hardening ✅
+
+Implemented:
+
+* Idempotent service start and stop handling.
+* Safe cleanup for startup and shutdown paths.
+* Explicit trading-engine connection lifecycle handling.
+* Lifecycle-focused regression coverage.
+
+### 3.10.2 — Configuration Validation ✅
+
+Implemented:
+
+* Analytics service configuration validation.
+* Engine host and port validation.
+* Timeout and reconnection configuration validation.
+* Payload-size validation.
+* Risk configuration validation.
+* Configuration-focused tests.
+
+### 3.10.3 — Resource Cleanup ✅
+
+Implemented:
+
+* Deterministic socket cleanup.
+* Publisher cleanup.
+* Persistence resource cleanup.
+* Repository lifecycle handling.
+* Shutdown cleanup regression coverage.
+
+### 3.10.4 — Backpressure Handling ✅
+
+Implemented:
+
+* Bounded analytics message queue.
+* Configurable queue capacity.
+* Rejection of inbound work when the queue is full.
+* Backpressure state handling.
+* Backpressure operational logging.
+* Backpressure-focused tests.
+
+### 3.10.5 — Failure Recovery ✅
+
+Implemented:
+
+* Bounded persistence retries.
+* Persistence retry delays.
+* Persistence failure propagation.
+* Publisher retry handling.
+* Engine disconnect recovery.
+* Socket reconnect handling.
+* Malformed-message recovery.
+* Recovery-focused integration and unit tests.
+
+Failed persistence transactions do not result in analytics publication.
+
+### 3.10.6 — Operational Logging ✅
+
+Implemented:
+
+* Centralized logging configuration.
+* Configurable log level and log format.
+* Standardized service lifecycle logs.
+* Engine connection and disconnection logs.
+* Parser and backpressure failure logs.
+* Persistence retry, success, and terminal-failure logs.
+* Publisher retry and failure logs.
+* Trade-processing failure logs.
+* Operational logging configuration tests.
+
+Supported environment configuration:
+
+```text
+TRADING_ENGINE_LOG_LEVEL
+TRADING_ENGINE_LOG_FORMAT
+```
+
+### Phase 3.10 Validation
+
+```text
+Analytics Python test suite    PASS — 447 passed
+GitHub Actions checks           PASS — 9/9
+```
+
+### Phase 3.10 Exit Criteria
+
+* [X] Service lifecycle hardening.
+* [X] Configuration validation.
+* [X] Resource cleanup.
+* [X] Backpressure handling.
+* [X] Failure recovery.
+* [X] Operational logging.
+* [X] Recovery-focused tests.
+* [X] Operational logging tests.
+* [X] Full analytics test suite passing.
+* [X] CI validation passing.
+
+**Phase 3.10 overall status:** ✅ Complete
+
+---
+
 ## 2026-09-28 — Phase 3.9 — Metrics and Observability
 
 ### Status
@@ -825,8 +934,8 @@ GitHub Actions CI    PASS — 7/7 checks
 
 ```text
 Date:    2026-09-28
-Phase:   3.8
-Task:    PostgreSQL Persistence & Observability
+Phase:   3.10
+Task:    Analytics Service Hardening
 Status:  ✅ Complete
 ```
 
