@@ -393,7 +393,7 @@ checkpoints/
 *.pkl
 *.pickle
 *.joblib
-
+.env
 # ML caches
 .ml_cache/
 
