@@ -306,8 +306,10 @@ Responsibilities:
 | Build System         | CMake / Make                                         |
 | Analytics            | Python                                               |
 | Numerical Processing | NumPy / Pandas                                       |
-| API Gateway          | Node.js                                              |
+| API Gateway          | Bun + Fastify                                        |
 | Gateway Language     | TypeScript                                           |
+| Gateway Runtime       | Bun                                                  |
+| Gateway Package/Test  | Bun                                                  |
 | Frontend             | React + TypeScript                                   |
 | Frontend Build       | Vite                                                 |
 | Charts               | Recharts                                             |
@@ -847,8 +849,7 @@ Install:
 - CMake
 - Make
 - Python 3
-- Node.js
-- npm
+- Bun
 - Docker
 - Docker Compose
 
@@ -902,8 +903,8 @@ python src/main.py
 ```bash
 cd gateway-node
 
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 ---
@@ -1274,16 +1275,34 @@ GitHub Actions checks           PASS — 9/9
 
 **Status:** ⏳ Planned
 
-Next implementation milestone:
+**Implementation language:** TypeScript  
+**Runtime:** Bun  
+**Package manager:** Bun  
+**HTTP:** Fastify  
+**WebSocket:** ws  
+**Validation:** Zod  
+**Testing:** Bun test  
+**Logging:** Pino  
+**Metrics:** Prometheus-compatible
 
-- HTTP API.
-- WebSocket API.
-- C++ engine integration.
-- Python analytics integration.
-- Analytics event forwarding.
-- Client subscription management.
-- Request validation and API error handling.
-- Gateway tests.
+Detailed implementation is tracked in docs/05-roadmap-and-phases.md.
+
+### Phase 4 milestones
+
+- 4.1 Gateway foundation and architecture.
+- 4.2 Typed configuration and environment management.
+- 4.3 C++ engine TCP client and reconnect handling.
+- 4.4 Engine protocol parsing and event normalization.
+- 4.5 REST API and request/response validation.
+- 4.6 WebSocket gateway, subscriptions, and client backpressure.
+- 4.7 Python analytics integration.
+- 4.8 Error handling, resilience, and resource cleanup.
+- 4.9 Security boundaries and input hardening.
+- 4.10 Operational logging and metrics.
+- 4.11 Unit, integration, and end-to-end gateway validation.
+- 4.12 Phase integration and exit criteria.
+
+Bun is the standard gateway development, test, and execution toolchain. npm is not the default package manager for Phase 4.
 
 ## Phase 5 — React Dashboard
 
