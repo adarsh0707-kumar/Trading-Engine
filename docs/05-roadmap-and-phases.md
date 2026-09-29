@@ -160,132 +160,77 @@ The Python analytics service is the current active development area.
 - Per-symbol risk state
 - Processor-level risk integration
 
-## Phase 3.7 — Risk Limits & Risk Events
+## Phase 3.7 — Risk Limits and Risk Events
 
 **Status:** ✅ Complete
 
-- Risk-limit configuration
-- Position and position-value limits
-- Drawdown and daily-loss limit evaluation
-- Warning / breached states
-- RiskEvent model
-- Risk-event generation
-- Per-symbol risk evaluation
-- StreamingProcessor integration
+Implemented risk-limit configuration, risk evaluation, warning/breach states, immutable risk events, event generation, and streaming-processor integration.
+
+---
 
 ## Phase 3.8 — PostgreSQL Persistence & Observability
 
 **Status:** ✅ Complete
 
-Implemented:
-
-- PostgreSQL connection configuration
-- Repository contract conformance
-- Trade persistence
-- Analytics-result persistence
-- Position persistence
-- Risk-state persistence
-- Risk-event persistence
-- Shared repository factory
-- Application persistence wiring
-- End-to-end PostgreSQL persistence
-- Atomic transaction boundaries
-- Persistence failure handling
-- Persistence success/failure metrics
-- Persistence duration logging
-- PostgreSQL health checks
-- Dedicated migration runner
-- Migration-aware application bootstrap
-- Migration idempotency and duplicate-version validation
-- Atomic migration execution
-
-### Database migrations
-
-```text
-001_create_trades.sql
-002_create_analytics_results.sql
-003_create_positions.sql
-004_create_risk_state.sql
-005_create_risk_events.sql
-```
-
-### Persistence transaction
-
-```text
-BEGIN
-  trades.save()
-  analytics.save()
-  positions.save()
-  risk.save_risk_state()
-  risk.save_event()
-COMMIT
-```
-
-On failure, the transaction rolls back and the analytics result is not published.
-
-### Migration lifecycle
-
-```text
-Database URL
-    ↓
-PostgreSQL Connection
-    ↓
-MigrationRunner
-    ↓
-PostgresRepositories
-    ↓
-AnalyticsService
-```
-
-Injected repositories do not automatically run migrations.
-
-### Validation
-
-```text
-Full analytics test suite    PASS — 312 passed
-PostgreSQL E2E coverage      PASS — 2 passed
-```
-
-**Phase 3.8 exit status:** ✅ Complete
+Implemented PostgreSQL connection management, repositories, transaction boundaries, persistence failure handling, health checks, migrations, and persistence observability.
 
 ---
 
-## Phase 3 Remaining Work
-
-Phase 3.8 is complete. No planned Phase 3.8 persistence items remain.
-
-### Phase 3.9 — Metrics and Observability
+## Phase 3.9 — Metrics and Observability
 
 **Status:** ✅ Complete
 
-Planned:
+Implemented:
 
-- Analytics service metrics
-- Processing latency metrics
-- Trade throughput metrics
-- Risk evaluation metrics
-- Error counters
-- Prometheus integration
-- Grafana dashboards
-- Service health metrics
+* Analytics service metrics.
+* Processing-duration and latency metrics.
+* Trade throughput metrics.
+* Risk and risk-event metrics.
+* Error counters.
+* Prometheus exposition.
+* Grafana dashboard provisioning.
+* Service liveness/readiness metrics.
+* Trading-engine connection health.
+* Inbound message metrics.
+* Service-health test coverage.
 
-> Note: Phase 3.8 already contains persistence-specific metrics and PostgreSQL health checks. Phase 3.9 expands observability to service-wide operational metrics.
+---
 
-### Phase 3.10 — Analytics Service Hardening
+## Phase 3.10 — Analytics Service Hardening
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
-Planned:
+Implemented:
 
-- Graceful service lifecycle hardening
-- Backpressure handling
-- Failure recovery
-- Resource cleanup
-- Configuration validation
-- Operational logging
-- End-to-end service tests
-- Recovery testing
-- Production-readiness review
+* Service lifecycle hardening.
+* Configuration validation.
+* Resource cleanup.
+* Bounded backpressure handling.
+* Failure recovery and bounded retries.
+* Engine disconnect/reconnect recovery.
+* Operational logging configuration.
+* Standardized service, socket, parser, persistence, publisher, and processing logs.
+* Recovery and operational-logging test coverage.
+
+### Phase 3.10 Breakdown
+
+| Sub-phase | Area | Status |
+| --- | --- | --- |
+| 3.10.1 | Service lifecycle hardening | ✅ Complete |
+| 3.10.2 | Configuration validation | ✅ Complete |
+| 3.10.3 | Resource cleanup | ✅ Complete |
+| 3.10.4 | Backpressure handling | ✅ Complete |
+| 3.10.5 | Failure recovery | ✅ Complete |
+| 3.10.6 | Operational logging | ✅ Complete |
+
+### Phase 3 Validation
+
+```text
+Analytics Python test suite    PASS — 447 passed
+GitHub Actions checks           PASS — 9/9
+```
+
+**Phase 3.10 exit status:** ✅ Complete
 
 ---
 
