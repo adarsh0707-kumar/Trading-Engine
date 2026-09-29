@@ -28,6 +28,11 @@ class Settings:
     backpressure_queue_capacity: int = 1000
     backpressure_enqueue_timeout: float = 0.1
 
+    persistence_retry_attempts: int = 2
+    persistence_retry_delay: float = 0.1
+    publish_retry_attempts: int = 2
+    publish_retry_delay: float = 0.1
+
     database_url: str | None = None
 
     metrics_host: str = "0.0.0.0"
@@ -50,6 +55,14 @@ class Settings:
             raise ConfigurationError("backpressure_queue_capacity must be an integer greater than 0")
         if not isinstance(self.backpressure_enqueue_timeout, (int, float)) or isinstance(self.backpressure_enqueue_timeout, bool) or self.backpressure_enqueue_timeout < 0 or not math.isfinite(self.backpressure_enqueue_timeout):
             raise ConfigurationError("backpressure_enqueue_timeout must be a finite number greater than or equal to 0")
+        if isinstance(self.persistence_retry_attempts, bool) or not isinstance(self.persistence_retry_attempts, int) or self.persistence_retry_attempts < 0:
+            raise ConfigurationError("persistence_retry_attempts must be an integer greater than or equal to 0")
+        if not isinstance(self.persistence_retry_delay, (int, float)) or isinstance(self.persistence_retry_delay, bool) or self.persistence_retry_delay < 0 or not math.isfinite(self.persistence_retry_delay):
+            raise ConfigurationError("persistence_retry_delay must be a finite number greater than or equal to 0")
+        if isinstance(self.publish_retry_attempts, bool) or not isinstance(self.publish_retry_attempts, int) or self.publish_retry_attempts < 0:
+            raise ConfigurationError("publish_retry_attempts must be an integer greater than or equal to 0")
+        if not isinstance(self.publish_retry_delay, (int, float)) or isinstance(self.publish_retry_delay, bool) or self.publish_retry_delay < 0 or not math.isfinite(self.publish_retry_delay):
+            raise ConfigurationError("publish_retry_delay must be a finite number greater than or equal to 0")
         if self.database_url is not None and not self.database_url.strip():
             raise ConfigurationError("database_url must not be empty when provided")
         if not self.metrics_host.strip():
@@ -122,6 +135,10 @@ class Settings:
             ),
             backpressure_queue_capacity=int(os.getenv("TRADING_ENGINE_BACKPRESSURE_QUEUE_CAPACITY", "1000")),
             backpressure_enqueue_timeout=float(os.getenv("TRADING_ENGINE_BACKPRESSURE_ENQUEUE_TIMEOUT", "0.1")),
+            persistence_retry_attempts=int(os.getenv("TRADING_ENGINE_PERSISTENCE_RETRY_ATTEMPTS", "2")),
+            persistence_retry_delay=float(os.getenv("TRADING_ENGINE_PERSISTENCE_RETRY_DELAY", "0.1")),
+            publish_retry_attempts=int(os.getenv("TRADING_ENGINE_PUBLISH_RETRY_ATTEMPTS", "2")),
+            publish_retry_delay=float(os.getenv("TRADING_ENGINE_PUBLISH_RETRY_DELAY", "0.1")),
             metrics_host=os.getenv(
                 "TRADING_ENGINE_METRICS_HOST",
                 "0.0.0.0",
