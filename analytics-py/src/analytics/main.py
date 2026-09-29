@@ -401,10 +401,12 @@ class AnalyticsService:
                 self.persistence_metrics.record_failure(duration_seconds)
                 if attempt >= self.settings.persistence_retry_attempts:
                     logger.error(
-                        "persistence failed after %d attempts: event_id=%s symbol=%s",
+                        "persistence failed after %d attempts: event_id=%s symbol=%s "
+                        "duration_seconds=%.6f",
                         attempt + 1,
                         result.trade.event_id,
                         result.trade.symbol,
+                        duration_seconds,
                     )
                     raise
                 logger.warning(
