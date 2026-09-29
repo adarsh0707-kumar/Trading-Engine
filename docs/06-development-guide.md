@@ -111,36 +111,115 @@ analytics-py/
 
 ---
 
-## 5. Node.js Development
+## 5. Node.js / Bun Gateway Development
 
-Use TypeScript for the gateway if possible.
+The gateway is implemented in TypeScript and uses Bun as the standard runtime, package manager, test runner, and development toolchain.
 
-Suggested structure:
+### Technology contract
 
 ```text
-src/
-├── server.ts
-├── config.ts
-├── routes/
-├── websocket/
-├── services/
-├── clients/
-├── middleware/
-└── types/
+Language       TypeScript
+Runtime        Bun
+Package manager Bun
+HTTP framework Fastify
+WebSocket      ws
+Validation     Zod
+Logging        Pino
+Testing        bun test
+Metrics        Prometheus-compatible
+```
+
+Do not use npm as the default package manager for gateway development. The repository should keep Bun's lockfile as the dependency source of truth.
+
+### Suggested structure
+
+```text
+gateway-node/
+├── src/
+│   ├── server.ts
+│   ├── config/
+│   ├── api/
+│   ├── websocket/
+│   ├── clients/
+│   ├── services/
+│   ├── middleware/
+│   ├── observability/
+│   └── types/
+├── tests/
+│   ├── unit/
+│   └── integration/
+├── package.json
+├── tsconfig.json
+├── bun.lock
+└── Dockerfile
 ```
 
 Responsibilities:
 
 ```text
-routes       -> HTTP interface
-websocket    -> browser streaming
-clients      -> upstream connections
-services     -> application logic
-middleware   -> auth/error/rate-limit
-config       -> environment handling
+api            -> HTTP interface
+websocket      -> browser streaming
+clients        -> C++ engine / analytics connections
+services       -> application coordination
+middleware     -> validation / errors / security hooks
+config         -> typed environment handling
+observability  -> logs / metrics
+types          -> shared gateway contracts
 ```
 
----
+### Gateway design rules
+
+- Use strict TypeScript.
+- Keep route handlers thin.
+- Keep upstream socket/network logic inside dedicated clients.
+- Validate external input before application processing.
+- Treat the C++ engine as authoritative for engine/trade state.
+- Treat Python Analytics as authoritative for analytics/risk calculations.
+- Do not duplicate VWAP, SMA, EMA, PnL, exposure, drawdown, or risk-event calculations in the gateway.
+- Keep WebSocket clients isolated from one another.
+- Use bounded queues and explicit slow-consumer handling.
+- Avoid unhandled promise rejections.
+- Close sockets, timers, subscriptions, and servers during shutdown.
+- Never log secrets or complete sensitive request payloads.
+- Keep REST and WebSocket response contracts typed and documented.
+
+### Bun commands
+
+From gateway-node:
+
+```bash
+bun install
+bun run dev
+bun run build
+bun test
+bun test --watch
+bun run start
+```
+
+Exact script names must match package.json once Phase 4.1 is implemented.
+
+### Gateway testing
+
+Use Bun's built-in test runner as the default test command:
+
+```bash
+bun test
+```
+
+Unit tests should cover configuration, schemas, protocol parsing, event normalization, route behavior, subscription state, errors, and backpressure.
+
+Integration tests should cover:
+
+```text
+Gateway ↔ C++ Engine
+Gateway ↔ Python Analytics
+REST ↔ upstream services
+WebSocket ↔ event stream
+Reconnect / failure recovery
+Graceful shutdown
+```
+
+CI must use the same Bun workflow as local development.
 
 ## 6. React Development
 
@@ -216,8 +295,8 @@ python -m analytics
 
 ```bash
 cd gateway-node
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 ### Terminal 4
@@ -248,10 +327,11 @@ Also run sanitizer builds.
 pytest
 ```
 
-### Node
+### Node / Bun Gateway
 
 ```bash
-npm test
+cd gateway-node
+bun test
 ```
 
 ### React
