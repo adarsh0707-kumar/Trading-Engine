@@ -1,3 +1,4 @@
+import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { registerHealthRoutes } from "./api/health.ts";
@@ -21,6 +22,10 @@ export function createGatewayServer(
     },
     bodyLimit: config.http.bodyLimitBytes,
     connectionTimeout: config.http.requestTimeoutMs,
+  });
+
+  app.register(cors, {
+    origin: config.cors.origin,
   });
 
   app.register(registerHealthRoutes);
