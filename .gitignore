@@ -462,4 +462,8 @@ config/*.local.*
 
 !.gitkeep
 !.env.example
-!.env.templatebuild-asan/
+!.env.template
+build-asan/
+
+# Bun gateway dependency lockfile
+!gateway-node/bun.lock

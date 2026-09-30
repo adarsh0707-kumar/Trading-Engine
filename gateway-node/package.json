@@ -1,0 +1,24 @@
+{
+  "name": "trading-engine-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "description": "TypeScript API and WebSocket gateway for the Cloud-Based Algorithmic Trading Engine",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "build": "tsc --noEmit",
+    "start": "bun src/server.ts",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+  },
+  "engines": {
+    "bun": ">=1.3.0"
+  },
+  "dependencies": {
+    "fastify": "^5.6.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.2"
+  }
+}
