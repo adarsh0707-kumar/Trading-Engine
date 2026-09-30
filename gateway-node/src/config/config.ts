@@ -106,6 +106,35 @@ function getString(
   return value;
 }
 
+function parseHost(
+  environment: Record<string, string | undefined>,
+  name: string,
+  fallback: string,
+): string {
+  const value = environment[name]?.trim();
+
+  if (value === undefined || value === "") {
+    return fallback;
+  }
+
+  if (/\s/.test(value)) {
+    throw new Error(`Invalid ${name}: ${value}`);
+  }
+
+  if (
+    !/^[a-zA-Z0-9.-]+$/.test(value) ||
+    value.startsWith(".") ||
+    value.endsWith(".") ||
+    value.startsWith("-") ||
+    value.endsWith("-") ||
+    value.includes("..")
+  ) {
+    throw new Error(`Invalid ${name}: ${value}`);
+  }
+
+  return value;
+}
+
 function parsePort(
   environment: Record<string, string | undefined>,
   name: string,
@@ -205,9 +234,9 @@ function parsePath(
 export function loadConfig(
   environment: Record<string, string | undefined> = process.env,
 ): GatewayConfig {
-  return Object.freeze({
+  const config = Object.freeze({
     gateway: Object.freeze({
-      host: getString(
+      host: parseHost(
         environment,
         "GATEWAY_HOST",
         DEFAULTS.gateway.host,
@@ -220,7 +249,7 @@ export function loadConfig(
     }),
 
     engine: Object.freeze({
-      host: getString(
+      host: parseHost(
         environment,
         "ENGINE_HOST",
         DEFAULTS.engine.host,
@@ -240,12 +269,12 @@ export function loadConfig(
         "ENGINE_REQUEST_TIMEOUT_MS",
         DEFAULTS.engine.requestTimeoutMs,
       ),
-      reconnectInitialDelayMs: parsePositiveInteger(
+      reconnectInitialDelayMs: parseNonNegativeInteger(
         environment,
         "ENGINE_RECONNECT_INITIAL_DELAY_MS",
         DEFAULTS.engine.reconnectInitialDelayMs,
       ),
-      reconnectMaxDelayMs: parsePositiveInteger(
+      reconnectMaxDelayMs: parseNonNegativeInteger(
         environment,
         "ENGINE_RECONNECT_MAX_DELAY_MS",
         DEFAULTS.engine.reconnectMaxDelayMs,
@@ -258,7 +287,7 @@ export function loadConfig(
     }),
 
     analytics: Object.freeze({
-      host: getString(
+      host: parseHost(
         environment,
         "ANALYTICS_HOST",
         DEFAULTS.analytics.host,
@@ -335,4 +364,15 @@ export function loadConfig(
       ),
     }),
   });
+
+  if (
+    config.engine.reconnectInitialDelayMs >
+    config.engine.reconnectMaxDelayMs
+  ) {
+    throw new Error(
+      "Invalid engine reconnect configuration: ENGINE_RECONNECT_INITIAL_DELAY_MS must be less than or equal to ENGINE_RECONNECT_MAX_DELAY_MS",
+    );
+  }
+
+  return config;
 }

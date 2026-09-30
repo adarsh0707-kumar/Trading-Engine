@@ -68,6 +68,25 @@ describe("loadConfig", () => {
     expect(config.analytics.requestTimeoutMs).toBe(4000);
   });
 
+  test("freezes the top-level configuration", () => {
+    const config = loadConfig();
+
+    expect(Object.isFrozen(config)).toBe(true);
+  });
+
+  test("freezes all nested configuration sections", () => {
+    const config = loadConfig();
+
+    expect(Object.isFrozen(config.gateway)).toBe(true);
+    expect(Object.isFrozen(config.engine)).toBe(true);
+    expect(Object.isFrozen(config.analytics)).toBe(true);
+    expect(Object.isFrozen(config.websocket)).toBe(true);
+    expect(Object.isFrozen(config.http)).toBe(true);
+    expect(Object.isFrozen(config.logging)).toBe(true);
+    expect(Object.isFrozen(config.metrics)).toBe(true);
+    expect(Object.isFrozen(config.cors)).toBe(true);
+  });
+
   test("loads HTTP, WebSocket, logging, metrics, and CORS configuration", () => {
     const config = loadConfig({
       WEBSOCKET_PATH: "/stream",
@@ -110,6 +129,44 @@ describe("loadConfig", () => {
     ).toThrow("Invalid ENGINE_PORT");
   });
 
+  test("accepts valid host values", () => {
+    const config = loadConfig({
+      GATEWAY_HOST: "0.0.0.0",
+      ENGINE_HOST: "engine",
+      ANALYTICS_HOST: "analytics.internal",
+    });
+
+    expect(config.gateway.host).toBe("0.0.0.0");
+    expect(config.engine.host).toBe("engine");
+    expect(config.analytics.host).toBe("analytics.internal");
+  });
+
+  test("rejects invalid host values", () => {
+    expect(() =>
+      loadConfig({
+        GATEWAY_HOST: "invalid host",
+      }),
+    ).toThrow("Invalid GATEWAY_HOST");
+
+    expect(() =>
+      loadConfig({
+        ENGINE_HOST: "engine host",
+      }),
+    ).toThrow("Invalid ENGINE_HOST");
+
+    expect(() =>
+      loadConfig({
+        ANALYTICS_HOST: "analytics..internal",
+      }),
+    ).toThrow("Invalid ANALYTICS_HOST");
+
+    expect(() =>
+      loadConfig({
+        GATEWAY_HOST: "-invalid",
+      }),
+    ).toThrow("Invalid GATEWAY_HOST");
+  });
+
   test("rejects invalid numeric settings", () => {
     expect(() =>
       loadConfig({
@@ -122,6 +179,27 @@ describe("loadConfig", () => {
         ENGINE_RECONNECT_MAX_ATTEMPTS: "-1",
       }),
     ).toThrow("Invalid ENGINE_RECONNECT_MAX_ATTEMPTS");
+  });
+
+  test("rejects reconnect delays when the initial delay exceeds the maximum", () => {
+    expect(() =>
+      loadConfig({
+        ENGINE_RECONNECT_INITIAL_DELAY_MS: "15000",
+        ENGINE_RECONNECT_MAX_DELAY_MS: "10000",
+      }),
+    ).toThrow(
+      "ENGINE_RECONNECT_INITIAL_DELAY_MS must be less than or equal to ENGINE_RECONNECT_MAX_DELAY_MS",
+    );
+  });
+
+  test("accepts equal reconnect initial and maximum delays", () => {
+    const config = loadConfig({
+      ENGINE_RECONNECT_INITIAL_DELAY_MS: "10000",
+      ENGINE_RECONNECT_MAX_DELAY_MS: "10000",
+    });
+
+    expect(config.engine.reconnectInitialDelayMs).toBe(10000);
+    expect(config.engine.reconnectMaxDelayMs).toBe(10000);
   });
 
   test("rejects invalid boolean settings", () => {
