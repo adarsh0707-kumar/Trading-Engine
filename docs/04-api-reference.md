@@ -20,7 +20,21 @@ Exact port numbers should be defined in the deployment configuration rather than
 
 ---
 
-## 2. Health
+## 2. Currently Implemented Endpoints
+
+### GET `/health`
+
+Returns the gateway health response.
+
+### GET `<METRICS_PATH>`
+
+Prometheus metrics are exposed when `METRICS_ENABLED=true`. The default configured path is `/metrics`, and `METRICS_PATH` may override it. When metrics are disabled, the route is not registered and requests return `404`.
+
+The gateway also applies the configured `CORS_ORIGIN` at runtime.
+
+---
+
+## 3. Health
 
 ### GET `/health`
 
@@ -52,7 +66,26 @@ HTTP status should be non-2xx when a required dependency is unavailable.
 
 ---
 
-## 3. Simulation Status
+## 4. Planned Application API
+
+Phase 4.3 introduces the versioned application API boundary under `/api/v1/...`. The following routes are planned and are not yet implemented:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | /api/v1/status | Engine/analytics connection status |
+| GET | /api/v1/market | Current market state |
+| GET | /api/v1/orderbook | Current order-book snapshot |
+| GET | /api/v1/trades | Recent trades |
+| GET | /api/v1/analytics | Latest analytics state |
+| POST | /api/v1/engine/start | Simulation control |
+| POST | /api/v1/engine/stop | Simulation control |
+| POST | /api/v1/engine/reset | Simulation reset |
+
+Historical query endpoints are deferred to Phase 6 unless a minimal read-through contract is required earlier.
+
+---
+
+## 5. Simulation Status
 
 ### GET `/api/v1/simulation/status`
 
@@ -69,7 +102,7 @@ Response:
 
 ---
 
-## 4. Start Simulation
+## 6. Start Simulation
 
 ### POST `/api/v1/simulation/start`
 
@@ -94,7 +127,7 @@ If already running, return an appropriate conflict response.
 
 ---
 
-## 5. Stop Simulation
+## 7. Stop Simulation
 
 ### POST `/api/v1/simulation/stop`
 
@@ -110,7 +143,7 @@ The endpoint should be idempotent where practical.
 
 ---
 
-## 6. Configuration
+## 8. Configuration
 
 ### GET `/api/v1/simulation/config`
 
@@ -140,7 +173,7 @@ The gateway must validate all values.
 
 ---
 
-## 7. Metrics
+## 9. Metrics
 
 ### GET `/api/v1/metrics/current`
 
@@ -161,7 +194,7 @@ Response:
 
 ---
 
-## 8. Historical Summary
+## 10. Historical Summary
 
 ### GET `/api/v1/metrics/summary`
 
@@ -181,7 +214,7 @@ The MVP may calculate this from an in-memory bounded history. Persistent storage
 
 ---
 
-## 9. WebSocket
+## 11. WebSocket
 
 ### Endpoint
 
@@ -225,7 +258,7 @@ Status event:
 
 ---
 
-## 10. Client Commands
+## 12. Client Commands
 
 Browser clients may send:
 
@@ -247,7 +280,7 @@ Control operations should normally remain REST operations rather than arbitrary 
 
 ---
 
-## 11. Error Format
+## 13. Error Format
 
 All REST errors should use a consistent format:
 
@@ -275,7 +308,7 @@ INTERNAL_ERROR
 
 ---
 
-## 12. Authentication
+## 14. Authentication
 
 For a local MVP, authentication may be disabled.
 
@@ -291,7 +324,7 @@ Read-only health endpoints may remain public inside a trusted development enviro
 
 ---
 
-## 13. Rate Limiting
+## 15. Rate Limiting
 
 Control endpoints should have stricter limits than read endpoints.
 
@@ -308,7 +341,7 @@ These are initial design values and should be configurable.
 
 ---
 
-## 14. CORS
+## 16. CORS
 
 Only configured frontend origins should be allowed.
 
@@ -322,7 +355,7 @@ Production deployments should use explicit HTTPS origins.
 
 ---
 
-## 15. API Versioning
+## 17. API Versioning
 
 All application APIs use:
 
@@ -338,7 +371,7 @@ Breaking changes should introduce:
 
 ---
 
-## 16. Internal Protocol
+## 18. Internal Protocol
 
 The C++ and Python services should not expose their internal ports publicly.
 
@@ -352,7 +385,7 @@ Gateway -> public application boundary
 
 ---
 
-## 17. API Contract Testing
+## 19. API Contract Testing
 
 API tests should verify:
 
