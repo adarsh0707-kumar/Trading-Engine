@@ -44,3 +44,48 @@ describe("gateway server CORS", () => {
     await gateway.stop();
   });
 });
+
+describe("gateway server metrics", () => {
+  test("serves Prometheus metrics on the configured path", async () => {
+    const gateway = createGatewayServer({
+      ...process.env,
+      METRICS_ENABLED: "true",
+      METRICS_PATH: "/custom-metrics",
+    });
+
+    const response = await gateway.app.inject({
+      method: "GET",
+      url: "/custom-metrics",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/plain");
+    expect(response.body).toContain("# HELP");
+
+    const defaultPathResponse = await gateway.app.inject({
+      method: "GET",
+      url: "/metrics",
+    });
+
+    expect(defaultPathResponse.statusCode).toBe(404);
+
+    await gateway.stop();
+  });
+
+  test("does not expose metrics when disabled", async () => {
+    const gateway = createGatewayServer({
+      ...process.env,
+      METRICS_ENABLED: "false",
+      METRICS_PATH: "/metrics",
+    });
+
+    const response = await gateway.app.inject({
+      method: "GET",
+      url: "/metrics",
+    });
+
+    expect(response.statusCode).toBe(404);
+
+    await gateway.stop();
+  });
+});

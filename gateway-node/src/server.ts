@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 
 import { registerHealthRoutes } from "./api/health.ts";
 import { loadConfig, type GatewayConfig } from "./config/config.ts";
+import { createGatewayMetrics } from "./metrics/metrics.ts";
 
 export interface GatewayServer {
   readonly app: FastifyInstance;
@@ -29,6 +30,16 @@ export function createGatewayServer(
   });
 
   app.register(registerHealthRoutes);
+
+  if (config.metrics.enabled) {
+    const metrics = createGatewayMetrics();
+
+    app.get(config.metrics.path, async (_request, reply) => {
+      reply.header("Content-Type", metrics.contentType);
+
+      return metrics.getMetrics();
+    });
+  }
 
   let started = false;
 
