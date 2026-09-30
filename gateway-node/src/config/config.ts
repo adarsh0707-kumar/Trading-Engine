@@ -1,5 +1,4 @@
 export interface GatewayConfig {
-
   readonly gateway: {
     readonly host: string;
     readonly port: number;
@@ -51,6 +50,7 @@ const DEFAULTS = {
     host: "127.0.0.1",
     port: 8080,
   },
+
   engine: {
     host: "127.0.0.1",
     port: 9000,
@@ -60,27 +60,33 @@ const DEFAULTS = {
     reconnectMaxDelayMs: 10000,
     reconnectMaxAttempts: 10,
   },
+
   analytics: {
     host: "127.0.0.1",
     port: 8000,
     requestTimeoutMs: 5000,
   },
+
   websocket: {
     path: "/ws",
     heartbeatIntervalMs: 30000,
     maxPayloadBytes: 1024 * 1024,
   },
+
   http: {
     requestTimeoutMs: 10000,
     bodyLimitBytes: 1024 * 1024,
   },
+
   logging: {
     level: "info",
   },
+
   metrics: {
     enabled: true,
     path: "/metrics",
   },
+
   cors: {
     origin: "http://localhost:5173",
   },
@@ -109,33 +115,16 @@ function parsePort(
 
   if (value === undefined || value === "") {
     return fallback;
-
-  readonly host: string;
-  readonly port: number;
-}
-
-const DEFAULT_HOST = "127.0.0.1";
-const DEFAULT_PORT = 8080;
-
-function parsePort(value: string | undefined): number {
-  if (value === undefined || value.trim() === "") {
-    return DEFAULT_PORT;
-
   }
 
-  const port = Number(value);
+  const parsed = Number(value);
 
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) {
     throw new Error(`Invalid ${name}: ${value}`);
-
-    throw new Error(`Invalid GATEWAY_PORT: ${value}`);
-
   }
 
-  return port;
+  return parsed;
 }
-
 
 function parsePositiveInteger(
   environment: Record<string, string | undefined>,
@@ -218,13 +207,29 @@ export function loadConfig(
 ): GatewayConfig {
   return Object.freeze({
     gateway: Object.freeze({
-      host: getString(environment, "GATEWAY_HOST", DEFAULTS.gateway.host),
-      port: parsePort(environment, "GATEWAY_PORT", DEFAULTS.gateway.port),
+      host: getString(
+        environment,
+        "GATEWAY_HOST",
+        DEFAULTS.gateway.host,
+      ),
+      port: parsePort(
+        environment,
+        "GATEWAY_PORT",
+        DEFAULTS.gateway.port,
+      ),
     }),
 
     engine: Object.freeze({
-      host: getString(environment, "ENGINE_HOST", DEFAULTS.engine.host),
-      port: parsePort(environment, "ENGINE_PORT", DEFAULTS.engine.port),
+      host: getString(
+        environment,
+        "ENGINE_HOST",
+        DEFAULTS.engine.host,
+      ),
+      port: parsePort(
+        environment,
+        "ENGINE_PORT",
+        DEFAULTS.engine.port,
+      ),
       connectTimeoutMs: parsePositiveInteger(
         environment,
         "ENGINE_CONNECT_TIMEOUT_MS",
@@ -329,19 +334,5 @@ export function loadConfig(
         DEFAULTS.cors.origin,
       ),
     }),
-
-export function loadConfig(
-  environment: Record<string, string | undefined> = process.env,
-): GatewayConfig {
-  const host = environment.GATEWAY_HOST?.trim() || DEFAULT_HOST;
-
-  if (host.length === 0) {
-    throw new Error("GATEWAY_HOST must not be empty");
-  }
-
-  return Object.freeze({
-    host,
-    port: parsePort(environment.GATEWAY_PORT),
-
   });
 }

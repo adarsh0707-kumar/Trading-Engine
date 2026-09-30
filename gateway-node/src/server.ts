@@ -1,21 +1,14 @@
 import Fastify, { type FastifyInstance } from "fastify";
 
-
-import { loadConfig, type GatewayConfig } from "./config/config.ts";
-
-import { loadConfig } from "./config/config.ts";
-
 import { registerHealthRoutes } from "./api/health.ts";
+import { loadConfig, type GatewayConfig } from "./config/config.ts";
 
 export interface GatewayServer {
   readonly app: FastifyInstance;
-
   readonly config: GatewayConfig;
-
   readonly start: () => Promise<void>;
   readonly stop: () => Promise<void>;
 }
-
 
 export function createGatewayServer(
   environment: Record<string, string | undefined> = process.env,
@@ -28,13 +21,6 @@ export function createGatewayServer(
     },
     bodyLimit: config.http.bodyLimitBytes,
     connectionTimeout: config.http.requestTimeoutMs,
-
-export function createGatewayServer(): GatewayServer {
-  const config = loadConfig();
-
-  const app = Fastify({
-    logger: true,
-
   });
 
   app.register(registerHealthRoutes);
@@ -47,13 +33,8 @@ export function createGatewayServer(): GatewayServer {
     }
 
     await app.listen({
-
       host: config.gateway.host,
       port: config.gateway.port,
-
-      host: config.host,
-      port: config.port,
-
     });
 
     started = true;
@@ -70,9 +51,7 @@ export function createGatewayServer(): GatewayServer {
 
   return {
     app,
-
     config,
-
     start,
     stop,
   };
@@ -112,9 +91,6 @@ export async function startGateway(): Promise<void> {
       },
       "gateway_started",
     );
-
-    gateway.app.log.info("gateway_started");
-
   } catch (error) {
     gateway.app.log.error({ error }, "gateway_start_failed");
     process.exit(1);
