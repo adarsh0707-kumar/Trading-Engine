@@ -80,6 +80,15 @@ The project is intended to demonstrate:
 11. Optional performance transports
 ```
 
+## Current Implementation Status
+
+- Phase 3 — Python Analytics: ✅ Complete
+- Phase 4.1 — Gateway Foundation: ✅ Complete
+- Phase 4.2 — Gateway Configuration & Runtime Hardening: ✅ Complete
+- Phase 4.3 — Gateway HTTP API: ⏳ Next
+
+The gateway currently provides health, configurable CORS, and optional Prometheus metrics. Versioned application routes under `/api/v1/...` are the next implementation milestone.
+
 ## Documentation Rule
 
 Documentation must evolve with implementation.
