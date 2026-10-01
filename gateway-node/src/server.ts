@@ -2,8 +2,17 @@ import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { registerHealthRoutes } from "./api/health.ts";
+import { registerV1Routes } from "./api/v1/index.ts";
 import { loadConfig, type GatewayConfig } from "./config/config.ts";
 import { createGatewayMetrics } from "./metrics/metrics.ts";
+import { registerErrorHandler } from "./errors/error-handler.ts";
+import type { EngineProvider } from "./engine/engine.types.ts";
+import { createStatusProvider } from "./status/status.provider.ts";
+import type { StatusProvider } from "./status/status.types.ts";
+import type { AnalyticsProvider } from "./analytics/analytics.types.ts";
+import type { MarketProvider } from "./market/market.types.ts";
+import type { OrderBookProvider } from "./orderbook/orderbook.types.ts";
+import type { TradesProvider } from "./trades/trades.types.ts";
 
 export interface GatewayServer {
   readonly app: FastifyInstance;
@@ -12,8 +21,18 @@ export interface GatewayServer {
   readonly stop: () => Promise<void>;
 }
 
+export interface GatewayServerOptions {
+  readonly statusProvider?: StatusProvider;
+  readonly marketProvider?: MarketProvider;
+  readonly orderBookProvider?: OrderBookProvider;
+  readonly tradesProvider?: TradesProvider;
+  readonly analyticsProvider?: AnalyticsProvider;
+  readonly engineProvider?: EngineProvider;
+}
+
 export function createGatewayServer(
   environment: Record<string, string | undefined> = process.env,
+  options: GatewayServerOptions = {},
 ): GatewayServer {
   const config = loadConfig(environment);
 
@@ -25,11 +44,24 @@ export function createGatewayServer(
     connectionTimeout: config.http.requestTimeoutMs,
   });
 
+  registerErrorHandler(app);
+
   app.register(cors, {
     origin: config.cors.origin,
   });
 
   app.register(registerHealthRoutes);
+
+  const statusProvider = options.statusProvider ?? createStatusProvider();
+
+  app.register(registerV1Routes, {
+    statusProvider,
+    marketProvider: options.marketProvider,
+    orderBookProvider: options.orderBookProvider,
+    tradesProvider: options.tradesProvider,
+    analyticsProvider: options.analyticsProvider,
+    engineProvider: options.engineProvider,
+  });
 
   if (config.metrics.enabled) {
     const metrics = createGatewayMetrics();
