@@ -2,7 +2,7 @@
 
 ## 1. API Overview
 
-The Node.js gateway is the public application boundary.
+The Node.js gateway is the public application boundary for the trading-engine system.
 
 Base URL:
 
@@ -10,390 +10,508 @@ Base URL:
 http://localhost:<GATEWAY_PORT>
 ```
 
-WebSocket:
+The gateway exposes a versioned application API under `/api/v1`.
 
-```text
-ws://localhost:<GATEWAY_PORT>/ws
-```
-
-Exact port numbers should be defined in the deployment configuration rather than hard-coded in this document.
+WebSocket support is planned for a later phase and is not currently implemented.
 
 ---
 
 ## 2. Currently Implemented Endpoints
 
-### GET `/health`
+| Method | Endpoint | Status | Purpose |
+| --- | --- | --- | --- |
+| GET | `/api/health` | Implemented | Gateway process health |
+| GET | `/api/v1/status` | Implemented | Gateway, engine, and analytics dependency status |
+| GET | `/api/v1/market` | Implemented | Current market-state contract |
+| GET | `/api/v1/orderbook` | Implemented | Current order-book contract |
+| GET | `/api/v1/trades` | Implemented | Trade-history contract |
+| GET | `/api/v1/analytics` | Implemented | Analytics-state contract |
+| POST | `/api/v1/engine/start` | Implemented | Engine start control contract |
+| POST | `/api/v1/engine/stop` | Implemented | Engine stop control contract |
+| POST | `/api/v1/engine/reset` | Implemented | Engine reset control contract |
+| GET | `<METRICS_PATH>` | Implemented | Prometheus metrics when enabled |
 
-Returns the gateway health response.
-
-### GET `<METRICS_PATH>`
-
-Prometheus metrics are exposed when `METRICS_ENABLED=true`. The default configured path is `/metrics`, and `METRICS_PATH` may override it. When metrics are disabled, the route is not registered and requests return `404`.
-
-The gateway also applies the configured `CORS_ORIGIN` at runtime.
+Phase 4.3 establishes the HTTP API boundary and deterministic dependency behavior. The gateway does not fabricate market, order-book, trade, analytics, or engine state when the corresponding upstream implementation is unavailable.
 
 ---
 
-## 3. Health
+## 3. Gateway Health
 
-### GET `/health`
+### GET `/api/health`
 
-Returns gateway health.
+Returns the health of the gateway process.
 
 Example response:
 
 ```json
 {
   "status": "ok",
-  "service": "gateway",
-  "timestamp": "2026-09-07T12:00:00.000Z"
+  "service": "gateway"
 }
 ```
 
-### GET `/health/services`
-
-Returns dependency status.
-
-```json
-{
-  "gateway": "ok",
-  "engine": "ok",
-  "analytics": "ok"
-}
-```
-
-HTTP status should be non-2xx when a required dependency is unavailable.
+The health endpoint does not currently report engine or analytics dependency state. Use `/api/v1/status` for that information.
 
 ---
 
-## 4. Planned Application API
+## 4. Gateway Status
 
-Phase 4.3 introduces the versioned application API boundary under `/api/v1/...`. The following routes are planned and are not yet implemented:
+### GET `/api/v1/status`
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| GET | /api/v1/status | Engine/analytics connection status |
-| GET | /api/v1/market | Current market state |
-| GET | /api/v1/orderbook | Current order-book snapshot |
-| GET | /api/v1/trades | Recent trades |
-| GET | /api/v1/analytics | Latest analytics state |
-| POST | /api/v1/engine/start | Simulation control |
-| POST | /api/v1/engine/stop | Simulation control |
-| POST | /api/v1/engine/reset | Simulation reset |
+Returns the current gateway dependency status.
 
-Historical query endpoints are deferred to Phase 6 unless a minimal read-through contract is required earlier.
-
----
-
-## 5. Simulation Status
-
-### GET `/api/v1/simulation/status`
-
-Response:
+Example response:
 
 ```json
 {
-  "state": "RUNNING",
-  "started_at": "2026-09-07T12:00:00.000Z",
-  "events_processed": 50000,
-  "events_per_second": 17500
+  "data": {
+    "gateway": "ok",
+    "engine": "disconnected",
+    "analytics": "disconnected"
+  }
+}
+```
+
+Possible dependency states:
+
+```text
+connected
+disconnected
+```
+
+The current default provider reports the engine and analytics dependencies as disconnected until their real integrations are connected.
+
+---
+
+## 5. Market
+
+### GET `/api/v1/market`
+
+Returns the latest market-state snapshot when a market provider is available.
+
+Example response:
+
+```json
+{
+  "data": {
+    "symbol": "BTC-USD",
+    "lastPrice": 65000.5,
+    "lastQuantity": 0.25,
+    "timestamp": "2026-09-30T12:00:00.000Z"
+  }
+}
+```
+
+If no market provider data is available:
+
+```http
+503 Service Unavailable
+```
+
+```json
+{
+  "error": {
+    "code": "DEPENDENCY_UNAVAILABLE",
+    "message": "Market state is unavailable",
+    "request_id": "<request-id>"
+  }
 }
 ```
 
 ---
 
-## 6. Start Simulation
+## 6. Order Book
 
-### POST `/api/v1/simulation/start`
+### GET `/api/v1/orderbook`
 
-Request:
+Returns the latest order-book snapshot when an order-book provider is available.
 
-```json
-{
-  "seed": 42,
-  "speed": 1.0
-}
-```
-
-Response:
+Example response:
 
 ```json
 {
-  "state": "STARTING"
+  "data": {
+    "symbol": "BTC-USD",
+    "bids": [
+      {
+        "price": 64999.5,
+        "quantity": 1.25
+      }
+    ],
+    "asks": [
+      {
+        "price": 65000.5,
+        "quantity": 0.8
+      }
+    ],
+    "timestamp": "2026-09-30T12:00:00.000Z"
+  }
 }
 ```
 
-If already running, return an appropriate conflict response.
+If no order-book provider data is available:
+
+```http
+503 Service Unavailable
+```
+
+```json
+{
+  "error": {
+    "code": "DEPENDENCY_UNAVAILABLE",
+    "message": "Order book state is unavailable",
+    "request_id": "<request-id>"
+  }
+}
+```
 
 ---
 
-## 7. Stop Simulation
+## 7. Trades
 
-### POST `/api/v1/simulation/stop`
+### GET `/api/v1/trades`
 
-Response:
+Returns recent trades when a trades provider is available.
+
+Example response:
 
 ```json
 {
-  "state": "STOPPING"
+  "data": {
+    "trades": [
+      {
+        "tradeId": "trade-42-buy-41",
+        "symbol": "BTC-USD",
+        "price": 65000.5,
+        "quantity": 0.25,
+        "takerSide": "buy",
+        "timestamp": "2026-09-30T12:00:00.000Z"
+      }
+    ]
+  }
 }
 ```
 
-The endpoint should be idempotent where practical.
+If trade data is unavailable:
+
+```http
+503 Service Unavailable
+```
+
+```json
+{
+  "error": {
+    "code": "DEPENDENCY_UNAVAILABLE",
+    "message": "Trade history is unavailable",
+    "request_id": "<request-id>"
+  }
+}
+```
 
 ---
 
-## 8. Configuration
+## 8. Analytics
 
-### GET `/api/v1/simulation/config`
+### GET `/api/v1/analytics`
+
+Returns the latest analytics snapshot when an analytics provider is available.
+
+Example response:
+
+```json
+{
+  "data": {
+    "equity": 100000,
+    "realizedPnl": 1250.5,
+    "unrealizedPnl": 320.25,
+    "drawdown": 0.018,
+    "riskStatus": "ok",
+    "timestamp": "2026-09-30T12:00:00.000Z"
+  }
+}
+```
+
+Possible risk states:
+
+```text
+ok
+warning
+breached
+```
+
+If analytics data is unavailable:
+
+```http
+503 Service Unavailable
+```
+
+```json
+{
+  "error": {
+    "code": "DEPENDENCY_UNAVAILABLE",
+    "message": "Analytics data is unavailable",
+    "request_id": "<request-id>"
+  }
+}
+```
+
+---
+
+## 9. Engine Control
+
+The engine control endpoints define the HTTP contract for simulation control.
+
+### POST `/api/v1/engine/start`
+
+Requests engine startup.
+
+### POST `/api/v1/engine/stop`
+
+Requests engine shutdown.
+
+### POST `/api/v1/engine/reset`
+
+Requests an engine reset.
+
+These endpoints currently accept an empty request body.
+
+When an `EngineProvider` implementation supports the requested operation, the API returns:
+
+```http
+202 Accepted
+```
 
 Example:
 
 ```json
 {
-  "symbol": "SIM",
-  "seed": 42,
-  "speed": 1.0,
-  "analytics_window": 20
+  "data": {
+    "action": "start",
+    "status": "accepted"
+  }
 }
 ```
 
-### PATCH `/api/v1/simulation/config`
-
-Example request:
-
-```json
-{
-  "speed": 2.0,
-  "analytics_window": 30
-}
-```
-
-The gateway must validate all values.
-
----
-
-## 9. Metrics
-
-### GET `/api/v1/metrics/current`
-
-Response:
-
-```json
-{
-  "price": 101.25,
-  "vwap": 101.12,
-  "sma": 101.08,
-  "ema": 101.15,
-  "position": 150,
-  "realized_pnl": 125.50,
-  "unrealized_pnl": 62.25,
-  "drawdown": 18.40
-}
-```
-
----
-
-## 10. Historical Summary
-
-### GET `/api/v1/metrics/summary`
-
-Possible response:
-
-```json
-{
-  "event_count": 100000,
-  "trade_count": 42150,
-  "average_trade_price": 101.11,
-  "total_volume": 1200000,
-  "max_drawdown": 85.20
-}
-```
-
-The MVP may calculate this from an in-memory bounded history. Persistent storage can be added later.
-
----
-
-## 11. WebSocket
-
-### Endpoint
+The `action` value is one of:
 
 ```text
-/ws
+start
+stop
+reset
 ```
 
-After connection, the server may send:
+If engine control is not available:
+
+```http
+503 Service Unavailable
+```
 
 ```json
 {
-  "type": "connected",
-  "connection_id": "conn-123"
-}
-```
-
-Live event:
-
-```json
-{
-  "type": "analytics_update",
-  "data": {
-    "price": 101.25,
-    "vwap": 101.12,
-    "sma": 101.08,
-    "ema": 101.15
+  "error": {
+    "code": "DEPENDENCY_UNAVAILABLE",
+    "message": "Engine control is unavailable",
+    "request_id": "<request-id>"
   }
 }
 ```
 
-Status event:
+### Current engine integration status
 
-```json
-{
-  "type": "simulation_status",
-  "data": {
-    "state": "RUNNING"
-  }
-}
-```
+The C++ engine currently exposes local `start()`, `stop()`, and market-generator reset operations, but its network protocol does not yet expose corresponding remote START, STOP, or RESET commands.
+
+Therefore the Phase 4.3 gateway does not invent network commands for these operations.
+
+Network engine-command integration is addressed by the later engine protocol work.
 
 ---
 
-## 12. Client Commands
+## 10. Error Response Contract
 
-Browser clients may send:
-
-```json
-{
-  "type": "ping"
-}
-```
-
-Response:
-
-```json
-{
-  "type": "pong"
-}
-```
-
-Control operations should normally remain REST operations rather than arbitrary WebSocket commands.
-
----
-
-## 13. Error Format
-
-All REST errors should use a consistent format:
+API errors use a deterministic JSON structure:
 
 ```json
 {
   "error": {
     "code": "INVALID_ARGUMENT",
-    "message": "speed must be greater than zero",
+    "message": "Request validation failed",
     "request_id": "req-123"
   }
 }
 ```
 
-Recommended codes:
+The `request_id` is generated from the Fastify request identifier.
 
-```text
-INVALID_ARGUMENT
-UNAUTHORIZED
-FORBIDDEN
-NOT_FOUND
-CONFLICT
-DEPENDENCY_UNAVAILABLE
-INTERNAL_ERROR
+### HTTP status mappings
+
+| Status | Error code | Meaning |
+| --- | --- | --- |
+| 400 | `INVALID_ARGUMENT` | Invalid request or validation failure |
+| 404 | `NOT_FOUND` | Requested route/resource was not found |
+| 409 | `CONFLICT` | Request conflicts with current state |
+| 500 | `INTERNAL_ERROR` | Unexpected gateway error |
+| 503 | `DEPENDENCY_UNAVAILABLE` | Required upstream dependency is unavailable |
+
+The API error type also defines `UNAUTHORIZED` and `FORBIDDEN` codes for future authenticated/authorized endpoints.
+
+Unknown routes return:
+
+```http
+404 Not Found
+```
+
+with:
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "Route not found",
+    "request_id": "<request-id>"
+  }
+}
 ```
 
 ---
 
-## 14. Authentication
+## 11. Prometheus Metrics
 
-For a local MVP, authentication may be disabled.
+### GET `<METRICS_PATH>`
 
-If enabled:
+Prometheus metrics are exposed when:
 
 ```text
-Authorization: Bearer <token>
+METRICS_ENABLED=true
 ```
 
-Control endpoints must require authorization.
-
-Read-only health endpoints may remain public inside a trusted development environment.
-
----
-
-## 15. Rate Limiting
-
-Control endpoints should have stricter limits than read endpoints.
-
-Example policy:
+The default configured path is:
 
 ```text
-POST /start       10 requests/minute
-POST /stop        10 requests/minute
-PATCH /config     30 requests/minute
-GET endpoints     higher limit
+/metrics
 ```
 
-These are initial design values and should be configurable.
-
----
-
-## 16. CORS
-
-Only configured frontend origins should be allowed.
-
-Development:
+The path can be changed using:
 
 ```text
-http://localhost:<dashboard-port>
+METRICS_PATH
 ```
 
-Production deployments should use explicit HTTPS origins.
+When metrics are disabled, the metrics route is not registered and requests return:
 
----
-
-## 17. API Versioning
-
-All application APIs use:
-
-```text
-/api/v1/...
-```
-
-Breaking changes should introduce:
-
-```text
-/api/v2/...
+```http
+404 Not Found
 ```
 
 ---
 
-## 18. Internal Protocol
+## 12. CORS
 
-The C++ and Python services should not expose their internal ports publicly.
+The gateway applies the configured CORS origin at runtime.
 
-Example:
+Configuration is controlled through:
 
 ```text
-C++ -> private engine channel
-Python -> private analytics channel
-Gateway -> public application boundary
+CORS_ORIGIN
 ```
+
+The gateway configuration determines which browser origins are permitted.
 
 ---
 
-## 19. API Contract Testing
+## 13. Planned APIs
 
-API tests should verify:
+The following capabilities remain planned and are not currently implemented.
 
-- status codes,
-- required fields,
-- data types,
-- error structure,
-- authorization behavior,
-- WebSocket event structure.
+### Simulation Status
 
-Contract fixtures should be kept under a shared test directory when practical.
+```text
+GET /api/v1/simulation/status
+```
+
+Intended to expose detailed simulation lifecycle state.
+
+### Simulation Configuration
+
+Future endpoints may expose or modify simulation configuration.
+
+The exact contract will be defined when simulation configuration becomes an implemented gateway responsibility.
+
+### Historical Metrics
+
+Historical analytics and metrics query APIs are deferred to Phase 6 unless a minimal read-through contract is required earlier.
+
+### WebSocket API
+
+Future real-time streaming will use the planned gateway WebSocket boundary:
+
+```text
+ws://localhost:<GATEWAY_PORT>/ws
+```
+
+WebSocket protocol and event contracts are deferred to the later WebSocket phase.
+
+---
+
+## 14. Phase 4.3 Contract Boundary
+
+Phase 4.3 establishes:
+
+- `/api/v1` route versioning
+- deterministic success response envelopes
+- deterministic API error responses
+- request identifiers in error responses
+- dependency-unavailable mapping
+- market, order-book, trade, and analytics provider boundaries
+- engine-control provider boundaries
+- integration tests for success and dependency-failure behavior
+- compatibility with the existing health and metrics endpoints
+
+Phase 4.3 does not fabricate upstream state.
+
+The real engine network protocol integration is handled by the engine protocol phase, while real Python analytics integration is handled by the analytics integration phase.
+
+---
+
+## 15. API Design Conventions
+
+### Success responses
+
+Successful application responses use:
+
+```json
+{
+  "data": {}
+}
+```
+
+### Errors
+
+Errors use:
+
+```json
+{
+  "error": {
+    "code": "...",
+    "message": "...",
+    "request_id": "..."
+  }
+}
+```
+
+### Versioning
+
+Application routes are versioned under:
+
+```text
+/api/v1
+```
+
+### Dependency failures
+
+Unavailable upstream services are represented explicitly with:
+
+```text
+503 DEPENDENCY_UNAVAILABLE
+```
+
+This prevents the gateway from presenting fabricated or stale upstream state as real data.
