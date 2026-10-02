@@ -14,10 +14,12 @@ from decimal import Decimal
 from typing import Any
 
 from analytics.ingestion.message_parser import MessageParser
-from analytics.models import Trade
+from analytics.models import AnalyticsResult, RiskEvent, Trade
 
 ANALYTICS_PROTOCOL_VERSION = 1
 SUPPORTED_MESSAGE_TYPE = "TRADE"
+ANALYTICS_UPDATE_MESSAGE_TYPE = "ANALYTICS_UPDATE"
+RISK_EVENT_MESSAGE_TYPE = "RISK_EVENT"
 
 
 class GatewayMessageParseError(ValueError):
@@ -143,6 +145,48 @@ class GatewayTradeMessage:
         )
 
 
+
+def serialize_analytics_update(result: AnalyticsResult) -> str:
+    """Serialize an AnalyticsResult using the bidirectional Gateway contract."""
+    payload = json.dumps(
+        result.to_dict(),
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return json.dumps(
+        {
+            "version": ANALYTICS_PROTOCOL_VERSION,
+            "type": ANALYTICS_UPDATE_MESSAGE_TYPE,
+            "event_id": result.event_id,
+            "request_id": result.event_id,
+            "timestamp": result.timestamp.isoformat(),
+            "payload": payload,
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+
+def serialize_risk_event(event: RiskEvent) -> str:
+    """Serialize a RiskEvent using the bidirectional Gateway contract."""
+    payload = json.dumps(
+        event.to_dict(),
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return json.dumps(
+        {
+            "version": ANALYTICS_PROTOCOL_VERSION,
+            "type": RISK_EVENT_MESSAGE_TYPE,
+            "event_id": event.event_id,
+            "request_id": event.event_id,
+            "timestamp": event.timestamp.isoformat(),
+            "payload": payload,
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
 def _require_string(
     data: dict[str, Any],
     field: str,
@@ -180,4 +224,6 @@ __all__ = [
     "ANALYTICS_PROTOCOL_VERSION",
     "GatewayMessageParseError",
     "GatewayTradeMessage",
+    "serialize_analytics_update",
+    "serialize_risk_event",
 ]

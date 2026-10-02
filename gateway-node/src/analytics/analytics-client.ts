@@ -1,9 +1,13 @@
 import { Socket, type Socket as NetSocket } from "node:net";
 
 import {
+  normalizeAnalyticsOutputMessage,
   serializeGatewayTradeMessage,
+  AnalyticsMessageValidationError,
 } from "./analytics-message.ts";
 import type {
+  GatewayAnalyticsUpdateMessage,
+  GatewayRiskEventMessage,
   GatewayTradeMessage,
 } from "./analytics-message.types.ts";
 import type {
@@ -23,6 +27,8 @@ export interface AnalyticsClientOptions {
   readonly reconnectMaxDelayMs: number;
   readonly reconnectMaxAttempts: number;
   readonly maxQueueSize: number;
+  readonly onAnalyticsUpdate?: (message: GatewayAnalyticsUpdateMessage) => void;
+  readonly onRiskEvent?: (message: GatewayRiskEventMessage) => void;
   readonly onError?: (error: Error) => void;
   readonly onStateChange?: (state: AnalyticsClientState) => void;
   readonly socketFactory?: () => NetSocket;
@@ -33,6 +39,7 @@ export interface AnalyticsClient {
   readonly stop: () => void;
   readonly sendTrade: (event: NormalizedEngineEventResult) => boolean;
   readonly isConnected: () => boolean;
+  readonly getState: () => AnalyticsClientState;
   readonly getQueueSize: () => number;
 }
 
@@ -81,8 +88,16 @@ export function createAnalyticsClient(
   let connectTimer: ReturnType<typeof setTimeout> | undefined;
   let running = false;
   let connected = false;
+  let state: AnalyticsClientState = "disconnected";
   let reconnectAttempts = 0;
+  let inboundBuffer = Buffer.alloc(0);
   const queue: Buffer[] = [];
+
+  const emitState = (nextState: AnalyticsClientState): void => {
+    state = nextState;
+    connected = nextState === "connected";
+    options.onStateChange?.(nextState);
+  };
 
   const clearTimers = (): void => {
     if (reconnectTimer !== undefined) {
@@ -100,17 +115,9 @@ export function createAnalyticsClient(
     options.onError?.(toError(error));
   };
 
-  const emitDisconnected = (): void => {
-    if (connected) {
-      connected = false;
-      options.onStateChange?.("disconnected");
-    } else {
-      options.onStateChange?.("disconnected");
-    }
-  };
-
   const disconnect = (): void => {
-    emitDisconnected();
+    emitState("disconnected");
+    inboundBuffer = Buffer.alloc(0);
 
     if (socket !== undefined) {
       socket.removeAllListeners();
@@ -126,12 +133,52 @@ export function createAnalyticsClient(
 
     while (queue.length > 0 && socket !== undefined && connected) {
       const message = queue.shift();
-
       if (message === undefined) {
         return;
       }
-
       socket.write(message);
+    }
+  };
+
+  const processInboundData = (data: Buffer): void => {
+    inboundBuffer = Buffer.concat([inboundBuffer, data]);
+
+    while (inboundBuffer.length >= 4) {
+      const payloadSize = inboundBuffer.readUInt32BE(0);
+
+      if (payloadSize > 1024 * 1024) {
+        throw new AnalyticsMessageValidationError(
+          "Analytics inbound payload exceeds maximum frame size",
+        );
+      }
+
+      const frameSize = 4 + payloadSize;
+      if (inboundBuffer.length < frameSize) {
+        return;
+      }
+
+      const payload = inboundBuffer
+        .subarray(4, frameSize)
+        .toString("utf8");
+
+      inboundBuffer = inboundBuffer.subarray(frameSize);
+
+      let value: unknown;
+      try {
+        value = JSON.parse(payload);
+      } catch {
+        throw new AnalyticsMessageValidationError(
+          "Analytics inbound payload must be valid JSON",
+        );
+      }
+
+      const message = normalizeAnalyticsOutputMessage(value);
+
+      if (message.type === "ANALYTICS_UPDATE") {
+        options.onAnalyticsUpdate?.(message);
+      } else {
+        options.onRiskEvent?.(message);
+      }
     }
   };
 
@@ -167,7 +214,8 @@ export function createAnalyticsClient(
     }
 
     socket = undefined;
-    emitDisconnected();
+    inboundBuffer = Buffer.alloc(0);
+    emitState("disconnected");
 
     if (running) {
       scheduleReconnect();
@@ -179,7 +227,7 @@ export function createAnalyticsClient(
       return;
     }
 
-    options.onStateChange?.("connecting");
+    emitState("connecting");
 
     const nextSocket = options.socketFactory?.() ?? new Socket();
     socket = nextSocket;
@@ -201,10 +249,18 @@ export function createAnalyticsClient(
         return;
       }
 
-      connected = true;
       reconnectAttempts = 0;
-      options.onStateChange?.("connected");
+      emitState("connected");
       flushQueue();
+    });
+
+    nextSocket.on("data", (data) => {
+      try {
+        processInboundData(data);
+      } catch (error) {
+        emitError(error);
+        nextSocket.destroy();
+      }
     });
 
     nextSocket.once("error", (error) => {
@@ -294,6 +350,7 @@ export function createAnalyticsClient(
     stop,
     sendTrade,
     isConnected: () => connected,
+    getState: () => state,
     getQueueSize: () => queue.length,
   };
 }

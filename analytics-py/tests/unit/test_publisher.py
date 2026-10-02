@@ -45,8 +45,12 @@ def test_publish_serializes_analytics_result() -> None:
 
     payload = json.loads(published[0])
 
+    assert payload["version"] == 1
+    assert payload["type"] == "ANALYTICS_UPDATE"
     assert payload["event_id"] == "analytics-SIM-000001"
-    assert payload["event_type"] == "ANALYTICS_UPDATE"
+    assert payload["request_id"] == "analytics-SIM-000001"
+    payload = json.loads(payload["payload"])
+    assert json.loads(payload["payload"])["event_type"] == "ANALYTICS_UPDATE"
     assert payload["symbol"] == "SIM"
     assert payload["price"] == "101.25"
     assert payload["vwap"] == "100.75"
@@ -88,9 +92,10 @@ def test_publish_preserves_nullable_indicator_values() -> None:
 
     payload = json.loads(published[0])
 
-    assert payload["vwap"] is None
-    assert payload["sma"] is None
-    assert payload["ema"] is None
+    nested = json.loads(payload["payload"])
+    assert nested["vwap"] is None
+    assert nested["sma"] is None
+    assert nested["ema"] is None
 
 
 def test_publish_calls_sink_once_per_result() -> None:
@@ -136,4 +141,4 @@ def test_published_payload_is_compact_json() -> None:
 
     assert "\n" not in payload
     assert ": " not in payload
-    assert json.loads(payload)["event_type"] == "ANALYTICS_UPDATE"
+    assert json.loads(json.loads(payload)["payload"])["event_type"] == "ANALYTICS_UPDATE"

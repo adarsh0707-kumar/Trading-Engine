@@ -8,7 +8,14 @@ import { loadConfig, type GatewayConfig } from "./config/config.ts";
 import { createGatewayMetrics } from "./metrics/metrics.ts";
 import { registerErrorHandler } from "./errors/error-handler.ts";
 import { createEngineEventClient, type EngineEventClient } from "./engine/engine-event-client.ts";
-import { createAnalyticsClient, type AnalyticsClient } from "./analytics/analytics-client.ts";
+import {
+  createAnalyticsClient,
+  type AnalyticsClient,
+} from "./analytics/analytics-client.ts";
+import {
+  createAnalyticsProvider,
+  type MutableAnalyticsProvider,
+} from "./analytics/analytics.provider.ts";
 import type { EngineProvider } from "./engine/engine.types.ts";
 import { createStatusProvider } from "./status/status.provider.ts";
 import type { StatusProvider } from "./status/status.types.ts";
@@ -56,6 +63,15 @@ export function createGatewayServer(
     heartbeatIntervalMs: config.websocket.heartbeatIntervalMs,
   });
 
+  const analyticsProvider =
+    options.analyticsProvider ?? createAnalyticsProvider();
+
+  const mutableAnalyticsProvider =
+    "updateAnalytics" in analyticsProvider &&
+    "updateRiskEvent" in analyticsProvider
+      ? (analyticsProvider as MutableAnalyticsProvider)
+      : undefined;
+
   const analyticsClient = createAnalyticsClient({
     host: config.analytics.host,
     port: config.analytics.port,
@@ -64,6 +80,26 @@ export function createGatewayServer(
     reconnectMaxDelayMs: config.analytics.reconnectMaxDelayMs,
     reconnectMaxAttempts: config.analytics.reconnectMaxAttempts,
     maxQueueSize: config.analytics.maxQueueSize,
+    onAnalyticsUpdate: (message) => {
+      mutableAnalyticsProvider?.updateAnalytics(message);
+
+      websocketHub.publish({
+        type: "ANALYTICS_UPDATE",
+        eventId: message.eventId,
+        timestamp: message.timestamp,
+        payload: message.payload,
+      });
+    },
+    onRiskEvent: (message) => {
+      mutableAnalyticsProvider?.updateRiskEvent(message);
+
+      websocketHub.publish({
+        type: "RISK_EVENT",
+        eventId: message.eventId,
+        timestamp: message.timestamp,
+        payload: message.payload,
+      });
+    },
     onError: (error) => {
       app.log.warn({ error }, "analytics_client_error");
     },
@@ -120,14 +156,19 @@ export function createGatewayServer(
 
   app.register(registerHealthRoutes);
 
-  const statusProvider = options.statusProvider ?? createStatusProvider();
+  const statusProvider =
+    options.statusProvider ??
+    createStatusProvider({
+      isEngineConnected: engineEventClient.isConnected,
+      isAnalyticsConnected: analyticsClient.isConnected,
+    });
 
   app.register(registerV1Routes, {
     statusProvider,
     marketProvider: options.marketProvider,
     orderBookProvider: options.orderBookProvider,
     tradesProvider: options.tradesProvider,
-    analyticsProvider: options.analyticsProvider,
+    analyticsProvider,
     engineProvider: options.engineProvider,
   });
 

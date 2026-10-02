@@ -17,7 +17,7 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest Completed Milestone:** Phase 4.6.3 — Python Analytics Receiver
+**Latest Completed Milestone:** Phase 4.6.4 — Analytics Output Back to Gateway
 
 **Current Milestone:** Phase 4.6 — Python Analytics Integration
 
@@ -47,6 +47,10 @@ ProcessedTrade
 PostgreSQL Persistence
         ↓
 AnalyticsPublisher
+        ↓
+Bidirectional analytics TCP output
+        ↓
+Gateway analytics state + WebSocket
 ```
 
 The Node.js gateway now provides the browser-facing HTTP boundary and a typed normalization layer for upstream engine messages. Phase 4.5 connects the live C++ TCP event stream to the WebSocket hub for real-time TRADE delivery.
@@ -462,16 +466,26 @@ Implemented:
 - Graceful Gateway shutdown integration.
 - Client transport and queue tests.
 
+### Phase 4.6.4 — Analytics Output Back to Gateway
+
+**Status:** ✅ Complete
+
+Implemented:
+
+- Extended the versioned analytics contract with ANALYTICS_UPDATE and RISK_EVENT.
+- Reused the existing Gateway ↔ Python TCP connection as a bidirectional analytics transport.
+- Added Gateway-side framed output decoding with fragmented and multiple-frame handling.
+- Added Python outbound framing through the active Gateway receiver connection.
+- Published AnalyticsResult and RiskEvent without duplicating analytics calculations.
+- Added Gateway-owned latest analytics snapshot state for /api/v1/analytics.
+- Added ANALYTICS_UPDATE and RISK_EVENT WebSocket event types.
+- Connected live engine and analytics connection state to /api/v1/status.
+- Added cross-service contract, transport, provider, and serialization tests.
+
 ### Remaining Phase 4.6 scope
 
-- Python analytics receiver integration.
-- Python analytics receiver integration.
-- Analytics result and risk-event transport back to Gateway.
-- Analytics availability tracking.
-- Latest analytics snapshot for REST.
-- Analytics updates for WebSocket clients.
-- Disconnect/reconnect handling.
-- Distinct engine and analytics health.
+- Full end-to-end Gateway → Python → Gateway validation against the real C++ engine and PostgreSQL runtime.
+- Final Phase 4.6 documentation and integration exit validation.
 
 ## Phase 4.7 — Error Handling, Resilience & Backpressure
 
