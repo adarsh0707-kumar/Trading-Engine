@@ -14,7 +14,13 @@ This project is an educational trading-infrastructure simulation. It does not co
 - Added bounded per-client outbound queues and slow-consumer protection.
 - Added graceful WebSocket shutdown handling.
 - Added unit coverage for connection setup, subscriptions, event delivery, invalid messages, and queue limits.
-- Remaining: connect the WebSocket hub to a live upstream engine event source and add end-to-end gateway WebSocket coverage.
+- Added the gateway TCP engine event client using the existing 4-byte length-prefixed protocol.
+- Connected normalized live TRADE events from the C++ engine to the WebSocket hub.
+- Added engine HEARTBEAT handling with protocol-compliant HEARTBEAT/OK responses.
+- Added bounded exponential reconnect, connection timeout handling, and engine connection lifecycle logging.
+- Updated C++ HELLO/HEARTBEAT messages with request IDs and timestamps required by the strict Phase 4.4 gateway protocol validator.
+- Added engine-event-client tests for TRADE normalization, heartbeat responses, and reconnect limits.
+- Remaining: add end-to-end gateway WebSocket coverage against a running/fake TCP engine source.
 
 ## [2026-10-02]
 
@@ -66,7 +72,7 @@ This project is an educational trading-infrastructure simulation. It does not co
 | Phase 4.2 — Gateway Configuration & Runtime Hardening | ✅ Complete |
 | Phase 4.3 — Gateway HTTP API | ✅ Complete |
 | Phase 4.4 — Engine Protocol & Event Normalization | ✅ Complete |
-| Phase 4.5 — WebSocket Gateway | ⏳ Next |
+| Phase 4.5 — WebSocket Gateway | 🚧 In Progress |
 | Phase 4.6 — Python Analytics Integration | ⏳ Planned |
 | Phase 4.7 — Error Handling, Resilience & Backpressure | ⏳ Planned |
 | Phase 4.8 — Security Boundaries & Input Hardening | ⏳ Planned |
