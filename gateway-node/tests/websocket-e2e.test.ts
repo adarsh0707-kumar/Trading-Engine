@@ -204,8 +204,6 @@ describe("gateway websocket end-to-end", () => {
       eventId: "trade-00000001-buy-1-sell-1",
       timestamp: "2026-10-02T12:00:01.000Z",
       payload: {
-        tradeId: "trade-00000001-buy-1-sell-1",
-        requestId: "trade-00000001-buy-1-sell-1",
         symbol: "SIM",
         price: 100.25,
         quantity: 10,
