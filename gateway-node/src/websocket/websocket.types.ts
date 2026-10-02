@@ -25,6 +25,7 @@ export interface WebSocketConnection {
   readonly subscriptions: Set<WebSocketEventType>;
   readonly queue: string[];
   flushing: boolean;
+  alive: boolean;
 }
 
 export type GatewayWebSocketEvent = NormalizedEngineEventResult;
