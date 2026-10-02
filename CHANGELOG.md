@@ -6,23 +6,29 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
-### Phase 4.5 — WebSocket Gateway — In Progress
+### Phase 4.6.1 — Gateway ↔ Python Analytics Contract
+- Added versioned Gateway-to-analytics message contract definitions.
+- Added typed Gateway TRADE envelope validation for event identity, timestamps, price, quantity, order identity, and taker side.
+- Preserved the existing Python analytics transport representation: the TRADE payload remains a nested JSON string.
+- Added Python-side contract validation that reuses the existing MessageParser and Trade domain model rather than duplicating analytics parsing rules.
+- Added cross-service contract tests for valid TRADE messages and malformed envelopes/payloads.
+- No runtime socket integration was changed in this sub-phase; the contract is the boundary for Phase 4.6.2.
+
+## [2026-10-02]
+
+### Phase 4.5 — WebSocket Gateway
 - Added a configurable browser-facing WebSocket endpoint.
 - Added connection lifecycle management and explicit subscribe/unsubscribe handling.
 - Added typed TRADE event serialization using the Phase 4.4 normalized event model.
 - Added server heartbeat/ping-pong and dead-client cleanup.
 - Added bounded per-client outbound queues and slow-consumer protection.
 - Added graceful WebSocket shutdown handling.
-- Added unit coverage for connection setup, subscriptions, event delivery, invalid messages, and queue limits.
+- Added unit and end-to-end coverage for live TRADE delivery from a fake TCP engine through the gateway WebSocket path.
 - Added the gateway TCP engine event client using the existing 4-byte length-prefixed protocol.
 - Connected normalized live TRADE events from the C++ engine to the WebSocket hub.
 - Added engine HEARTBEAT handling with protocol-compliant HEARTBEAT/OK responses.
 - Added bounded exponential reconnect, connection timeout handling, and engine connection lifecycle logging.
 - Updated C++ HELLO/HEARTBEAT messages with request IDs and timestamps required by the strict Phase 4.4 gateway protocol validator.
-- Added engine-event-client tests for TRADE normalization, heartbeat responses, and reconnect limits.
-- Remaining: add end-to-end gateway WebSocket coverage against a running/fake TCP engine source.
-
-## [2026-10-02]
 
 ### Phase 4.4 — Engine Protocol & Event Normalization
 - Added gateway-side decoding for the existing 4-byte big-endian length-prefixed engine frames.
@@ -36,29 +42,14 @@ This project is an educational trading-infrastructure simulation. It does not co
 - Added protocol and normalization test coverage.
 
 ### Phase 4.3 — Gateway HTTP API
-- Completed the versioned gateway application API boundary under `/api/v1/...`.
+- Completed the versioned gateway application API boundary under /api/v1/....
 - Added request/response validation and deterministic HTTP error handling.
 - Added upstream status/error mapping and route-level integration coverage.
-- Preserved the existing `/health` and Prometheus metrics behavior.
+- Preserved the existing /health and Prometheus metrics behavior.
 
 ### Documentation
-- Updated the roadmap to reflect completed Phase 4.3 and Phase 4.4 milestones.
-- Updated the current milestone to Phase 4.5 WebSocket Gateway.
-- Added Phase 4.4 implementation details and validation scope to the historical changelog.
-
-## [2026-09-30]
-
-### Phase 4.2 — Gateway Configuration & Runtime Hardening
-- Completed typed gateway configuration and environment management.
-- Added validation for gateway host, ports, timeouts, limits, CORS, reconnect parameters, logging, and metrics settings.
-- Added immutable configuration objects and deterministic validation errors.
-- Added complete `.env.example` coverage for gateway configuration.
-- Integrated runtime CORS with `@fastify/cors`.
-- Integrated Prometheus-compatible metrics with `prom-client`.
-- Added configurable metrics path and disabled-mode behavior.
-- Added integration coverage for CORS and metrics.
-- Preserved idempotent gateway start/stop lifecycle behavior.
-- Validation: gateway build passes; gateway test suite passes with 21 tests.
+- Updated the roadmap to reflect completed Phase 4.5 and the start of Phase 4.6.
+- Added Phase 4.6.1 contract scope and validation details.
 
 ## Current Phase Status
 
@@ -72,8 +63,8 @@ This project is an educational trading-infrastructure simulation. It does not co
 | Phase 4.2 — Gateway Configuration & Runtime Hardening | ✅ Complete |
 | Phase 4.3 — Gateway HTTP API | ✅ Complete |
 | Phase 4.4 — Engine Protocol & Event Normalization | ✅ Complete |
-| Phase 4.5 — WebSocket Gateway | 🚧 In Progress |
-| Phase 4.6 — Python Analytics Integration | ⏳ Planned |
+| Phase 4.5 — WebSocket Gateway | ✅ Complete |
+| Phase 4.6 — Python Analytics Integration | 🚧 In Progress |
 | Phase 4.7 — Error Handling, Resilience & Backpressure | ⏳ Planned |
 | Phase 4.8 — Security Boundaries & Input Hardening | ⏳ Planned |
 | Phase 4.9 — Operational Logging & Metrics | ⏳ Planned |
