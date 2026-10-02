@@ -94,7 +94,7 @@ function requireNullableFiniteNumber(
   if (value === null) {
     return null;
   }
-  return requireFiniteNumber(value, field);
+  return requireOutputNumber(value, field);
 }
 
 function parseJsonPayload(value: unknown, context: string): Record<string, unknown> {
