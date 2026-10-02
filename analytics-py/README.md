@@ -57,9 +57,9 @@ calculations before integrating them into the streaming analytics pipeline.
 `analytics-py` is the Python analytics component of the Trading Engine
 platform.
 
-The service is designed to sit downstream of the high-performance C++ trading
-engine and provide analytical calculations that can later be consumed by the
-gateway and dashboard.
+The service sits downstream of the Gateway and receives normalized TRADE
+events over the Phase 4.6 Gateway-to-analytics TCP contract. It provides
+analytical calculations that can later be consumed by the gateway and dashboard.
 
 The architecture separates:
 
@@ -129,7 +129,7 @@ The analytics service is intended to provide the following capabilities:
 ### Infrastructure
 
 * Market/trade message parsing
-* Socket-based ingestion
+* Socket-based ingestion from the Gateway
 * Streaming processing
 * Analytics result publishing
 * Configuration
@@ -144,6 +144,24 @@ Trading Engine roadmap.
 # Current Status
 
 ## Completed
+
+### Phase 4.6.3 — Python Analytics Receiver
+
+The Python analytics service now accepts Gateway-to-analytics TRADE traffic over
+a dedicated TCP listener.
+
+Implemented:
+
+* 4-byte big-endian framed Gateway receiver.
+* 1 MiB maximum payload enforcement.
+* Fragmented and multiple-frame decoding.
+* UTF-8 validation.
+* Gateway connect/disconnect lifecycle handling.
+* Reconnection-safe acceptance of a new Gateway connection.
+* Integration with the existing AnalyticsService backpressure and processing
+  pipeline.
+* Reuse of the Phase 4.6.1 GatewayTradeMessage contract and existing
+  MessageParser/Trade domain model.
 
 ### Phase 3.1 — Python Foundation
 
@@ -268,24 +286,19 @@ The intended data flow is:
 ```text
 C++ Trading Engine
         │
-        │ Trade / Market Events
-        ▼
-Python Analytics
-        │
-        ├── Parse event
-        │
-        ├── Validate event
-        │
-        ├── Convert to domain model
-        │
-        ├── Update analytical state
-        │
-        ├── Calculate indicators
-        │
-        └── Produce analytics update
-        │
+        │ Trade Events
         ▼
 Node Gateway
+        │
+        │ Gateway analytics TCP contract
+        ▼
+Python Analytics Receiver
+        │
+        ▼
+Parse / validate / domain model
+        │
+        ▼
+Streaming analytics + risk
         │
         ▼
 React Dashboard
@@ -1211,14 +1224,15 @@ config/
 
 Configuration is intentionally separated from calculation logic.
 
-Future configuration will cover items such as:
+Current Gateway receiver settings include:
 
-* analytics service settings;
-* engine connection;
-* gateway connection;
-* indicator periods;
-* logging;
-* runtime behavior.
+* `ANALYTICS_GATEWAY_HOST` — listener host, default `127.0.0.1`;
+* `ANALYTICS_GATEWAY_PORT` — listener port, default `8000`;
+* `TRADING_ENGINE_MAX_PAYLOAD_SIZE` — maximum framed payload size, default 1 MiB;
+* existing service, persistence, logging, and metrics settings.
+
+The Gateway analytics client connects to the configured listener and sends
+versioned TRADE envelopes using the existing 4-byte big-endian framing.
 
 ---
 
@@ -1237,6 +1251,11 @@ ingestion/
 ├── __init__.py
 ├── message_parser.py
 └── socket_client.py
+
+integration/
+├── __init__.py
+├── gateway_message.py
+└── gateway_receiver.py
 ```
 
 Its intended responsibilities are:

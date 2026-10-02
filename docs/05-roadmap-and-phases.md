@@ -17,7 +17,7 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest Completed Milestone:** Phase 4.5 — WebSocket Gateway
+**Latest Completed Milestone:** Phase 4.6.3 — Python Analytics Receiver
 
 **Current Milestone:** Phase 4.6 — Python Analytics Integration
 
@@ -28,9 +28,15 @@ C++ Matching Engine
         ↓
 C++ TCP Transport
         ↓
-Python SocketClient
+Gateway Engine Event Client
         ↓
-Message Parser
+Gateway normalization
+        ↓
+Gateway Analytics Client
+        ↓
+Python Gateway Analytics Receiver
+        ↓
+Phase 4.6.1 contract validation
         ↓
 StreamingProcessor
    ├── Indicators
@@ -421,6 +427,25 @@ Implemented:
 - Python contract validation layered on the existing MessageParser and Trade model.
 - Cross-service contract tests for valid and invalid TRADE messages.
 - Preserved the existing nested JSON-string payload representation used by Python analytics.
+
+### Phase 4.6.3 — Python Analytics Receiver
+
+**Status:** ✅ Complete
+
+Implemented:
+
+- Added a dedicated Python TCP receiver for Gateway-to-analytics traffic.
+- Reused the existing 4-byte big-endian length-prefixed framing.
+- Preserved the existing 1 MiB maximum payload boundary.
+- Added fragmented and multiple-frame decoding.
+- Added UTF-8 validation and deterministic transport-protocol errors.
+- Added clean Gateway connect/disconnect lifecycle handling.
+- Added support for a new Gateway connection after disconnect.
+- Routed complete raw messages into the existing AnalyticsService backpressure queue.
+- Reused the Phase 4.6.1 GatewayTradeMessage contract and existing MessageParser/Trade domain model.
+- Added receiver transport and configuration tests.
+
+The receiver intentionally does not duplicate analytics calculations or domain validation.
 
 ### Phase 4.6.2 — Gateway Analytics Client
 

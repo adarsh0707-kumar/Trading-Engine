@@ -36,6 +36,23 @@ def test_settings_reads_logging_configuration_from_environment(
     assert settings.log_format == "%(levelname)s %(message)s"
 
 
+def test_settings_default_gateway_receiver_configuration() -> None:
+    settings = Settings()
+
+    assert settings.gateway_host == "127.0.0.1"
+    assert settings.gateway_port == 8000
+
+
+def test_settings_reads_gateway_receiver_configuration_from_environment(monkeypatch) -> None:
+    monkeypatch.setenv("ANALYTICS_GATEWAY_HOST", "0.0.0.0")
+    monkeypatch.setenv("ANALYTICS_GATEWAY_PORT", "8100")
+
+    settings = Settings.from_environment()
+
+    assert settings.gateway_host == "0.0.0.0"
+    assert settings.gateway_port == 8100
+
+
 def test_settings_default_database_url_is_none() -> None:
     """Database persistence is opt-in by default."""
 
@@ -104,6 +121,9 @@ def test_metrics_configuration_reads_environment(monkeypatch):
         ("engine_host", "   ", "engine_host must not be empty"),
         ("engine_port", 0, "engine_port must be between 1 and 65535"),
         ("engine_port", 65536, "engine_port must be between 1 and 65535"),
+        ("gateway_host", "   ", "gateway_host must not be empty"),
+        ("gateway_port", 0, "gateway_port must be between 1 and 65535"),
+        ("gateway_port", 65536, "gateway_port must be between 1 and 65535"),
         ("engine_port", True, "engine_port must be an integer between 1 and 65535"),
         ("connect_timeout", 0, "connect_timeout must be a finite number greater than 0"),
         ("receive_timeout", -1, "receive_timeout must be a finite number greater than 0"),

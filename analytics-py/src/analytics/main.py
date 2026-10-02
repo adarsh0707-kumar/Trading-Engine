@@ -9,7 +9,7 @@ from time import perf_counter, sleep
 from typing import Callable
 
 from analytics.config.settings import Settings
-from analytics.ingestion import MessageParseError, MessageParser, SocketClient
+from analytics.ingestion import MessageParseError, MessageParser
 from analytics.ingestion.backpressure import BackpressureQueue, BackpressureWorker
 from analytics.models import ProcessedTrade, Trade
 from analytics.observability import (
@@ -30,6 +30,7 @@ from analytics.persistence.postgres import (
     PostgresRepositories,
     create_postgres_repositories,
 )
+from analytics.integration.gateway_receiver import GatewayAnalyticsReceiver
 from analytics.pipeline import AnalyticsPublisher, StreamingProcessor
 
 
@@ -113,13 +114,11 @@ class AnalyticsService:
             persistence_health=self.check_persistence_health,
         )
 
-        self.client = SocketClient(
-            settings.engine_host,
-            settings.engine_port,
-            connect_timeout=settings.connect_timeout,
-            receive_timeout=settings.receive_timeout,
-            reconnect=settings.reconnect,
-            reconnect_delay=settings.reconnect_delay,
+        # Keep the public attribute name stable for service callers/tests while
+        # replacing direct engine ingestion with the Phase 4.6 Gateway receiver.
+        self.client = GatewayAnalyticsReceiver(
+            settings.gateway_host,
+            settings.gateway_port,
             max_payload_size=settings.max_payload_size,
             on_message=self._handle_message,
             on_connect=self._handle_connect,
@@ -161,9 +160,9 @@ class AnalyticsService:
 
         self.health_metrics.mark_started()
         logger.info(
-            "service_start engine_host=%s engine_port=%d",
-            self.settings.engine_host,
-            self.settings.engine_port,
+            "service_start gateway_host=%s gateway_port=%d",
+            self.settings.gateway_host,
+            self.settings.gateway_port,
         )
 
         try:
@@ -470,18 +469,22 @@ class AnalyticsService:
         raise AssertionError("persistence retry loop exited unexpectedly")
 
     def _handle_connect(self) -> None:
-        """Handle successful connection to the trading engine."""
+        """Handle a successful Gateway connection."""
         self.health_metrics.mark_engine_connected()
         logger.info(
-            "engine_connected host=%s port=%d",
-            self.settings.engine_host,
-            self.settings.engine_port,
+            "gateway_connected host=%s port=%d",
+            self.settings.gateway_host,
+            self.settings.gateway_port,
         )
 
     def _handle_disconnect(self) -> None:
-        """Handle trading-engine disconnection."""
+        """Handle Gateway disconnection."""
         self.health_metrics.mark_engine_disconnected()
-        logger.warning("engine_disconnected host=%s port=%d", self.settings.engine_host, self.settings.engine_port)
+        logger.warning(
+            "gateway_disconnected host=%s port=%d",
+            self.settings.gateway_host,
+            self.settings.gateway_port,
+        )
 
     @staticmethod
     def _default_publish_sink(payload: str) -> None:
