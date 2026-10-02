@@ -49,6 +49,9 @@ class Settings:
         if not self.engine_host.strip():
             raise ConfigurationError("engine_host must not be empty")
         self._validate_port("engine_port", self.engine_port)
+        if not self.gateway_host.strip():
+            raise ConfigurationError("gateway_host must not be empty")
+        self._validate_port("gateway_port", self.gateway_port)
         self._validate_positive_finite("connect_timeout", self.connect_timeout)
         self._validate_positive_finite("receive_timeout", self.receive_timeout)
         if self.reconnect_delay < 0 or not math.isfinite(self.reconnect_delay):
@@ -121,6 +124,16 @@ class Settings:
                 os.getenv(
                     "TRADING_ENGINE_RECEIVE_TIMEOUT",
                     "1.0",
+                )
+            ),
+            gateway_host=os.getenv(
+                "ANALYTICS_GATEWAY_HOST",
+                "127.0.0.1",
+            ),
+            gateway_port=int(
+                os.getenv(
+                    "ANALYTICS_GATEWAY_PORT",
+                    "8000",
                 )
             ),
             reconnect=os.getenv(
