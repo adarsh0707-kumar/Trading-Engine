@@ -1,4 +1,5 @@
 import cors from "@fastify/cors";
+import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { registerHealthRoutes } from "./api/health.ts";
@@ -13,12 +14,14 @@ import type { AnalyticsProvider } from "./analytics/analytics.types.ts";
 import type { MarketProvider } from "./market/market.types.ts";
 import type { OrderBookProvider } from "./orderbook/orderbook.types.ts";
 import type { TradesProvider } from "./trades/trades.types.ts";
+import { createWebSocketHub, type WebSocketHub } from "./websocket/websocket-hub.ts";
 
 export interface GatewayServer {
   readonly app: FastifyInstance;
   readonly config: GatewayConfig;
   readonly start: () => Promise<void>;
   readonly stop: () => Promise<void>;
+  readonly websocketHub: WebSocketHub;
 }
 
 export interface GatewayServerOptions {
@@ -43,6 +46,25 @@ export function createGatewayServer(
     bodyLimit: config.http.bodyLimitBytes,
     connectionTimeout: config.http.requestTimeoutMs,
   });
+
+  const websocketHub = createWebSocketHub({
+    maxQueueSize: config.websocket.maxQueueSize,
+  });
+
+  app.register(websocket, {
+    options: {
+      maxPayload: config.websocket.maxPayloadBytes,
+      clientTracking: true,
+    },
+  });
+
+  app.get(
+    config.websocket.path,
+    { websocket: true },
+    (socket) => {
+      websocketHub.add(socket);
+    },
+  );
 
   registerErrorHandler(app);
 
@@ -93,6 +115,7 @@ export function createGatewayServer(
       return;
     }
 
+    websocketHub.closeAll();
     await app.close();
     started = false;
   };
@@ -102,6 +125,7 @@ export function createGatewayServer(
     config,
     start,
     stop,
+    websocketHub,
   };
 }
 
