@@ -130,10 +130,10 @@ def test_receives_framed_gateway_message() -> None:
 
             # The receiver should expose complete frames, not TCP chunks.
             _wait_until(received.is_set)
-            _wait_until(lambda: len(messages) == 2)
+            _wait_until(lambda: len(messages) == 1)
 
         assert connected.is_set()
-        assert messages == [VALID_MESSAGE[:80], VALID_MESSAGE[80:]]
+        assert messages == [VALID_MESSAGE]
     finally:
         receiver.stop()
 
