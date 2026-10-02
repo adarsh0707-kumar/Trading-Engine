@@ -7,6 +7,10 @@ import logging
 import time
 from typing import Any
 
+from analytics.integration.gateway_message import (
+    serialize_analytics_update,
+    serialize_risk_event,
+)
 from analytics.models import AnalyticsResult, RiskEvent
 
 logger = logging.getLogger(__name__)
