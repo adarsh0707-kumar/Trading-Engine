@@ -86,14 +86,6 @@ class AnalyticsService:
         self.parser = MessageParser()
         self.processor = StreamingProcessor()
 
-        if publish_sink is None:
-            publish_sink = self._default_publish_sink
-
-        self.publisher = AnalyticsPublisher(
-            publish_sink,
-            retry_attempts=settings.publish_retry_attempts,
-            retry_delay=settings.publish_retry_delay,
-        )
         self._message_queue = BackpressureQueue(
             capacity=settings.backpressure_queue_capacity,
         )
@@ -123,6 +115,15 @@ class AnalyticsService:
             on_message=self._handle_message,
             on_connect=self._handle_connect,
             on_disconnect=self._handle_disconnect,
+        )
+
+        if publish_sink is None:
+            publish_sink = self._publish_to_gateway
+
+        self.publisher = AnalyticsPublisher(
+            publish_sink,
+            retry_attempts=settings.publish_retry_attempts,
+            retry_delay=settings.publish_retry_delay,
         )
 
     def start_metrics_server(self) -> None:
@@ -487,6 +488,10 @@ class AnalyticsService:
         )
 
     @staticmethod
+    def _publish_to_gateway(self, payload: str) -> None:
+        """Publish a versioned analytics payload over the active Gateway socket."""
+        self.client.send(payload)
+
     def _default_publish_sink(payload: str) -> None:
         """Log published analytics payloads until a downstream sink exists."""
         logger.info("analytics update: %s", payload)
