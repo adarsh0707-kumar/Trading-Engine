@@ -71,6 +71,8 @@ def test_serializes_normalized_contract_representation() -> None:
             "symbol": "SIM",
             "taker_order_id": "buy-1",
             "taker_side": "BUY",
+            "timestamp": "2026-10-02T12:00:01+00:00",
+            "trade_id": "trade-00000001-buy-1-sell-1",
         },
     }
 
