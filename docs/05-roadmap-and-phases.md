@@ -43,7 +43,7 @@ PostgreSQL Persistence
 AnalyticsPublisher
 ```
 
-The Node.js gateway now provides the browser-facing HTTP boundary and a typed normalization layer for upstream engine messages. Phase 4.5 extends that gateway with real-time WebSocket delivery.
+The Node.js gateway now provides the browser-facing HTTP boundary and a typed normalization layer for upstream engine messages. Phase 4.5 connects the live C++ TCP event stream to the WebSocket hub for real-time TRADE delivery.
 
 ---
 
