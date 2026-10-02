@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
+from typing import Any
 
 from analytics.integration.gateway_message import (
     serialize_analytics_update,
@@ -19,7 +21,7 @@ class AnalyticsPublisher:
 
     def __init__(
         self,
-        sink,
+        sink: Callable[[str], Any],
         *,
         retry_attempts: int = 0,
         retry_delay: float = 0.0,
