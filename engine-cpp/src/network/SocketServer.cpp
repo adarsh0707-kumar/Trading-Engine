@@ -1,5 +1,7 @@
 #include "network/SocketServer.hpp"
 
+#include "utils/Time.hpp"
+
 #include <cerrno>
 #include <chrono>
 #include <cstring>
@@ -245,6 +247,12 @@ void SocketServer::acceptLoop()
         hello.type =
             serialization::MessageType::HELLO;
 
+        hello.requestId =
+            "hello-" + std::to_string(connectionId);
+
+        hello.timestamp =
+            utils::Time::iso8601();
+
         hello.payload =
             "Trading Engine transport connected";
 
@@ -284,6 +292,12 @@ void SocketServer::heartbeatLoop()
 
             heartbeat.type =
                 serialization::MessageType::HEARTBEAT;
+
+            heartbeat.requestId =
+                "heartbeat";
+
+            heartbeat.timestamp =
+                utils::Time::iso8601();
 
             heartbeat.payload = "PING";
 
