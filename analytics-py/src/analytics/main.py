@@ -499,7 +499,6 @@ class AnalyticsService:
             self.settings.gateway_port,
         )
 
-    @staticmethod
     def _publish_to_gateway(self, payload: str) -> None:
         """Publish a versioned analytics payload over the active Gateway socket."""
         self.client.send(payload)
