@@ -7,6 +7,7 @@ import { registerV1Routes } from "./api/v1/index.ts";
 import { loadConfig, type GatewayConfig } from "./config/config.ts";
 import { createGatewayMetrics } from "./metrics/metrics.ts";
 import { registerErrorHandler } from "./errors/error-handler.ts";
+import { createEngineEventClient, type EngineEventClient } from "./engine/engine-event-client.ts";
 import type { EngineProvider } from "./engine/engine.types.ts";
 import { createStatusProvider } from "./status/status.provider.ts";
 import type { StatusProvider } from "./status/status.types.ts";
@@ -22,6 +23,7 @@ export interface GatewayServer {
   readonly start: () => Promise<void>;
   readonly stop: () => Promise<void>;
   readonly websocketHub: WebSocketHub;
+  readonly engineEventClient: EngineEventClient;
 }
 
 export interface GatewayServerOptions {
@@ -50,6 +52,30 @@ export function createGatewayServer(
   const websocketHub = createWebSocketHub({
     maxQueueSize: config.websocket.maxQueueSize,
     heartbeatIntervalMs: config.websocket.heartbeatIntervalMs,
+  });
+
+  const engineEventClient = createEngineEventClient({
+    host: config.engine.host,
+    port: config.engine.port,
+    connectTimeoutMs: config.engine.connectTimeoutMs,
+    reconnectInitialDelayMs: config.engine.reconnectInitialDelayMs,
+    reconnectMaxDelayMs: config.engine.reconnectMaxDelayMs,
+    reconnectMaxAttempts: config.engine.reconnectMaxAttempts,
+    onEvent: (event) => {
+      websocketHub.publish(event);
+    },
+    onError: (error) => {
+      app.log.warn(
+        { error },
+        "engine_event_client_error",
+      );
+    },
+    onStateChange: (state) => {
+      app.log.info(
+        { state },
+        "engine_event_client_state_changed",
+      );
+    },
   });
 
   app.register(websocket, {
@@ -109,6 +135,7 @@ export function createGatewayServer(
     });
 
     websocketHub.startHeartbeat();
+    engineEventClient.start();
     started = true;
   };
 
@@ -117,6 +144,7 @@ export function createGatewayServer(
       return;
     }
 
+    engineEventClient.stop();
     websocketHub.stopHeartbeat();
     websocketHub.closeAll();
     await app.close();
@@ -129,6 +157,7 @@ export function createGatewayServer(
     start,
     stop,
     websocketHub,
+    engineEventClient,
   };
 }
 
