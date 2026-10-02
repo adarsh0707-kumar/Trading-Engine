@@ -3,9 +3,11 @@
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 from analytics.models import AnalyticsResult, Trade
+from analytics.risk.risk_manager import RiskSnapshot
 
 from analytics.config.settings import Settings
 from analytics.main import AnalyticsService
@@ -42,8 +44,8 @@ def test_successful_trade_updates_throughput_metrics() -> None:
         timestamp=datetime.now(timezone.utc),
         taker_side="BUY",
     )
-    result = Mock()
-    result.analytics = AnalyticsResult(
+    result = SimpleNamespace(
+        analytics=AnalyticsResult(
         event_id=trade.event_id,
         event_type="ANALYTICS_UPDATE",
         symbol=trade.symbol,
@@ -58,6 +60,17 @@ def test_successful_trade_updates_throughput_metrics() -> None:
         peak_equity=Decimal("0"),
         drawdown=Decimal("0"),
         timestamp=trade.timestamp,
+        ),
+        risk_snapshot=RiskSnapshot(
+            position=10,
+            average_entry_price=trade.price,
+            realized_pnl=Decimal("0"),
+            unrealized_pnl=Decimal("0"),
+            equity=Decimal("0"),
+            peak_equity=Decimal("0"),
+            drawdown=Decimal("0"),
+        ),
+        risk_events=(),
     )
 
     service.parser.parse = Mock(return_value=trade)
