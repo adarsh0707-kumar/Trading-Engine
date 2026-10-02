@@ -422,9 +422,24 @@ Implemented:
 - Cross-service contract tests for valid and invalid TRADE messages.
 - Preserved the existing nested JSON-string payload representation used by Python analytics.
 
+### Phase 4.6.2 — Gateway Analytics Client
+
+**Status:** ✅ Complete
+
+Implemented:
+
+- Dedicated Gateway-to-Python analytics TCP client.
+- Existing 4-byte big-endian framed UTF-8 transport.
+- Phase 4.6.1 versioned TRADE contract serialization.
+- Bounded disconnected outbound queue.
+- Exponential reconnect and connection timeout handling.
+- Separate analytics connection lifecycle logging.
+- Graceful Gateway shutdown integration.
+- Client transport and queue tests.
+
 ### Remaining Phase 4.6 scope
 
-- Gateway analytics transport client.
+- Python analytics receiver integration.
 - Python analytics receiver integration.
 - Analytics result and risk-event transport back to Gateway.
 - Analytics availability tracking.
