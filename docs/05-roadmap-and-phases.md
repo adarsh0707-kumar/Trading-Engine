@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest Completed Milestone:** Phase 4.4 — Engine Protocol & Event Normalization
+**Latest Completed Milestone:** Phase 4.5 — WebSocket Gateway
 
-**Current Milestone:** Phase 4.5 — WebSocket Gateway
+**Current Milestone:** Phase 4.6 — Python Analytics Integration
 
 ### Current validated path
 
@@ -368,7 +368,7 @@ Phase 4.4 establishes the event contract used by the WebSocket layer in Phase 4.
 
 ## Phase 4.5 — WebSocket Gateway
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
 Provide real-time browser streaming without exposing internal services directly.
 
@@ -386,9 +386,9 @@ Implemented in the current milestone:
 
 Remaining scope:
 
-- Connect the hub to a live upstream engine event source.
-- Add end-to-end WebSocket integration coverage against a running gateway.
-- Expand supported streamed event types when their Phase 4.4 typed contracts are implemented.
+- Connected the hub to the live upstream engine event source through the Gateway engine event client.
+- Added end-to-end WebSocket integration coverage against a fake TCP engine source.
+- Expanded live TRADE delivery through the normalized Phase 4.4 event model.
 
 Exit criteria:
 
@@ -402,13 +402,31 @@ Exit criteria:
 
 ## Phase 4.6 — Python Analytics Integration
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress
 
 Integrate the completed analytics service without duplicating analytics calculations.
 
-Scope:
+### Phase 4.6.1 — Gateway ↔ Python Analytics Contract
 
-- Gateway-to-analytics integration boundary.
+**Status:** ✅ Complete
+
+Implemented:
+
+- Versioned Gateway-to-analytics TRADE envelope.
+- Stable event and request identity contract.
+- ISO-8601 timestamp validation with timezone requirement.
+- Positive price and quantity validation.
+- Taker/maker and buy/sell order identity validation.
+- BUY/SELL taker-side validation.
+- Python contract validation layered on the existing MessageParser and Trade model.
+- Cross-service contract tests for valid and invalid TRADE messages.
+- Preserved the existing nested JSON-string payload representation used by Python analytics.
+
+### Remaining Phase 4.6 scope
+
+- Gateway analytics transport client.
+- Python analytics receiver integration.
+- Analytics result and risk-event transport back to Gateway.
 - Analytics availability tracking.
 - Latest analytics snapshot for REST.
 - Analytics updates for WebSocket clients.
@@ -614,8 +632,8 @@ Planned:
 | 4.2 | Gateway Configuration & Runtime Hardening | ✅ Complete |
 | 4.3 | Gateway HTTP API | ✅ Complete |
 | 4.4 | Engine Protocol & Event Normalization | ✅ Complete |
-| 4.5 | WebSocket Gateway | 🚧 In Progress |
-| 4.6 | Python Analytics Integration | ⏳ Planned |
+| 4.5 | WebSocket Gateway | ✅ Complete |
+| 4.6 | Python Analytics Integration | 🚧 In Progress |
 | 4.7 | Error Handling, Resilience & Backpressure | ⏳ Planned |
 | 4.8 | Security Boundaries & Input Hardening | ⏳ Planned |
 | 4.9 | Operational Logging & Metrics | ⏳ Planned |
