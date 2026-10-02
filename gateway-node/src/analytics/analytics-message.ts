@@ -62,7 +62,7 @@ function requireFiniteNumber(value: unknown, field: string): number {
 
 function requireOutputNumber(value: unknown, field: string): number {
   if (typeof value === "number") {
-    return requireOutputNumber(value, field);
+    return requireFiniteNumber(value, field);
   }
 
   if (typeof value === "string" && value.trim().length > 0) {
