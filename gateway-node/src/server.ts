@@ -8,6 +8,7 @@ import { loadConfig, type GatewayConfig } from "./config/config.ts";
 import { createGatewayMetrics } from "./metrics/metrics.ts";
 import { registerErrorHandler } from "./errors/error-handler.ts";
 import { createEngineEventClient, type EngineEventClient } from "./engine/engine-event-client.ts";
+import { createAnalyticsClient, type AnalyticsClient } from "./analytics/analytics-client.ts";
 import type { EngineProvider } from "./engine/engine.types.ts";
 import { createStatusProvider } from "./status/status.provider.ts";
 import type { StatusProvider } from "./status/status.types.ts";
@@ -24,6 +25,7 @@ export interface GatewayServer {
   readonly stop: () => Promise<void>;
   readonly websocketHub: WebSocketHub;
   readonly engineEventClient: EngineEventClient;
+  readonly analyticsClient: AnalyticsClient;
 }
 
 export interface GatewayServerOptions {
@@ -54,6 +56,22 @@ export function createGatewayServer(
     heartbeatIntervalMs: config.websocket.heartbeatIntervalMs,
   });
 
+  const analyticsClient = createAnalyticsClient({
+    host: config.analytics.host,
+    port: config.analytics.port,
+    connectTimeoutMs: config.analytics.connectTimeoutMs,
+    reconnectInitialDelayMs: config.analytics.reconnectInitialDelayMs,
+    reconnectMaxDelayMs: config.analytics.reconnectMaxDelayMs,
+    reconnectMaxAttempts: config.analytics.reconnectMaxAttempts,
+    maxQueueSize: config.analytics.maxQueueSize,
+    onError: (error) => {
+      app.log.warn({ error }, "analytics_client_error");
+    },
+    onStateChange: (state) => {
+      app.log.info({ state }, "analytics_client_state_changed");
+    },
+  });
+
   const engineEventClient = createEngineEventClient({
     host: config.engine.host,
     port: config.engine.port,
@@ -63,6 +81,7 @@ export function createGatewayServer(
     reconnectMaxAttempts: config.engine.reconnectMaxAttempts,
     onEvent: (event) => {
       websocketHub.publish(event);
+      analyticsClient.sendTrade(event);
     },
     onError: (error) => {
       app.log.warn(
@@ -136,6 +155,7 @@ export function createGatewayServer(
 
     websocketHub.startHeartbeat();
     engineEventClient.start();
+    analyticsClient.start();
     started = true;
   };
 
@@ -144,6 +164,7 @@ export function createGatewayServer(
       return;
     }
 
+    analyticsClient.stop();
     engineEventClient.stop();
     websocketHub.stopHeartbeat();
     websocketHub.closeAll();
@@ -158,6 +179,7 @@ export function createGatewayServer(
     stop,
     websocketHub,
     engineEventClient,
+    analyticsClient,
   };
 }
 
