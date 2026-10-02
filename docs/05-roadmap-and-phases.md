@@ -19,7 +19,7 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Latest Completed Milestone:** Phase 4.6.4 — Analytics Output Back to Gateway
 
-**Current Milestone:** Phase 4.6 — Python Analytics Integration
+**Current Milestone:** Phase 4.7.1 — Error Model & Failure Boundaries
 
 ### Current validated path
 
@@ -489,9 +489,23 @@ Implemented:
 
 ## Phase 4.7 — Error Handling, Resilience & Backpressure
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress
 
 Apply bounded reliability and recovery behavior to gateway requests, upstream connections, and real-time clients.
+
+### Phase 4.7.1 — Error Model & Failure Boundaries
+
+**Status:** 🚧 In Progress
+
+Implemented the initial cross-service failure taxonomy and failure-boundary policy.
+
+- Defined stable connection, timeout, protocol, validation, queue-overflow, dependency-unavailable, processing, and shutdown categories.
+- Defined recoverability semantics without changing runtime reconnect/backpressure behavior.
+- Added Python integration failure types and tests.
+- Added Gateway failure types, classification helper, and tests.
+- Documented logging, recovery, queue, and connection-close boundaries.
+
+Remaining 4.7 scope will implement runtime resilience policies incrementally in Phases 4.7.2–4.7.8.
 
 ## Phase 4.8 — Security Boundaries & Input Hardening
 
@@ -688,7 +702,7 @@ Planned:
 | 4.4 | Engine Protocol & Event Normalization | ✅ Complete |
 | 4.5 | WebSocket Gateway | ✅ Complete |
 | 4.6 | Python Analytics Integration | 🚧 In Progress |
-| 4.7 | Error Handling, Resilience & Backpressure | ⏳ Planned |
+| 4.7 | Error Handling, Resilience & Backpressure | 🚧 In Progress |
 | 4.8 | Security Boundaries & Input Hardening | ⏳ Planned |
 | 4.9 | Operational Logging & Metrics | ⏳ Planned |
 | 4.10 | Testing & Integration Validation | ⏳ Planned |
