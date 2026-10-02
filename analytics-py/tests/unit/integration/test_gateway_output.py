@@ -70,4 +70,4 @@ def test_serializes_risk_event_envelope() -> None:
 
     payload = json.loads(message["payload"])
     assert payload["status"] == "breached"
-    assert payload["limit_type"] == "MAX_DRAWDOWN"
+    assert payload["limit_type"] == "max_drawdown"
