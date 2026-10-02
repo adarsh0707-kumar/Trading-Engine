@@ -6,10 +6,37 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
-### Next — Phase 4.3 Gateway HTTP API
-- Introduce the versioned application API boundary under `/api/v1/...`.
-- Add request/response contracts, validation, deterministic HTTP errors, and integration tests.
-- Preserve the existing `/health`, CORS, and Prometheus metrics behavior.
+### Next — Phase 4.5 WebSocket Gateway
+- Provide the configured browser-facing WebSocket endpoint.
+- Add connection lifecycle and subscription handling.
+- Stream normalized gateway events to clients.
+- Add heartbeat/ping-pong and dead-client cleanup.
+- Add per-client queue/backpressure limits and slow-consumer protection.
+- Preserve graceful gateway shutdown behavior.
+
+## [2026-10-02]
+
+### Phase 4.4 — Engine Protocol & Event Normalization
+- Added gateway-side decoding for the existing 4-byte big-endian length-prefixed engine frames.
+- Added fragmented-frame and multiple-frame decoding support.
+- Added UTF-8 validation and the existing 1 MiB payload limit at the gateway boundary.
+- Added typed validation and normalization for supported engine messages.
+- Added explicit message types for HELLO, HEARTBEAT, ORDER, TRADE, MARKET_DATA, BOOK_SNAPSHOT, ERROR, and SHUTDOWN.
+- Added typed TRADE payload validation covering symbol, price, quantity, taker/maker order identity, taker side, and buy/sell order identity.
+- Added normalized typed engine events for supported TRADE events.
+- Added explicit rejection of malformed and currently unsupported engine events.
+- Added protocol and normalization test coverage.
+
+### Phase 4.3 — Gateway HTTP API
+- Completed the versioned gateway application API boundary under `/api/v1/...`.
+- Added request/response validation and deterministic HTTP error handling.
+- Added upstream status/error mapping and route-level integration coverage.
+- Preserved the existing `/health` and Prometheus metrics behavior.
+
+### Documentation
+- Updated the roadmap to reflect completed Phase 4.3 and Phase 4.4 milestones.
+- Updated the current milestone to Phase 4.5 WebSocket Gateway.
+- Added Phase 4.4 implementation details and validation scope to the historical changelog.
 
 ## [2026-09-30]
 
@@ -25,12 +52,6 @@ This project is an educational trading-infrastructure simulation. It does not co
 - Preserved idempotent gateway start/stop lifecycle behavior.
 - Validation: gateway build passes; gateway test suite passes with 21 tests.
 
-### Documentation
-- Corrected roadmap status for completed Phase 3.10, Phase 4.1, and Phase 4.2 milestones.
-- Documented the currently implemented gateway operational endpoints.
-- Distinguished implemented endpoints from planned application API routes.
-- Added this changelog as the historical implementation record.
-
 ## Current Phase Status
 
 | Phase | Status |
@@ -41,9 +62,9 @@ This project is an educational trading-infrastructure simulation. It does not co
 | Phase 3.10 — Analytics Service Hardening | ✅ Complete |
 | Phase 4.1 — Gateway Foundation & Architecture | ✅ Complete |
 | Phase 4.2 — Gateway Configuration & Runtime Hardening | ✅ Complete |
-| Phase 4.3 — Gateway HTTP API | ⏳ Next |
-| Phase 4.4 — Engine Protocol & Event Normalization | ⏳ Planned |
-| Phase 4.5 — WebSocket Gateway | ⏳ Planned |
+| Phase 4.3 — Gateway HTTP API | ✅ Complete |
+| Phase 4.4 — Engine Protocol & Event Normalization | ✅ Complete |
+| Phase 4.5 — WebSocket Gateway | ⏳ Next |
 | Phase 4.6 — Python Analytics Integration | ⏳ Planned |
 | Phase 4.7 — Error Handling, Resilience & Backpressure | ⏳ Planned |
 | Phase 4.8 — Security Boundaries & Input Hardening | ⏳ Planned |
