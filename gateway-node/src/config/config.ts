@@ -18,6 +18,11 @@ export interface GatewayConfig {
     readonly host: string;
     readonly port: number;
     readonly requestTimeoutMs: number;
+    readonly connectTimeoutMs: number;
+    readonly reconnectInitialDelayMs: number;
+    readonly reconnectMaxDelayMs: number;
+    readonly reconnectMaxAttempts: number;
+    readonly maxQueueSize: number;
   };
 
   readonly websocket: {
@@ -66,6 +71,11 @@ const DEFAULTS = {
     host: "127.0.0.1",
     port: 8000,
     requestTimeoutMs: 5000,
+    connectTimeoutMs: 5000,
+    reconnectInitialDelayMs: 500,
+    reconnectMaxDelayMs: 10000,
+    reconnectMaxAttempts: 10,
+    maxQueueSize: 256,
   },
 
   websocket: {
@@ -304,6 +314,31 @@ export function loadConfig(
         "ANALYTICS_REQUEST_TIMEOUT_MS",
         DEFAULTS.analytics.requestTimeoutMs,
       ),
+      connectTimeoutMs: parsePositiveInteger(
+        environment,
+        "ANALYTICS_CONNECT_TIMEOUT_MS",
+        DEFAULTS.analytics.connectTimeoutMs,
+      ),
+      reconnectInitialDelayMs: parseNonNegativeInteger(
+        environment,
+        "ANALYTICS_RECONNECT_INITIAL_DELAY_MS",
+        DEFAULTS.analytics.reconnectInitialDelayMs,
+      ),
+      reconnectMaxDelayMs: parseNonNegativeInteger(
+        environment,
+        "ANALYTICS_RECONNECT_MAX_DELAY_MS",
+        DEFAULTS.analytics.reconnectMaxDelayMs,
+      ),
+      reconnectMaxAttempts: parseNonNegativeInteger(
+        environment,
+        "ANALYTICS_RECONNECT_MAX_ATTEMPTS",
+        DEFAULTS.analytics.reconnectMaxAttempts,
+      ),
+      maxQueueSize: parseNonNegativeInteger(
+        environment,
+        "ANALYTICS_MAX_QUEUE_SIZE",
+        DEFAULTS.analytics.maxQueueSize,
+      ),
     }),
 
     websocket: Object.freeze({
@@ -378,6 +413,15 @@ export function loadConfig(
   ) {
     throw new Error(
       "Invalid engine reconnect configuration: ENGINE_RECONNECT_INITIAL_DELAY_MS must be less than or equal to ENGINE_RECONNECT_MAX_DELAY_MS",
+    );
+  }
+
+  if (
+    config.analytics.reconnectInitialDelayMs >
+    config.analytics.reconnectMaxDelayMs
+  ) {
+    throw new Error(
+      "Invalid analytics reconnect configuration: ANALYTICS_RECONNECT_INITIAL_DELAY_MS must be less than or equal to ANALYTICS_RECONNECT_MAX_DELAY_MS",
     );
   }
 
