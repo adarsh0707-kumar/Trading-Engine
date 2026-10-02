@@ -372,18 +372,23 @@ Phase 4.4 establishes the event contract used by the WebSocket layer in Phase 4.
 
 Provide real-time browser streaming without exposing internal services directly.
 
-Scope:
+Implemented in the current milestone:
 
-- Configured WebSocket endpoint.
-- Connection lifecycle.
-- Subscriptions.
-- Typed event serialization using the Phase 4.4 normalized event model.
-- Heartbeat/ping-pong.
-- Dead-client cleanup.
-- Per-client queue/backpressure limits.
-- Slow-consumer protection.
-- Graceful shutdown.
-- WebSocket unit and integration tests.
+- Configurable WebSocket endpoint at `WEBSOCKET_PATH`.
+- WebSocket connection lifecycle management.
+- Explicit subscribe/unsubscribe protocol for supported event types.
+- Typed TRADE event serialization using the Phase 4.4 normalized event model.
+- Server ping/pong heartbeat and dead-client cleanup.
+- Per-client bounded outbound queues.
+- Slow-consumer protection by closing clients whose queues exceed `WEBSOCKET_MAX_QUEUE_SIZE`.
+- Graceful gateway shutdown that stops heartbeat processing and closes active clients.
+- Unit coverage for connection setup, subscriptions, event delivery, invalid messages, and queue limits.
+
+Remaining scope:
+
+- Connect the hub to a live upstream engine event source.
+- Add end-to-end WebSocket integration coverage against a running gateway.
+- Expand supported streamed event types when their Phase 4.4 typed contracts are implemented.
 
 Exit criteria:
 
