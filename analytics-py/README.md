@@ -145,6 +145,24 @@ Trading Engine roadmap.
 
 ## Completed
 
+### Phase 4.6.3 — Python Analytics Receiver
+
+The Python analytics service now accepts Gateway-to-analytics TRADE traffic over
+a dedicated TCP listener.
+
+Implemented:
+
+* 4-byte big-endian framed Gateway receiver.
+* 1 MiB maximum payload enforcement.
+* Fragmented and multiple-frame decoding.
+* UTF-8 validation.
+* Gateway connect/disconnect lifecycle handling.
+* Reconnection-safe acceptance of a new Gateway connection.
+* Integration with the existing AnalyticsService backpressure and processing
+  pipeline.
+* Reuse of the Phase 4.6.1 GatewayTradeMessage contract and existing
+  MessageParser/Trade domain model.
+
 ### Phase 3.1 — Python Foundation
 
 The project foundation is established.
