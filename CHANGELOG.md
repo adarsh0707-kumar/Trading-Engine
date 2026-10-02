@@ -6,6 +6,13 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4.6.2 — Gateway Analytics Client
+- Added a dedicated Gateway TCP analytics client using the existing 4-byte length-prefixed transport.
+- Forwarded normalized engine TRADE events using the versioned Phase 4.6.1 analytics contract.
+- Added bounded outbound queuing while analytics is disconnected.
+- Added exponential reconnect, connection timeout handling, lifecycle logging, and graceful shutdown.
+- Added analytics transport configuration and client integration tests.
+
 ### Phase 4.6.1 — Gateway ↔ Python Analytics Contract
 - Added versioned Gateway-to-analytics message contract definitions.
 - Added typed Gateway TRADE envelope validation for event identity, timestamps, price, quantity, order identity, and taker side.
