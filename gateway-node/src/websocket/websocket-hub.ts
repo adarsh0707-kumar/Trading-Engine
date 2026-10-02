@@ -10,6 +10,7 @@ import { WEBSOCKET_EVENT_TYPES } from "./websocket.types.ts";
 
 export interface WebSocketHubOptions {
   readonly maxQueueSize: number;
+  readonly heartbeatIntervalMs: number;
 }
 
 export interface WebSocketHub {
@@ -17,6 +18,8 @@ export interface WebSocketHub {
   readonly publish: (event: GatewayWebSocketEvent) => void;
   readonly closeAll: (code?: number, reason?: string) => void;
   readonly size: () => number;
+  readonly startHeartbeat: () => void;
+  readonly stopHeartbeat: () => void;
 }
 
 const OPEN = 1;
@@ -148,6 +151,7 @@ export function createWebSocketHub(
       subscriptions: new Set<WebSocketEventType>(),
       queue: [],
       flushing: false,
+      alive: true,
     };
 
     clients.add(client);
@@ -181,6 +185,10 @@ export function createWebSocketHub(
       }
     });
 
+    socket.on("pong", () => {
+      client.alive = true;
+    });
+
     socket.on("close", () => {
       remove(client);
     });
@@ -208,6 +216,41 @@ export function createWebSocketHub(
     }
   };
 
+  let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+
+  const startHeartbeat = (): void => {
+    if (heartbeatTimer !== undefined) {
+      return;
+    }
+
+    heartbeatTimer = setInterval(() => {
+      for (const client of clients) {
+        if (client.socket.readyState !== OPEN) {
+          remove(client);
+          continue;
+        }
+
+        if (!client.alive) {
+          remove(client);
+          client.socket.terminate();
+          continue;
+        }
+
+        client.alive = false;
+        client.socket.ping();
+      }
+    }, options.heartbeatIntervalMs);
+  };
+
+  const stopHeartbeat = (): void => {
+    if (heartbeatTimer === undefined) {
+      return;
+    }
+
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = undefined;
+  };
+
   const closeAll = (
     code = 1001,
     reason = "Gateway is shutting down",
@@ -226,5 +269,7 @@ export function createWebSocketHub(
     publish,
     closeAll,
     size: () => clients.size,
+    startHeartbeat,
+    stopHeartbeat,
   };
 }
