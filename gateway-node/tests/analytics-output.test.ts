@@ -7,6 +7,10 @@ import {
 } from "../src/analytics/analytics-message.ts";
 import { createAnalyticsClient } from "../src/analytics/analytics-client.ts";
 import { createAnalyticsProvider } from "../src/analytics/analytics.provider.ts";
+import type {
+  GatewayAnalyticsUpdateMessage,
+  GatewayRiskEventMessage,
+} from "../src/analytics/analytics-message.types.ts";
 
 const servers: Server[] = [];
 
@@ -153,7 +157,7 @@ describe("analytics output protocol", () => {
     provider.updateAnalytics(
       normalizeAnalyticsOutputMessage(
         JSON.parse(outputMessage("ANALYTICS_UPDATE")),
-      ) as never,
+      ) as GatewayAnalyticsUpdateMessage,
     );
 
     expect(provider.getAnalytics()).toEqual({
@@ -168,7 +172,7 @@ describe("analytics output protocol", () => {
     provider.updateRiskEvent(
       normalizeAnalyticsOutputMessage(
         JSON.parse(outputMessage("RISK_EVENT")),
-      ) as never,
+      ) as GatewayRiskEventMessage,
     );
 
     expect(provider.getAnalytics()?.riskStatus).toBe("breached");
