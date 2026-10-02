@@ -18,6 +18,9 @@ class Settings:
     engine_host: str = "127.0.0.1"
     engine_port: int = 9000
 
+    gateway_host: str = "127.0.0.1"
+    gateway_port: int = 8000
+
     connect_timeout: float = 5.0
     receive_timeout: float = 1.0
 
