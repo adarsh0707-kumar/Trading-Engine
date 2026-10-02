@@ -50,7 +50,7 @@ def test_publish_serializes_analytics_result() -> None:
     assert payload["event_id"] == "analytics-SIM-000001"
     assert payload["request_id"] == "analytics-SIM-000001"
     payload = json.loads(payload["payload"])
-    assert json.loads(payload["payload"])["event_type"] == "ANALYTICS_UPDATE"
+    assert payload["event_type"] == "ANALYTICS_UPDATE"
     assert payload["symbol"] == "SIM"
     assert payload["price"] == "101.25"
     assert payload["vwap"] == "100.75"
