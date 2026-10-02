@@ -77,6 +77,16 @@ function requireOutputNumber(value: unknown, field: string): number {
   );
 }
 
+function requirePositiveOutputNumber(value: unknown, field: string): number {
+  const parsed = requireOutputNumber(value, field);
+  if (parsed <= 0) {
+    throw new AnalyticsMessageValidationError(
+      `Analytics output field '${field}' must be greater than zero`,
+    );
+  }
+  return parsed;
+}
+
 function requireNullableFiniteNumber(
   value: unknown,
   field: string,
@@ -129,7 +139,7 @@ function parseTradePayload(value: unknown): AnalyticsTradePayload {
   return {
     tradeId: requireNonEmptyString(value["trade_id"], "trade_id"),
     symbol: requireNonEmptyString(value["symbol"], "symbol"),
-    price: requirePositiveNumber(value["price"], "price"),
+    price: requirePositiveOutputNumber(value["price"], "price"),
     quantity: requirePositiveInteger(value["quantity"], "quantity"),
     takerOrderId: requireNonEmptyString(value["taker_order_id"], "taker_order_id"),
     makerOrderId: requireNonEmptyString(value["maker_order_id"], "maker_order_id"),
