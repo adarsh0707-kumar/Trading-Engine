@@ -107,6 +107,7 @@ export function createGatewayServer(
       port: config.gateway.port,
     });
 
+    websocketHub.startHeartbeat();
     started = true;
   };
 
@@ -115,6 +116,7 @@ export function createGatewayServer(
       return;
     }
 
+    websocketHub.stopHeartbeat();
     websocketHub.closeAll();
     await app.close();
     started = false;
