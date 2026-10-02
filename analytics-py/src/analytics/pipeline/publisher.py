@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import time
-from typing import Any
 
 from analytics.integration.gateway_message import (
     serialize_analytics_update,
@@ -88,11 +86,7 @@ class AnalyticsPublisher:
         if not isinstance(result, AnalyticsResult):
             raise TypeError("result must be an AnalyticsResult")
 
-        payload = json.dumps(
-            result.to_dict(),
-            separators=(",", ":"),
-            sort_keys=True,
-        )
+        payload = serialize_analytics_update(result)
 
         self._publish_payload(
             payload,
@@ -106,11 +100,7 @@ class AnalyticsPublisher:
         if not isinstance(event, RiskEvent):
             raise TypeError("event must be a RiskEvent")
 
-        payload = json.dumps(
-            event.to_dict(),
-            separators=(",", ":"),
-            sort_keys=True,
-        )
+        payload = serialize_risk_event(event)
 
         self._publish_payload(
             payload,
