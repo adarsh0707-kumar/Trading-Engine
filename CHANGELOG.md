@@ -6,6 +6,13 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4.7.1 — Error Model & Failure Boundaries
+- Added a stable failure taxonomy for connection, timeout, protocol, validation, queue overflow, dependency unavailability, processing, and shutdown failures.
+- Added explicit recoverability semantics without changing existing reconnect or backpressure runtime behavior.
+- Added Python analytics integration failure types and tests.
+- Added Gateway failure types, classification, and tests.
+- Added the Phase 4.7 resilience error-model documentation and failure-boundary policy.
+
 ### Phase 4.6.4 — Analytics Output Back to Gateway
 - Extended the versioned analytics protocol with ANALYTICS_UPDATE and RISK_EVENT output envelopes.
 - Made the existing Gateway ↔ Python analytics TCP connection bidirectional.
@@ -91,7 +98,7 @@ This project is an educational trading-infrastructure simulation. It does not co
 | Phase 4.4 — Engine Protocol & Event Normalization | ✅ Complete |
 | Phase 4.5 — WebSocket Gateway | ✅ Complete |
 | Phase 4.6 — Python Analytics Integration | 🚧 In Progress |
-| Phase 4.7 — Error Handling, Resilience & Backpressure | ⏳ Planned |
+| Phase 4.7 — Error Handling, Resilience & Backpressure | 🚧 In Progress |
 | Phase 4.8 — Security Boundaries & Input Hardening | ⏳ Planned |
 | Phase 4.9 — Operational Logging & Metrics | ⏳ Planned |
 | Phase 4.10 — Testing & Integration Validation | ⏳ Planned |
