@@ -140,13 +140,15 @@ export function createGatewayServer(
     },
   });
 
-  app.get(
-    config.websocket.path,
-    { websocket: true },
-    (socket) => {
-      websocketHub.add(socket);
-    },
-  );
+  app.register(async (websocketApp) => {
+    websocketApp.get(
+      config.websocket.path,
+      { websocket: true },
+      (socket) => {
+        websocketHub.add(socket);
+      },
+    );
+  });
 
   registerErrorHandler(app);
 
