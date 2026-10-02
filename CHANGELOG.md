@@ -6,13 +6,15 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
-### Next — Phase 4.5 WebSocket Gateway
-- Provide the configured browser-facing WebSocket endpoint.
-- Add connection lifecycle and subscription handling.
-- Stream normalized gateway events to clients.
-- Add heartbeat/ping-pong and dead-client cleanup.
-- Add per-client queue/backpressure limits and slow-consumer protection.
-- Preserve graceful gateway shutdown behavior.
+### Phase 4.5 — WebSocket Gateway — In Progress
+- Added a configurable browser-facing WebSocket endpoint.
+- Added connection lifecycle management and explicit subscribe/unsubscribe handling.
+- Added typed TRADE event serialization using the Phase 4.4 normalized event model.
+- Added server heartbeat/ping-pong and dead-client cleanup.
+- Added bounded per-client outbound queues and slow-consumer protection.
+- Added graceful WebSocket shutdown handling.
+- Added unit coverage for connection setup, subscriptions, event delivery, invalid messages, and queue limits.
+- Remaining: connect the WebSocket hub to a live upstream engine event source and add end-to-end gateway WebSocket coverage.
 
 ## [2026-10-02]
 
