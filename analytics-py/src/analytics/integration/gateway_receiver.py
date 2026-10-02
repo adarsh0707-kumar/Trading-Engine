@@ -101,6 +101,31 @@ class GatewayAnalyticsReceiver:
         with self._client_lock:
             return self._client is not None
 
+    def send(self, payload: str) -> None:
+        """Send one framed analytics result to the connected Gateway."""
+        if not isinstance(payload, str):
+            raise TypeError("payload must be a string")
+
+        encoded = payload.encode("utf-8")
+        if len(encoded) > self.max_payload_size:
+            raise GatewayReceiverProtocolError(
+                "outbound payload exceeds maximum frame size"
+            )
+
+        frame = struct.pack(">I", len(encoded)) + encoded
+
+        with self._client_lock:
+            client = self._client
+            if client is None:
+                raise ConnectionError("Gateway is not connected")
+
+            try:
+                client.sendall(frame)
+            except OSError as exc:
+                raise ConnectionError(
+                    "failed to send analytics result to Gateway"
+                ) from exc
+
     def _run(self) -> None:
         try:
             self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
