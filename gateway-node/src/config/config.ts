@@ -24,6 +24,7 @@ export interface GatewayConfig {
     readonly path: string;
     readonly heartbeatIntervalMs: number;
     readonly maxPayloadBytes: number;
+    readonly maxQueueSize: number;
   };
 
   readonly http: {
@@ -71,6 +72,7 @@ const DEFAULTS = {
     path: "/ws",
     heartbeatIntervalMs: 30000,
     maxPayloadBytes: 1024 * 1024,
+    maxQueueSize: 256,
   },
 
   http: {
@@ -319,6 +321,11 @@ export function loadConfig(
         environment,
         "WEBSOCKET_MAX_PAYLOAD_BYTES",
         DEFAULTS.websocket.maxPayloadBytes,
+      ),
+      maxQueueSize: parsePositiveInteger(
+        environment,
+        "WEBSOCKET_MAX_QUEUE_SIZE",
+        DEFAULTS.websocket.maxQueueSize,
       ),
     }),
 

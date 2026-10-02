@@ -1,4 +1,5 @@
 import cors from "@fastify/cors";
+import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { registerHealthRoutes } from "./api/health.ts";
@@ -6,6 +7,7 @@ import { registerV1Routes } from "./api/v1/index.ts";
 import { loadConfig, type GatewayConfig } from "./config/config.ts";
 import { createGatewayMetrics } from "./metrics/metrics.ts";
 import { registerErrorHandler } from "./errors/error-handler.ts";
+import { createEngineEventClient, type EngineEventClient } from "./engine/engine-event-client.ts";
 import type { EngineProvider } from "./engine/engine.types.ts";
 import { createStatusProvider } from "./status/status.provider.ts";
 import type { StatusProvider } from "./status/status.types.ts";
@@ -13,12 +15,15 @@ import type { AnalyticsProvider } from "./analytics/analytics.types.ts";
 import type { MarketProvider } from "./market/market.types.ts";
 import type { OrderBookProvider } from "./orderbook/orderbook.types.ts";
 import type { TradesProvider } from "./trades/trades.types.ts";
+import { createWebSocketHub, type WebSocketHub } from "./websocket/websocket-hub.ts";
 
 export interface GatewayServer {
   readonly app: FastifyInstance;
   readonly config: GatewayConfig;
   readonly start: () => Promise<void>;
   readonly stop: () => Promise<void>;
+  readonly websocketHub: WebSocketHub;
+  readonly engineEventClient: EngineEventClient;
 }
 
 export interface GatewayServerOptions {
@@ -43,6 +48,50 @@ export function createGatewayServer(
     bodyLimit: config.http.bodyLimitBytes,
     connectionTimeout: config.http.requestTimeoutMs,
   });
+
+  const websocketHub = createWebSocketHub({
+    maxQueueSize: config.websocket.maxQueueSize,
+    heartbeatIntervalMs: config.websocket.heartbeatIntervalMs,
+  });
+
+  const engineEventClient = createEngineEventClient({
+    host: config.engine.host,
+    port: config.engine.port,
+    connectTimeoutMs: config.engine.connectTimeoutMs,
+    reconnectInitialDelayMs: config.engine.reconnectInitialDelayMs,
+    reconnectMaxDelayMs: config.engine.reconnectMaxDelayMs,
+    reconnectMaxAttempts: config.engine.reconnectMaxAttempts,
+    onEvent: (event) => {
+      websocketHub.publish(event);
+    },
+    onError: (error) => {
+      app.log.warn(
+        { error },
+        "engine_event_client_error",
+      );
+    },
+    onStateChange: (state) => {
+      app.log.info(
+        { state },
+        "engine_event_client_state_changed",
+      );
+    },
+  });
+
+  app.register(websocket, {
+    options: {
+      maxPayload: config.websocket.maxPayloadBytes,
+      clientTracking: true,
+    },
+  });
+
+  app.get(
+    config.websocket.path,
+    { websocket: true },
+    (socket) => {
+      websocketHub.add(socket);
+    },
+  );
 
   registerErrorHandler(app);
 
@@ -85,6 +134,8 @@ export function createGatewayServer(
       port: config.gateway.port,
     });
 
+    websocketHub.startHeartbeat();
+    engineEventClient.start();
     started = true;
   };
 
@@ -93,6 +144,9 @@ export function createGatewayServer(
       return;
     }
 
+    engineEventClient.stop();
+    websocketHub.stopHeartbeat();
+    websocketHub.closeAll();
     await app.close();
     started = false;
   };
@@ -102,6 +156,8 @@ export function createGatewayServer(
     config,
     start,
     stop,
+    websocketHub,
+    engineEventClient,
   };
 }
 

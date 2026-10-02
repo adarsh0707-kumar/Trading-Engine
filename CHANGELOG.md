@@ -6,13 +6,21 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
-### Next — Phase 4.5 WebSocket Gateway
-- Provide the configured browser-facing WebSocket endpoint.
-- Add connection lifecycle and subscription handling.
-- Stream normalized gateway events to clients.
-- Add heartbeat/ping-pong and dead-client cleanup.
-- Add per-client queue/backpressure limits and slow-consumer protection.
-- Preserve graceful gateway shutdown behavior.
+### Phase 4.5 — WebSocket Gateway — In Progress
+- Added a configurable browser-facing WebSocket endpoint.
+- Added connection lifecycle management and explicit subscribe/unsubscribe handling.
+- Added typed TRADE event serialization using the Phase 4.4 normalized event model.
+- Added server heartbeat/ping-pong and dead-client cleanup.
+- Added bounded per-client outbound queues and slow-consumer protection.
+- Added graceful WebSocket shutdown handling.
+- Added unit coverage for connection setup, subscriptions, event delivery, invalid messages, and queue limits.
+- Added the gateway TCP engine event client using the existing 4-byte length-prefixed protocol.
+- Connected normalized live TRADE events from the C++ engine to the WebSocket hub.
+- Added engine HEARTBEAT handling with protocol-compliant HEARTBEAT/OK responses.
+- Added bounded exponential reconnect, connection timeout handling, and engine connection lifecycle logging.
+- Updated C++ HELLO/HEARTBEAT messages with request IDs and timestamps required by the strict Phase 4.4 gateway protocol validator.
+- Added engine-event-client tests for TRADE normalization, heartbeat responses, and reconnect limits.
+- Remaining: add end-to-end gateway WebSocket coverage against a running/fake TCP engine source.
 
 ## [2026-10-02]
 
@@ -64,7 +72,7 @@ This project is an educational trading-infrastructure simulation. It does not co
 | Phase 4.2 — Gateway Configuration & Runtime Hardening | ✅ Complete |
 | Phase 4.3 — Gateway HTTP API | ✅ Complete |
 | Phase 4.4 — Engine Protocol & Event Normalization | ✅ Complete |
-| Phase 4.5 — WebSocket Gateway | ⏳ Next |
+| Phase 4.5 — WebSocket Gateway | 🚧 In Progress |
 | Phase 4.6 — Python Analytics Integration | ⏳ Planned |
 | Phase 4.7 — Error Handling, Resilience & Backpressure | ⏳ Planned |
 | Phase 4.8 — Security Boundaries & Input Hardening | ⏳ Planned |
