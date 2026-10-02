@@ -323,6 +323,18 @@ class AnalyticsService:
                     raise
 
                 self.service_metrics.record_published_analytics()
+                for risk_event in result.risk_events:
+                    try:
+                        self.publisher.publish_risk_event(risk_event)
+                    except Exception as exc:
+                        self.error_metrics.record_publish_error()
+                        logger.error(
+                            "risk_event_publish_failed event_id=%s symbol=%s error=%s",
+                            risk_event.event_id,
+                            risk_event.symbol,
+                            exc,
+                        )
+                        raise
                 self.trade_throughput_metrics.record_trade()
                 self.risk_metrics.record_snapshot(
                     position=result.risk_snapshot.position,
