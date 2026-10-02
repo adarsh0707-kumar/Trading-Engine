@@ -124,8 +124,9 @@ def test_receives_framed_gateway_message() -> None:
         _wait_until(lambda: receiver.is_running())
 
         with socket.create_connection(("127.0.0.1", port), timeout=2.0) as client:
-            client.sendall(_frame(VALID_MESSAGE[:80]))
-            client.sendall(_frame(VALID_MESSAGE[80:]))
+            framed = _frame(VALID_MESSAGE)
+            client.sendall(framed[:3])
+            client.sendall(framed[3:])
 
             # The receiver should expose complete frames, not TCP chunks.
             _wait_until(received.is_set)
@@ -222,6 +223,7 @@ def test_receiver_accepts_a_new_gateway_connection_after_disconnect() -> None:
 
         _wait_until(second_connection.is_set)
         _wait_until(lambda: len(messages) == 2)
+        _wait_until(lambda: disconnected_count == 2)
 
         assert connected_count == 2
         assert disconnected_count == 2
