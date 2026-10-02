@@ -98,9 +98,13 @@ function requireNullableFiniteNumber(
 }
 
 function parseJsonPayload(value: unknown, context: string): Record<string, unknown> {
+  if (isRecord(value)) {
+    return value;
+  }
+
   if (typeof value !== "string") {
     throw new AnalyticsMessageValidationError(
-      `Analytics ${context} payload must be a JSON string`,
+      `Analytics ${context} payload must be a JSON string or object`,
     );
   }
 
@@ -214,7 +218,7 @@ function parseAnalyticsUpdatePayload(
 ): AnalyticsUpdatePayload {
   return {
     symbol: requireNonEmptyString(value["symbol"], "symbol"),
-    price: requirePositiveNumber(value["price"], "price"),
+    price: requirePositiveOutputNumber(value["price"], "price"),
     vwap: requireNullableFiniteNumber(value["vwap"], "vwap"),
     sma: requireNullableFiniteNumber(value["sma"], "sma"),
     ema: requireNullableFiniteNumber(value["ema"], "ema"),
@@ -280,12 +284,12 @@ export function normalizeAnalyticsOutputMessage(
         symbol,
         limitType: requireNonEmptyString(envelope.payload["limit_type"], "limit_type"),
         status,
-        threshold: requireFiniteNumber(envelope.payload["threshold"], "threshold"),
-        warningThreshold: requireFiniteNumber(
+        threshold: requireOutputNumber(envelope.payload["threshold"], "threshold"),
+        warningThreshold: requireOutputNumber(
           envelope.payload["warning_threshold"],
           "warning_threshold",
         ),
-        currentValue: requireFiniteNumber(
+        currentValue: requireOutputNumber(
           envelope.payload["current_value"],
           "current_value",
         ),
