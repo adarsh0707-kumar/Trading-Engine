@@ -309,24 +309,26 @@ export function normalizeAnalyticsOutputMessage(
 export function serializeGatewayTradeMessage(
   message: GatewayTradeMessage,
 ): string {
-  const normalized = normalizeGatewayTradeMessage(message);
-
-  return JSON.stringify({
-    version: normalized.version,
-    type: normalized.type,
-    event_id: normalized.eventId,
-    request_id: normalized.requestId,
-    timestamp: normalized.timestamp,
+  const wireMessage = {
+    version: message.version,
+    type: message.type,
+    event_id: message.eventId,
+    request_id: message.requestId,
+    timestamp: message.timestamp,
     payload: JSON.stringify({
-      trade_id: normalized.payload.tradeId,
-      symbol: normalized.payload.symbol,
-      price: normalized.payload.price,
-      quantity: normalized.payload.quantity,
-      taker_order_id: normalized.payload.takerOrderId,
-      maker_order_id: normalized.payload.makerOrderId,
-      taker_side: normalized.payload.takerSide,
-      buy_order_id: normalized.payload.buyOrderId,
-      sell_order_id: normalized.payload.sellOrderId,
+      trade_id: message.payload.tradeId,
+      symbol: message.payload.symbol,
+      price: message.payload.price,
+      quantity: message.payload.quantity,
+      taker_order_id: message.payload.takerOrderId,
+      maker_order_id: message.payload.makerOrderId,
+      taker_side: message.payload.takerSide,
+      buy_order_id: message.payload.buyOrderId,
+      sell_order_id: message.payload.sellOrderId,
     }),
-  });
+  };
+
+  normalizeGatewayTradeMessage(wireMessage);
+
+  return JSON.stringify(wireMessage);
 }
