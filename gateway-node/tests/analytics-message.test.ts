@@ -12,17 +12,17 @@ const validMessage = {
   event_id: "trade-00000001-buy-1-sell-1",
   request_id: "trade-00000001-buy-1-sell-1",
   timestamp: "2026-10-02T12:00:01.000Z",
-  payload: {
+  payload: JSON.stringify({
     trade_id: "trade-00000001-buy-1-sell-1",
     symbol: "SIM",
     price: 100.25,
     quantity: 10,
     taker_order_id: "buy-1",
     maker_order_id: "sell-1",
-    taker_side: "BUY" as const,
+    taker_side: "BUY",
     buy_order_id: "buy-1",
     sell_order_id: "sell-1",
-  },
+  }),
 };
 
 describe("gateway analytics message contract", () => {
@@ -84,21 +84,21 @@ describe("gateway analytics message contract", () => {
       "invalid price",
       {
         ...validMessage,
-        payload: { ...validMessage.payload, price: 0 },
+        payload: JSON.stringify({ ...JSON.parse(validMessage.payload as string), price: 0 }),
       },
     ],
     [
       "invalid quantity",
       {
         ...validMessage,
-        payload: { ...validMessage.payload, quantity: 0 },
+        payload: JSON.stringify({ ...JSON.parse(validMessage.payload as string), quantity: 0 }),
       },
     ],
     [
       "invalid side",
       {
         ...validMessage,
-        payload: { ...validMessage.payload, taker_side: "HOLD" },
+        payload: JSON.stringify({ ...JSON.parse(validMessage.payload as string), taker_side: "HOLD" }),
       },
     ],
   ])("rejects %s", (_, message) => {
