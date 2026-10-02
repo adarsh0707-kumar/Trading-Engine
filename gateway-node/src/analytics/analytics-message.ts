@@ -60,6 +60,23 @@ function requireFiniteNumber(value: unknown, field: string): number {
   return value;
 }
 
+function requireOutputNumber(value: unknown, field: string): number {
+  if (typeof value === "number") {
+    return requireOutputNumber(value, field);
+  }
+
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  throw new AnalyticsMessageValidationError(
+    `Analytics output field '${field}' must be a finite number or numeric string`,
+  );
+}
+
 function requireNullableFiniteNumber(
   value: unknown,
   field: string,
@@ -191,12 +208,12 @@ function parseAnalyticsUpdatePayload(
     vwap: requireNullableFiniteNumber(value["vwap"], "vwap"),
     sma: requireNullableFiniteNumber(value["sma"], "sma"),
     ema: requireNullableFiniteNumber(value["ema"], "ema"),
-    position: requireFiniteNumber(value["position"], "position"),
-    realizedPnl: requireFiniteNumber(value["realized_pnl"], "realized_pnl"),
-    unrealizedPnl: requireFiniteNumber(value["unrealized_pnl"], "unrealized_pnl"),
-    equity: requireFiniteNumber(value["equity"], "equity"),
-    peakEquity: requireFiniteNumber(value["peak_equity"], "peak_equity"),
-    drawdown: requireFiniteNumber(value["drawdown"], "drawdown"),
+    position: requireOutputNumber(value["position"], "position"),
+    realizedPnl: requireOutputNumber(value["realized_pnl"], "realized_pnl"),
+    unrealizedPnl: requireOutputNumber(value["unrealized_pnl"], "unrealized_pnl"),
+    equity: requireOutputNumber(value["equity"], "equity"),
+    peakEquity: requireOutputNumber(value["peak_equity"], "peak_equity"),
+    drawdown: requireOutputNumber(value["drawdown"], "drawdown"),
   };
 }
 
