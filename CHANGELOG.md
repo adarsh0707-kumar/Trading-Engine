@@ -6,6 +6,14 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4.6.3 — Python Analytics Receiver
+- Added a Gateway-facing Python TCP receiver on the analytics service.
+- Reused the existing 4-byte big-endian length-prefixed transport and 1 MiB payload limit.
+- Added fragmented-frame, multiple-frame, UTF-8, disconnect, and reconnect handling.
+- Routed complete Gateway payloads into the existing analytics service backpressure and processing pipeline.
+- Reused the Phase 4.6.1 GatewayTradeMessage contract and existing MessageParser/Trade domain model without duplicating business parsing.
+- Added receiver transport and configuration test coverage.
+
 ### Phase 4.6.2 — Gateway Analytics Client
 - Added a dedicated Gateway TCP analytics client using the existing 4-byte length-prefixed transport.
 - Forwarded normalized engine TRADE events using the versioned Phase 4.6.1 analytics contract.
