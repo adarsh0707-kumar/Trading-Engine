@@ -6,6 +6,17 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4.6.4 — Analytics Output Back to Gateway
+- Extended the versioned analytics protocol with ANALYTICS_UPDATE and RISK_EVENT output envelopes.
+- Made the existing Gateway ↔ Python analytics TCP connection bidirectional.
+- Added fragmented and multiple-frame output decoding on the Gateway.
+- Added Python-side framing and outbound Gateway publishing through the active receiver connection.
+- Routed AnalyticsResult and generated RiskEvent objects back to the Gateway without duplicating analytics calculations.
+- Added a Gateway-owned latest analytics snapshot for GET /api/v1/analytics.
+- Added live analytics and risk-event WebSocket events.
+- Connected analytics and engine connection state to the Gateway status endpoint.
+- Added contract, transport, provider, and output serialization tests.
+
 ### Phase 4.6.3 — Python Analytics Receiver
 - Added a Gateway-facing Python TCP receiver on the analytics service.
 - Reused the existing 4-byte big-endian length-prefixed transport and 1 MiB payload limit.
