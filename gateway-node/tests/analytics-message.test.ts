@@ -27,7 +27,24 @@ const validMessage = {
 
 describe("gateway analytics message contract", () => {
   test("normalizes a valid TRADE message", () => {
-    expect(normalizeGatewayTradeMessage(validMessage)).toEqual(validMessage);
+    expect(normalizeGatewayTradeMessage(validMessage)).toEqual({
+      version: 1,
+      type: "TRADE",
+      eventId: "trade-00000001-buy-1-sell-1",
+      requestId: "trade-00000001-buy-1-sell-1",
+      timestamp: "2026-10-02T12:00:01.000Z",
+      payload: {
+        tradeId: "trade-00000001-buy-1-sell-1",
+        symbol: "SIM",
+        price: 100.25,
+        quantity: 10,
+        takerOrderId: "buy-1",
+        makerOrderId: "sell-1",
+        takerSide: "BUY",
+        buyOrderId: "buy-1",
+        sellOrderId: "sell-1",
+      },
+    });
   });
 
   test("serializes the stable Python-compatible wire envelope", () => {
