@@ -53,6 +53,27 @@ function waitForOpen(socket: WebSocket): Promise<void> {
   });
 }
 
+async function getFreePort(): Promise<number> {
+  const server = createServer();
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  const address = server.address();
+
+  if (address === null || typeof address === "string") {
+    server.close();
+    throw new Error("Port probe did not expose an address");
+  }
+
+  const port = address.port;
+
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+
+  return port;
+}
+
 function waitForMessage(socket: WebSocket): Promise<unknown> {
   return new Promise((resolve, reject) => {
     socket.once("message", (data) => {
@@ -128,9 +149,11 @@ describe("gateway websocket end-to-end", () => {
       throw new Error("Engine test server did not expose an address");
     }
 
+    const gatewayPort = await getFreePort();
+
     gateway = createGatewayServer({
       GATEWAY_HOST: "127.0.0.1",
-      GATEWAY_PORT: "8081",
+      GATEWAY_PORT: String(gatewayPort),
       ENGINE_HOST: "127.0.0.1",
       ENGINE_PORT: String(engineAddress.port),
       ENGINE_CONNECT_TIMEOUT_MS: "1000",
@@ -157,7 +180,7 @@ describe("gateway websocket end-to-end", () => {
 
     expect(ready).toEqual({
       type: "CONNECTION_READY",
-      events: ["TRADE"],
+      subscriptions: [],
     });
 
     client.send(
@@ -170,8 +193,8 @@ describe("gateway websocket end-to-end", () => {
     const subscription = await waitForMessage(client);
 
     expect(subscription).toEqual({
-      type: "SUBSCRIBED",
-      events: ["TRADE"],
+      type: "SUBSCRIPTION_UPDATED",
+      subscriptions: ["TRADE"],
     });
 
     const event = await waitForMessage(client);
