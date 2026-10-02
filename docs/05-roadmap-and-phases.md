@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest Completed Milestone:** Phase 4.2 — Gateway Configuration & Runtime Hardening
+**Latest Completed Milestone:** Phase 4.4 — Engine Protocol & Event Normalization
 
-**Next Milestone:** Phase 4.3 — Gateway HTTP API
+**Current Milestone:** Phase 4.5 — WebSocket Gateway
 
 ### Current validated path
 
@@ -42,6 +42,8 @@ PostgreSQL Persistence
         ↓
 AnalyticsPublisher
 ```
+
+The Node.js gateway now provides the browser-facing HTTP boundary and a typed normalization layer for upstream engine messages. Phase 4.5 extends that gateway with real-time WebSocket delivery.
 
 ---
 
@@ -302,21 +304,21 @@ Validation:
 
 ## Phase 4.3 — Gateway HTTP API
 
-**Status:** ⏳ Next
+**Status:** ✅ Complete
 
 Expose a stable, versioned application API without duplicating engine or analytics domain logic.
 
-Scope:
+Implemented:
 
-- Establish the `/api/v1/...` route boundary.
-- Add request and response schemas.
-- Validate path, query, and body inputs.
-- Define consistent HTTP status codes.
-- Define deterministic REST error responses.
-- Add upstream timeout/error mapping.
-- Keep `/health` and the configured Prometheus endpoint operational.
-- Add route-level unit/integration tests.
-- Update API documentation with implemented contracts.
+- Established the `/api/v1/...` route boundary.
+- Added request and response schemas.
+- Validated path, query, and body inputs.
+- Defined consistent HTTP status codes.
+- Defined deterministic REST error responses.
+- Added upstream timeout/error mapping.
+- Preserved `/health` and the configured Prometheus endpoint.
+- Added route-level unit/integration tests.
+- Updated API documentation with implemented contracts.
 
 Initial application surface:
 
@@ -343,22 +345,30 @@ Exit criteria:
 
 ## Phase 4.4 — Engine Protocol & Event Normalization
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Create a stable gateway-facing event model around upstream engine messages.
 
-Scope:
+Implemented:
 
 - Typed TypeScript representations for supported engine messages.
-- JSON/schema validation.
-- Event normalization.
-- Preservation of event IDs, timestamps, symbols, quantities, prices, and order/trade identity.
-- Safe rejection of malformed or unsupported events.
-- Consistent serialization for REST and WebSocket consumers.
+- JSON validation and deterministic normalization.
+- 4-byte big-endian length-prefixed engine-frame decoding.
+- Fragmented and multiple-frame handling.
+- Fatal UTF-8 validation.
+- Existing 1 MiB maximum payload enforcement.
+- Explicit engine message types: HELLO, HEARTBEAT, ORDER, TRADE, MARKET_DATA, BOOK_SNAPSHOT, ERROR, and SHUTDOWN.
+- Typed TRADE payload validation for symbol, price, quantity, taker/maker order identity, taker side, and buy/sell order identity.
+- Normalized typed TRADE events preserving event identity and trading fields.
+- Explicit rejection of malformed messages and unsupported event types.
+- Consistent normalized event representation for downstream gateway consumers.
+- Unit coverage for frame decoding, message parsing/normalization, event normalization, and TRADE validation.
+
+Phase 4.4 establishes the event contract used by the WebSocket layer in Phase 4.5.
 
 ## Phase 4.5 — WebSocket Gateway
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress
 
 Provide real-time browser streaming without exposing internal services directly.
 
@@ -367,12 +377,23 @@ Scope:
 - Configured WebSocket endpoint.
 - Connection lifecycle.
 - Subscriptions.
-- Typed event serialization.
+- Typed event serialization using the Phase 4.4 normalized event model.
 - Heartbeat/ping-pong.
 - Dead-client cleanup.
 - Per-client queue/backpressure limits.
 - Slow-consumer protection.
 - Graceful shutdown.
+- WebSocket unit and integration tests.
+
+Exit criteria:
+
+- Clients can establish and close WebSocket connections deterministically.
+- Supported normalized engine events can be serialized and delivered to subscribed clients.
+- Heartbeat/ping-pong behavior is bounded and tested.
+- Dead or slow clients do not block other clients.
+- Queue/backpressure limits are enforced deterministically.
+- Gateway shutdown closes active WebSocket clients cleanly.
+- WebSocket behavior is covered by automated tests.
 
 ## Phase 4.6 — Python Analytics Integration
 
@@ -584,7 +605,17 @@ Planned:
 | 3.8 | PostgreSQL Persistence & Observability | ✅ Complete |
 | 3.9 | Metrics & Observability | ✅ Complete |
 | 3.10 | Analytics Service Hardening | ✅ Complete |
-| 4 | Node.js Gateway (TypeScript + Bun) | 🚧 In Progress |
+| 4.1 | Gateway Foundation & Architecture | ✅ Complete |
+| 4.2 | Gateway Configuration & Runtime Hardening | ✅ Complete |
+| 4.3 | Gateway HTTP API | ✅ Complete |
+| 4.4 | Engine Protocol & Event Normalization | ✅ Complete |
+| 4.5 | WebSocket Gateway | 🚧 In Progress |
+| 4.6 | Python Analytics Integration | ⏳ Planned |
+| 4.7 | Error Handling, Resilience & Backpressure | ⏳ Planned |
+| 4.8 | Security Boundaries & Input Hardening | ⏳ Planned |
+| 4.9 | Operational Logging & Metrics | ⏳ Planned |
+| 4.10 | Testing & Integration Validation | ⏳ Planned |
+| 4.11 | Phase Integration & Exit Criteria | ⏳ Planned |
 | 5 | React Dashboard | ⏳ Planned |
 | 6 | Historical Analytics | ⏳ Planned |
 | 7 | Authentication & Security | ⏳ Planned |
@@ -645,7 +676,7 @@ Planned:
                                       │
                          ┌────────────▼────────────┐
                          │     Node.js Gateway     │
-                         │        Phase 4          │
+                         │   Phases 4.1–4.5       │
                          └────────────┬────────────┘
                                       │
                                Trading / Events
