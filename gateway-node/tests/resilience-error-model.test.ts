@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   ConnectionFailure,
   DependencyUnavailable,
-  FailureCategory,
+  type FailureCategory,
   GatewayFailure,
   ProcessingFailure,
   ProtocolFailure,
