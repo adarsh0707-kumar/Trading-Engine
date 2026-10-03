@@ -28,6 +28,12 @@ describe("loadConfig", () => {
     expect(config.metrics.path).toBe("/metrics");
 
     expect(config.cors.origins).toEqual(["http://localhost:5173"]);
+
+    expect(config.rateLimit.enabled).toBe(true);
+    expect(config.rateLimit.maxRequests).toBe(120);
+    expect(config.rateLimit.windowMs).toBe(60_000);
+    expect(config.rateLimit.maxClients).toBe(10_000);
+    expect(config.rateLimit.excludedPaths).toEqual(["/api/health", "/metrics"]);
   });
 
   test("loads gateway, engine, and analytics values from environment", () => {
@@ -98,6 +104,10 @@ describe("loadConfig", () => {
       METRICS_ENABLED: "false",
       METRICS_PATH: "/internal/metrics",
       CORS_ORIGIN: "https://example.com",
+      RATE_LIMIT_ENABLED: "false",
+      RATE_LIMIT_MAX_REQUESTS: "25",
+      RATE_LIMIT_WINDOW_MS: "5000",
+      RATE_LIMIT_MAX_CLIENTS: "500",
     });
 
     expect(config.websocket.path).toBe("/stream");
@@ -113,6 +123,10 @@ describe("loadConfig", () => {
     expect(config.metrics.path).toBe("/internal/metrics");
 
     expect(config.cors.origins).toEqual(["https://example.com"]);
+    expect(config.rateLimit.enabled).toBe(false);
+    expect(config.rateLimit.maxRequests).toBe(25);
+    expect(config.rateLimit.windowMs).toBe(5000);
+    expect(config.rateLimit.maxClients).toBe(500);
   });
 
   test("rejects invalid ports", () => {
@@ -200,6 +214,24 @@ describe("loadConfig", () => {
 
     expect(config.engine.reconnectInitialDelayMs).toBe(10000);
     expect(config.engine.reconnectMaxDelayMs).toBe(10000);
+  });
+
+  test("rejects rate limit values outside their configured bounds", () => {
+    expect(() => loadConfig({ RATE_LIMIT_MAX_REQUESTS: "0" })).toThrow(
+      "RATE_LIMIT_MAX_REQUESTS must be a positive integer",
+    );
+
+    expect(() => loadConfig({ RATE_LIMIT_MAX_REQUESTS: "10001" })).toThrow(
+      "RATE_LIMIT_MAX_REQUESTS must not exceed 10000",
+    );
+
+    expect(() => loadConfig({ RATE_LIMIT_WINDOW_MS: "3600001" })).toThrow(
+      "RATE_LIMIT_WINDOW_MS must not exceed 3600000",
+    );
+
+    expect(() => loadConfig({ RATE_LIMIT_MAX_CLIENTS: "100001" })).toThrow(
+      "RATE_LIMIT_MAX_CLIENTS must not exceed 100000",
+    );
   });
 
   test("rejects invalid boolean settings", () => {
