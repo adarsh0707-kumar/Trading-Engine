@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest Completed Milestone:** Phase 4.8.7 — Security Regression & Integration Validation
+**Latest completed milestone: **Phase 4.9.3 — Request & Event Correlation**
 
-**Current Milestone:** Phase 4.9 — Operational Logging & Metrics
+**Current milestone: **Phase 4.9 — Operational Logging & Metrics**
 
 ### Current validated path
 
@@ -631,51 +631,17 @@ Harden external inputs, CORS, request/message sizes, error exposure, rate-limit 
 
 Extend structured operational logging and metrics across gateway HTTP, engine, analytics, and WebSocket boundaries. The basic Prometheus exposition endpoint is already implemented; this milestone focuses on consistent operational instrumentation rather than changing business behavior.
 
-### Phase 4.9.1 — Structured Operational Logging
+### Phase 4.9 — Operational Logging & Metrics
 
-**Status:** ⏳ Planned
+**Status:** In Progress
 
-- Standardize structured Gateway lifecycle, request, dependency, and failure events.
-- Define consistent operational fields for service, component, event, outcome, request identity, and event identity.
-- Preserve sanitized public errors while keeping detailed diagnostics in server-side logs.
-- Cover engine and analytics connection lifecycle transitions and WebSocket operational events.
+- **4.9.1 Structured Operational Logging** — Complete
+- **4.9.2 Metrics Completion** — Complete
+- **4.9.3 Request & Event Correlation** — Complete
+- **4.9.4 Health & Readiness Observability** — Next
+- **4.9.5 Observability Regression Validation** — Planned
+- **4.9.6 Operational Observability Integration** — Planned
 
-### Phase 4.9.2 — Metrics Completion
-
-**Status:** ⏳ Planned
-
-- Review existing Gateway Prometheus metrics for naming and label consistency.
-- Add missing HTTP, WebSocket, engine, and analytics operational counters/gauges.
-- Keep security and health endpoint boundaries explicit.
-
-### Phase 4.9.3 — Request & Event Correlation
-
-**Status:** ⏳ Planned
-
-- Propagate request/event identity across Gateway processing boundaries where available.
-- Make engine, analytics, HTTP, and WebSocket failures operationally traceable without exposing internal details to clients.
-
-### Phase 4.9.4 — Health & Readiness Observability
-
-**Status:** ⏳ Planned
-
-- Review health, readiness, and dependency-state semantics.
-- Ensure monitoring endpoints remain compatible with existing security and rate-limit boundaries.
-
-### Phase 4.9.5 — Observability Regression Validation
-
-**Status:** ⏳ Planned
-
-- Add focused logging and metrics regression coverage.
-- Run Gateway build, focused tests, and the complete Gateway suite.
-- Update operational documentation and changelog entries.
-
-### Phase 4.9.6 — Operational Observability Integration
-
-**Status:** ⏳ Planned
-
-- Complete the Gateway observability integration across engine, analytics, HTTP, and WebSocket paths.
-- Confirm the resulting instrumentation is bounded, deterministic, and compatible with the existing contracts.
 
 ## Phase 4.10 — Testing & Integration Validation
 
