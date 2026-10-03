@@ -7,6 +7,12 @@ This project is an educational trading-infrastructure simulation. It does not co
 ## [Unreleased]
 
 ### Phase 4.8 — Security Boundaries & Input Hardening
+### Phase 4.8.7 — Security Regression & Integration Validation
+- Added a dedicated Gateway security regression command covering Phase 4.8.1–4.8.6 boundaries.
+- Added CI coverage for the Gateway Bun build, security regression suite, and full Gateway test suite.
+- Kept the final Phase 4.8 gate validation-focused: no new authentication provider, credential verifier, or security feature is introduced.
+- Updated the security milestone status to complete after the regression gate passes.
+
 ### Phase 4.8.6 — AuthN/AuthZ Boundary Preparation
 - Added explicit authentication state and principal types without introducing a credential verifier.
 - Added reusable authentication and role/scope authorization guards for future protected routes.
