@@ -3,6 +3,31 @@ import { describe, expect, test } from "bun:test";
 import { loadConfig } from "../src/config/config.ts";
 
 describe("gateway analytics configuration", () => {
+  test("loads the default CORS origin allowlist", () => {
+    const config = loadConfig({});
+
+    expect(config.cors.origins).toEqual(["http://localhost:5173"]);
+  });
+
+  test("loads a comma-separated CORS origin allowlist", () => {
+    const config = loadConfig({
+      CORS_ORIGINS: "https://app.example.com, https://admin.example.com",
+    });
+
+    expect(config.cors.origins).toEqual([
+      "https://app.example.com",
+      "https://admin.example.com",
+    ]);
+  });
+
+  test("rejects wildcard CORS configuration", () => {
+    expect(() =>
+      loadConfig({
+        CORS_ORIGINS: "*",
+      }),
+    ).toThrow("Invalid CORS origin");
+  });
+
   test("loads the engine heartbeat liveness timeout default", () => {
     const config = loadConfig({});
 
