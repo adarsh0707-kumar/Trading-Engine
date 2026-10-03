@@ -1,10 +1,11 @@
+import Fastify from "fastify";
 import { describe, expect, test } from "bun:test";
 
 import { registerHealthRoutes } from "../src/api/health.ts";
 
 describe("health routes", () => {
   test("liveness reports gateway process health", async () => {
-    const app = await import("fastify").then(({ default: Fastify }) => Fastify());
+    const app = Fastify();
 
     await registerHealthRoutes(app, {
       getStatus: () => ({
@@ -29,7 +30,7 @@ describe("health routes", () => {
   });
 
   test("readiness is healthy only when required dependencies are connected", async () => {
-    const app = await import("fastify").then(({ default: Fastify }) => Fastify());
+    const app = Fastify();
 
     await registerHealthRoutes(app, {
       getStatus: () => ({
@@ -59,7 +60,7 @@ describe("health routes", () => {
   });
 
   test("readiness returns 503 when a required dependency is unavailable", async () => {
-    const app = await import("fastify").then(({ default: Fastify }) => Fastify());
+    const app = Fastify();
 
     await registerHealthRoutes(app, {
       getStatus: () => ({
