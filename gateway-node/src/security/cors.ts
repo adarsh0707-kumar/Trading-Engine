@@ -1,4 +1,4 @@
-import { isRecord, validateBoundedString } from "./input-validation.ts";
+import { validateBoundedString } from "./input-validation.ts";
 
 const MAX_CORS_ORIGINS = 32;
 const MAX_CORS_ORIGIN_LENGTH = 2048;
