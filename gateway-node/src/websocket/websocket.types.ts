@@ -39,6 +39,7 @@ export interface WebSocketConnection {
 export interface GatewayAnalyticsUpdateWebSocketEvent {
   readonly type: "ANALYTICS_UPDATE";
   readonly eventId: string;
+  readonly requestId: string;
   readonly timestamp: string;
   readonly payload: AnalyticsUpdatePayload;
 }
@@ -46,6 +47,7 @@ export interface GatewayAnalyticsUpdateWebSocketEvent {
 export interface GatewayRiskEventWebSocketEvent {
   readonly type: "RISK_EVENT";
   readonly eventId: string;
+  readonly requestId: string;
   readonly timestamp: string;
   readonly payload: AnalyticsRiskEventPayload;
 }

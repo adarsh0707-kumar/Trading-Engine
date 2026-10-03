@@ -42,6 +42,26 @@ const trade = {
   },
 };
 
+const analyticsUpdate = {
+  type: "ANALYTICS_UPDATE" as const,
+  eventId: "analytics-event-1",
+  requestId: "trade-request-1",
+  timestamp: "2026-10-02T12:00:01.000Z",
+  payload: {
+    symbol: "BTC-USD",
+    price: 100,
+    vwap: null,
+    sma: null,
+    ema: null,
+    position: 2,
+    realizedPnl: 0,
+    unrealizedPnl: 0.5,
+    equity: 1000.5,
+    peakEquity: 1000.5,
+    drawdown: 0,
+  },
+};
+
 describe("websocket hub", () => {
   test("registers clients and sends the connection-ready message", () => {
     const socket = createSocket();
@@ -56,7 +76,7 @@ describe("websocket hub", () => {
     });
   });
 
-  test("updates subscriptions and publishes matching events", () => {
+  test("updates subscriptions and publishes matching events with correlation fields", () => {
     const socket = createSocket();
     const hub = createWebSocketHub({ maxQueueSize: 8, heartbeatIntervalMs: 30_000 });
 
@@ -80,8 +100,33 @@ describe("websocket hub", () => {
     expect(messages[2]).toEqual({
       type: "TRADE",
       eventId: "event-1",
+      requestId: "request-1",
       timestamp: "2026-10-02T12:00:00.000Z",
       payload: trade.payload,
+    });
+  });
+
+  test("preserves analytics event and request IDs for WebSocket consumers", () => {
+    const socket = createSocket();
+    const hub = createWebSocketHub({ maxQueueSize: 8, heartbeatIntervalMs: 30_000 });
+
+    hub.add(socket);
+    socket.emit(
+      "message",
+      JSON.stringify({
+        action: "subscribe",
+        events: ["ANALYTICS_UPDATE"],
+      }),
+    );
+
+    hub.publish(analyticsUpdate);
+
+    expect(JSON.parse(socket.sent[2])).toEqual({
+      type: "ANALYTICS_UPDATE",
+      eventId: "analytics-event-1",
+      requestId: "trade-request-1",
+      timestamp: "2026-10-02T12:00:01.000Z",
+      payload: analyticsUpdate.payload,
     });
   });
 

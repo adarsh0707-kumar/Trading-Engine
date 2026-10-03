@@ -133,7 +133,7 @@ describe("gateway websocket end-to-end", () => {
 
       setTimeout(() => {
         socket.write(tradeMessage());
-      }, 25);
+      }, 100);
     });
 
     await new Promise<void>((resolve) => {
@@ -202,6 +202,7 @@ describe("gateway websocket end-to-end", () => {
     expect(event).toEqual({
       type: "TRADE",
       eventId: "trade-00000001-buy-1-sell-1",
+      requestId: "trade-00000001-buy-1-sell-1",
       timestamp: "2026-10-02T12:00:01.000Z",
       payload: {
         symbol: "SIM",

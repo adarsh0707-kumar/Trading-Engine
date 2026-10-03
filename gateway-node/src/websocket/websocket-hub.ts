@@ -102,6 +102,7 @@ function serializeEvent(event: GatewayWebSocketEvent): string {
   return JSON.stringify({
     type: event.type,
     eventId: event.eventId,
+    requestId: event.requestId,
     timestamp: event.timestamp,
     payload: event.payload,
   });
