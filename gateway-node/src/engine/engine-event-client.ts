@@ -226,7 +226,7 @@ export function createEngineEventClient(
       options.onStateChange?.("connected");
     });
 
-    nextSocket.on("data", (chunk) => handleData(nextSocket, nextProtocol, chunk));
+    nextSocket.on("data", (chunk) => handleData(nextSocket, nextProtocol, Buffer.from(chunk)));
 
     nextSocket.once("error", (error) => {
       if (socket === nextSocket) emitConnectionError(error);
