@@ -17,7 +17,7 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest Completed Milestone:** Phase 4.7.5 — Analytics Backpressure & Graceful Degradation
+**Latest Completed Milestone:** Phase 4.8.5 — Rate-Limit Boundary
 
 **Current Milestone:** Phase 4.8 — Security Boundaries & Input Hardening
 
@@ -547,6 +547,42 @@ Phase 4.7 establishes bounded failure handling, recovery, liveness monitoring, a
 **Phase 4.7 exit status:** ✅ Complete
 
 ## Phase 4.8 — Security Boundaries & Input Hardening
+
+## Phase 4.8.5 — Rate-Limit Boundary
+
+**Status:** 🚧 Complete on milestone branch; pending merge
+
+Implemented:
+
+- Bounded in-process HTTP fixed-window rate limiting.
+- Per-client request buckets keyed by the gateway-observed remote address.
+- Configurable request count, window duration, maximum retained client buckets, and enable/disable control.
+- Stable HTTP 429 response using the public RATE_LIMITED error code.
+- Retry-After response header for rejected requests.
+- Explicit exclusions for /api/health and /metrics.
+- Prometheus rejection metric: gateway_rate_limit_rejections_total.
+- Structured rate-limit rejection logging.
+- Configuration and runtime regression coverage.
+
+Default boundary:
+
+| Setting | Default |
+| --- | ---: |
+| Enabled | true |
+| Maximum requests | 120 |
+| Window | 60 seconds |
+| Maximum retained clients | 10,000 |
+
+Environment variables:
+
+- RATE_LIMIT_ENABLED
+- RATE_LIMIT_MAX_REQUESTS
+- RATE_LIMIT_WINDOW_MS
+- RATE_LIMIT_MAX_CLIENTS
+
+The limiter is intentionally in-process for the current single-gateway simulation. A shared store can be introduced later if horizontally scaled gateway instances require a distributed rate-limit boundary.
+
+
 
 **Status:** 🚧 In Progress
 

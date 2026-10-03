@@ -53,6 +53,14 @@ export interface GatewayConfig {
   readonly cors: {
     readonly origins: readonly string[];
   };
+
+  readonly rateLimit: {
+    readonly enabled: boolean;
+    readonly maxRequests: number;
+    readonly windowMs: number;
+    readonly maxClients: number;
+    readonly excludedPaths: readonly string[];
+  };
 }
 
 const DEFAULTS = {
@@ -106,6 +114,14 @@ const DEFAULTS = {
 
   cors: {
     origins: ["http://localhost:5173"] as const,
+  },
+
+  rateLimit: {
+    enabled: true,
+    maxRequests: 120,
+    windowMs: 60_000,
+    maxClients: 10_000,
+    excludedPaths: ["/api/health", "/metrics"] as const,
   },
 } as const;
 
@@ -429,6 +445,33 @@ export function loadConfig(
 
     cors: Object.freeze({
       origins: parseCorsOrigins(environment),
+    }),
+
+    rateLimit: Object.freeze({
+      enabled: parseBoolean(
+        environment,
+        "RATE_LIMIT_ENABLED",
+        DEFAULTS.rateLimit.enabled,
+      ),
+      maxRequests: parseBoundedPositiveInteger(
+        environment,
+        "RATE_LIMIT_MAX_REQUESTS",
+        DEFAULTS.rateLimit.maxRequests,
+        10_000,
+      ),
+      windowMs: parseBoundedPositiveInteger(
+        environment,
+        "RATE_LIMIT_WINDOW_MS",
+        DEFAULTS.rateLimit.windowMs,
+        3_600_000,
+      ),
+      maxClients: parseBoundedPositiveInteger(
+        environment,
+        "RATE_LIMIT_MAX_CLIENTS",
+        DEFAULTS.rateLimit.maxClients,
+        100_000,
+      ),
+      excludedPaths: DEFAULTS.rateLimit.excludedPaths,
     }),
   });
 

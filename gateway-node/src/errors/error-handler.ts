@@ -25,6 +25,8 @@ function getPublicErrorMessage(
       return "Request conflicts with the current state";
     case "DEPENDENCY_UNAVAILABLE":
       return "Required dependency is unavailable";
+    case "RATE_LIMITED":
+      return "Too many requests";
     case "INTERNAL_ERROR":
       return "Internal server error";
   }

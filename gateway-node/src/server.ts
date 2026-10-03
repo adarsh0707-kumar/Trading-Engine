@@ -24,7 +24,8 @@ import type { MarketProvider } from "./market/market.types.ts";
 import type { OrderBookProvider } from "./orderbook/orderbook.types.ts";
 import type { TradesProvider } from "./trades/trades.types.ts";
 import { createWebSocketHub, type WebSocketHub } from "./websocket/websocket-hub.ts";
-import { createCorsOriginValidator } from "./security/cors.ts";
+import { ApiError } from "./errors/api-error.ts";
+import { assertRateLimit, createRateLimiter } from "./security/rate-limit.ts";
 
 export interface GatewayServer {
   readonly app: FastifyInstance;
@@ -66,6 +67,38 @@ export function createGatewayServer(
   });
 
   const metrics = createGatewayMetrics();
+
+  const rateLimiter = createRateLimiter({
+    maxRequests: config.rateLimit.maxRequests,
+    windowMs: config.rateLimit.windowMs,
+    maxClients: config.rateLimit.maxClients,
+  });
+
+  if (config.rateLimit.enabled) {
+    app.addHook("onRequest", async (request) => {
+      const path = request.url.split("?")[0];
+
+      if (
+        config.rateLimit.excludedPaths.includes(path) ||
+        path === config.websocket.path
+      ) {
+        return;
+      }
+
+      try {
+        assertRateLimit(rateLimiter, request.ip);
+      } catch (error) {
+        if (error instanceof ApiError && error.code === "RATE_LIMITED") {
+          metrics.recordRateLimitRejection();
+          app.log.warn(
+            { ip: request.ip, method: request.method, url: request.url },
+            "gateway_rate_limit_rejected",
+          );
+        }
+        throw error;
+      }
+    });
+  }
 
   const analyticsProvider =
     options.analyticsProvider ?? createAnalyticsProvider();

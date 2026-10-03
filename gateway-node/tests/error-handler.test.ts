@@ -8,6 +8,7 @@ import {
   internalError,
   invalidArgument,
   notFound,
+  rateLimited,
   unauthorized,
 } from "../src/errors/api-error.ts";
 import { registerErrorHandler } from "../src/errors/error-handler.ts";
@@ -34,6 +35,7 @@ describe("public API error contract", () => {
       [404, notFound("internal table=secret"), "NOT_FOUND", "Resource not found"],
       [409, conflict("state details=secret"), "CONFLICT", "Request conflicts with the current state"],
       [503, dependencyUnavailable("postgres host=secret"), "DEPENDENCY_UNAVAILABLE", "Required dependency is unavailable"],
+      [429, rateLimited(7), "RATE_LIMITED", "Too many requests"],
       [500, internalError("stack trace=secret"), "INTERNAL_ERROR", "Internal server error"],
     ] as const;
 
@@ -58,6 +60,10 @@ describe("public API error contract", () => {
         },
       });
       expect(response.body).not.toContain("secret");
+
+      if (code === "RATE_LIMITED") {
+        expect(response.headers["retry-after"]).toBe("7");
+      }
     }
   });
 

@@ -91,8 +91,9 @@ The project is intended to demonstrate:
 - Phase 4.6 — Python Analytics Integration: ✅ Complete
 - Phase 4.7 — Error Handling, Resilience & Backpressure: ✅ Complete
 - Phase 4.8 — Security Boundaries & Input Hardening: 🚧 Current
+- Phase 4.8.5 — Rate-Limit Boundary: 🚧 Complete on milestone branch
 
-Phase 4.7.5 is the latest completed Gateway milestone. Phase 4.8 is now the active milestone, focused on external-input validation, CORS hardening, request/message size enforcement, safe error exposure, rate-limit extension points, and future authentication/authorization boundaries.
+Phase 4.8.5 is the latest completed Gateway milestone on its milestone branch. Phase 4.8 remains the active security milestone, with rate limiting now implemented and authentication/authorization boundaries still remaining.
 
 ## Documentation Rule
 
