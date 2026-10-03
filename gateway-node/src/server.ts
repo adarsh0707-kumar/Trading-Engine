@@ -199,6 +199,8 @@ export function createGatewayServer(
     tradesProvider: options.tradesProvider,
     analyticsProvider,
     engineProvider: options.engineProvider,
+    engineEventClient,
+  });
   });
 
   if (config.metrics.enabled) {
