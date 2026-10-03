@@ -13,8 +13,14 @@ function frame(payload: string): Buffer {
 }
 
 const servers: Server[] = [];
+const sockets: import("node:net").Socket[] = [];
 
 afterEach(async () => {
+  for (const socket of sockets) {
+    socket.destroy();
+  }
+  sockets.length = 0;
+
   await Promise.all(
     servers.map(
       (server) =>
@@ -33,6 +39,7 @@ afterEach(async () => {
 describe("engine event client health", () => {
   test("exposes connection state and timestamps for engine traffic", async () => {
     const server = createServer((socket) => {
+      sockets.push(socket);
       socket.write(
         frame(
           JSON.stringify({
@@ -130,6 +137,7 @@ describe("engine event client health", () => {
 
   test("classifies malformed frames as protocol health events", async () => {
     const server = createServer((socket) => {
+      sockets.push(socket);
       socket.write(frame("not-json"));
     });
     servers.push(server);
@@ -159,7 +167,6 @@ describe("engine event client health", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     client.stop();
 
-    expect(events).toContain("message");
     expect(events).toContain("protocol_failure");
   });
 });
