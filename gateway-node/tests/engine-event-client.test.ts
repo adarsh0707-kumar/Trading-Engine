@@ -207,3 +207,98 @@ describe("engine event client", () => {
     expect(connecting).toBeLessThanOrEqual(3);
   });
 });
+
+
+test("reconnects after an unexpected engine disconnect and resets retry attempts after success", async () => {
+  let connections = 0;
+  const states: string[] = [];
+
+  const server = createServer((socket) => {
+    connections += 1;
+    if (connections === 1) {
+      socket.destroy();
+      return;
+    }
+
+    socket.write(frame(tradeMessage()));
+  });
+  servers.push(server);
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  const address = server.address();
+  if (address === null || typeof address === "string") throw new Error("Test server did not expose an address");
+
+  const events: unknown[] = [];
+  const client = createEngineEventClient({
+    host: "127.0.0.1",
+    port: address.port,
+    connectTimeoutMs: 500,
+    reconnectInitialDelayMs: 10,
+    reconnectMaxDelayMs: 20,
+    reconnectMaxAttempts: 3,
+    onEvent: (event) => events.push(event),
+    onStateChange: (state) => states.push(state),
+  });
+
+  client.start();
+  await new Promise<void>((resolve) => {
+    const deadline = Date.now() + 1000;
+    const check = () => events.length === 1 || Date.now() >= deadline ? resolve() : setTimeout(check, 5);
+    check();
+  });
+  client.stop();
+
+  expect(connections).toBeGreaterThanOrEqual(2);
+  expect(events).toHaveLength(1);
+  expect(states).toContain("connecting");
+  expect(states).toContain("connected");
+  expect(states).toContain("disconnected");
+});
+
+test("classifies connection and protocol failures without disabling reconnect", async () => {
+  const errors: Error[] = [];
+  const connectionClient = createEngineEventClient({
+    host: "127.0.0.1",
+    port: 1,
+    connectTimeoutMs: 100,
+    reconnectInitialDelayMs: 10,
+    reconnectMaxDelayMs: 10,
+    reconnectMaxAttempts: 1,
+    onEvent: () => {},
+    onError: (error) => errors.push(error),
+  });
+
+  connectionClient.start();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  connectionClient.stop();
+
+  expect(errors.some((error) => error.name === "GatewayFailure")).toBe(true);
+  expect(errors.some((error) => (error as { category?: string }).category === "connection")).toBe(true);
+
+  const server = createServer((socket) => socket.write(frame("not-json")));
+  servers.push(server);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", () => resolve()));
+  const address = server.address();
+  if (address === null || typeof address === "string") throw new Error("Test server did not expose an address");
+
+  const protocolErrors: Error[] = [];
+  const protocolClient = createEngineEventClient({
+    host: "127.0.0.1",
+    port: address.port,
+    connectTimeoutMs: 500,
+    reconnectInitialDelayMs: 10,
+    reconnectMaxDelayMs: 10,
+    reconnectMaxAttempts: 1,
+    onEvent: () => {},
+    onError: (error) => protocolErrors.push(error),
+  });
+
+  protocolClient.start();
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  protocolClient.stop();
+
+  expect(protocolErrors.some((error) => (error as { category?: string }).category === "protocol")).toBe(true);
+});
