@@ -32,7 +32,7 @@ function write(
 
   logger[level](
     {
-      service: fields.service ?? SERVICE,
+      service: SERVICE,
       event,
       ...extra,
     },
