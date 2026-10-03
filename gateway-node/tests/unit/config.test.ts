@@ -34,6 +34,8 @@ describe("loadConfig", () => {
     expect(config.rateLimit.windowMs).toBe(60_000);
     expect(config.rateLimit.maxClients).toBe(10_000);
     expect(config.rateLimit.excludedPaths).toEqual(["/api/health", "/metrics"]);
+    expect(config.auth.enabled).toBe(false);
+    expect(config.auth.enforcementEnabled).toBe(false);
   });
 
   test("loads gateway, engine, and analytics values from environment", () => {
@@ -108,6 +110,8 @@ describe("loadConfig", () => {
       RATE_LIMIT_MAX_REQUESTS: "25",
       RATE_LIMIT_WINDOW_MS: "5000",
       RATE_LIMIT_MAX_CLIENTS: "500",
+      AUTH_ENABLED: "true",
+      AUTH_ENFORCEMENT_ENABLED: "true",
     });
 
     expect(config.websocket.path).toBe("/stream");
@@ -127,6 +131,8 @@ describe("loadConfig", () => {
     expect(config.rateLimit.maxRequests).toBe(25);
     expect(config.rateLimit.windowMs).toBe(5000);
     expect(config.rateLimit.maxClients).toBe(500);
+    expect(config.auth.enabled).toBe(true);
+    expect(config.auth.enforcementEnabled).toBe(true);
   });
 
   test("rejects invalid ports", () => {
