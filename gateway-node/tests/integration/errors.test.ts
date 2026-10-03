@@ -49,7 +49,7 @@ describe("API error handling", () => {
 
     expect(body.error).toEqual({
       code: "DEPENDENCY_UNAVAILABLE",
-      message: "Trading engine is unavailable",
+      message: "Required dependency is unavailable",
       request_id: body.error.request_id,
     });
 
