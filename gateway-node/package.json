@@ -9,7 +9,8 @@
     "build": "tsc --noEmit",
     "start": "bun src/server.ts",
     "test": "bun test",
-    "test:watch": "bun test --watch"
+    "test:watch": "bun test --watch",
+    "test:security": "bun test tests/input-validation.test.ts tests/engine-message.test.ts tests/websocket-hub.test.ts tests/request-size-boundaries.test.ts tests/cors.test.ts tests/cors-server.test.ts tests/error-handler.test.ts tests/rate-limit-server.test.ts tests/unit/rate-limit.test.ts tests/auth-boundary.test.ts tests/unit/auth.test.ts"
   },
   "engines": {
     "bun": ">=1.3.0"

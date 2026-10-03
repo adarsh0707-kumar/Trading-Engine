@@ -94,7 +94,7 @@ export function createGatewayServer(
 
   if (config.rateLimit.enabled) {
     app.addHook("onRequest", async (request) => {
-      const path = request.url.split("?")[0];
+      const path = request.url.split("?")[0] ?? "";
 
       if (
         config.rateLimit.excludedPaths.includes(path) ||
@@ -104,7 +104,7 @@ export function createGatewayServer(
       }
 
       try {
-        assertRateLimit(rateLimiter, request.ip);
+        assertRateLimit(rateLimiter, request.ip ?? "unknown");
       } catch (error) {
         if (error instanceof ApiError && error.code === "RATE_LIMITED") {
           metrics.recordRateLimitRejection();

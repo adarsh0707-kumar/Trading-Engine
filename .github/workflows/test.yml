@@ -65,3 +65,29 @@ jobs:
       - name: Test
         working-directory: analytics-py
         run: python -m pytest -q
+  gateway-node:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Install
+        working-directory: gateway-node
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        working-directory: gateway-node
+        run: bun run build
+
+      - name: Security regression suite
+        working-directory: gateway-node
+        run: bun run test:security
+
+      - name: Full Gateway test suite
+        working-directory: gateway-node
+        run: bun test
+

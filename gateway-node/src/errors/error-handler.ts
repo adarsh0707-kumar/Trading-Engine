@@ -75,6 +75,10 @@ export function registerErrorHandler(app: FastifyInstance): void {
     }
 
     if (error instanceof ApiError) {
+      if (error.retryAfterSeconds !== undefined) {
+        reply.header("Retry-After", String(error.retryAfterSeconds));
+      }
+
       return reply
         .status(error.statusCode)
         .send(
