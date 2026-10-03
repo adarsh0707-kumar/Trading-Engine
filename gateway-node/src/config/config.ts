@@ -8,6 +8,7 @@ export interface GatewayConfig {
     readonly host: string;
     readonly port: number;
     readonly connectTimeoutMs: number;
+    readonly heartbeatTimeoutMs: number;
     readonly requestTimeoutMs: number;
     readonly reconnectInitialDelayMs: number;
     readonly reconnectMaxDelayMs: number;
@@ -61,6 +62,7 @@ const DEFAULTS = {
     host: "127.0.0.1",
     port: 9000,
     connectTimeoutMs: 5000,
+    heartbeatTimeoutMs: 15000,
     requestTimeoutMs: 5000,
     reconnectInitialDelayMs: 500,
     reconnectMaxDelayMs: 10000,
@@ -248,33 +250,22 @@ export function loadConfig(
 ): GatewayConfig {
   const config = Object.freeze({
     gateway: Object.freeze({
-      host: parseHost(
-        environment,
-        "GATEWAY_HOST",
-        DEFAULTS.gateway.host,
-      ),
-      port: parsePort(
-        environment,
-        "GATEWAY_PORT",
-        DEFAULTS.gateway.port,
-      ),
+      host: parseHost(environment, "GATEWAY_HOST", DEFAULTS.gateway.host),
+      port: parsePort(environment, "GATEWAY_PORT", DEFAULTS.gateway.port),
     }),
 
     engine: Object.freeze({
-      host: parseHost(
-        environment,
-        "ENGINE_HOST",
-        DEFAULTS.engine.host,
-      ),
-      port: parsePort(
-        environment,
-        "ENGINE_PORT",
-        DEFAULTS.engine.port,
-      ),
+      host: parseHost(environment, "ENGINE_HOST", DEFAULTS.engine.host),
+      port: parsePort(environment, "ENGINE_PORT", DEFAULTS.engine.port),
       connectTimeoutMs: parsePositiveInteger(
         environment,
         "ENGINE_CONNECT_TIMEOUT_MS",
         DEFAULTS.engine.connectTimeoutMs,
+      ),
+      heartbeatTimeoutMs: parsePositiveInteger(
+        environment,
+        "ENGINE_HEARTBEAT_TIMEOUT_MS",
+        DEFAULTS.engine.heartbeatTimeoutMs,
       ),
       requestTimeoutMs: parsePositiveInteger(
         environment,
@@ -299,16 +290,8 @@ export function loadConfig(
     }),
 
     analytics: Object.freeze({
-      host: parseHost(
-        environment,
-        "ANALYTICS_HOST",
-        DEFAULTS.analytics.host,
-      ),
-      port: parsePort(
-        environment,
-        "ANALYTICS_PORT",
-        DEFAULTS.analytics.port,
-      ),
+      host: parseHost(environment, "ANALYTICS_HOST", DEFAULTS.analytics.host),
+      port: parsePort(environment, "ANALYTICS_PORT", DEFAULTS.analytics.port),
       requestTimeoutMs: parsePositiveInteger(
         environment,
         "ANALYTICS_REQUEST_TIMEOUT_MS",
@@ -342,11 +325,7 @@ export function loadConfig(
     }),
 
     websocket: Object.freeze({
-      path: parsePath(
-        environment,
-        "WEBSOCKET_PATH",
-        DEFAULTS.websocket.path,
-      ),
+      path: parsePath(environment, "WEBSOCKET_PATH", DEFAULTS.websocket.path),
       heartbeatIntervalMs: parsePositiveInteger(
         environment,
         "WEBSOCKET_HEARTBEAT_INTERVAL_MS",
@@ -378,11 +357,7 @@ export function loadConfig(
     }),
 
     logging: Object.freeze({
-      level: getString(
-        environment,
-        "LOG_LEVEL",
-        DEFAULTS.logging.level,
-      ),
+      level: getString(environment, "LOG_LEVEL", DEFAULTS.logging.level),
     }),
 
     metrics: Object.freeze({
@@ -391,19 +366,11 @@ export function loadConfig(
         "METRICS_ENABLED",
         DEFAULTS.metrics.enabled,
       ),
-      path: parsePath(
-        environment,
-        "METRICS_PATH",
-        DEFAULTS.metrics.path,
-      ),
+      path: parsePath(environment, "METRICS_PATH", DEFAULTS.metrics.path),
     }),
 
     cors: Object.freeze({
-      origin: getString(
-        environment,
-        "CORS_ORIGIN",
-        DEFAULTS.cors.origin,
-      ),
+      origin: getString(environment, "CORS_ORIGIN", DEFAULTS.cors.origin),
     }),
   });
 
