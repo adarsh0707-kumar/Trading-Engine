@@ -8,11 +8,13 @@ describe("health routes", () => {
     const app = Fastify();
 
     await registerHealthRoutes(app, {
-      getStatus: () => ({
+      statusProvider: {
+        getStatus: () => ({
         gateway: "ok",
         engine: "disconnected",
         analytics: "disconnected",
-      }),
+        }),
+      },
     });
 
     const response = await app.inject({
@@ -21,7 +23,7 @@ describe("health routes", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({
+    expect(JSON.parse(response.body)).toEqual({
       status: "ok",
       service: "gateway",
     });
@@ -46,7 +48,7 @@ describe("health routes", () => {
     });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({
+    expect(JSON.parse(response.body)).toEqual({
       status: "ready",
       service: "gateway",
       dependencies: {
@@ -76,7 +78,7 @@ describe("health routes", () => {
     });
 
     expect(response.statusCode).toBe(503);
-    expect(response.json()).toEqual({
+    expect(JSON.parse(response.body)).toEqual({
       status: "not_ready",
       service: "gateway",
       dependencies: {
