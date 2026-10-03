@@ -201,7 +201,6 @@ export function createGatewayServer(
     engineProvider: options.engineProvider,
     engineEventClient,
   });
-  });
 
   if (config.metrics.enabled) {
     app.get(config.metrics.path, async (_request, reply) => {
