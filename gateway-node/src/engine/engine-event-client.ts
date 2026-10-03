@@ -177,8 +177,6 @@ export function createEngineEventClient(
   };
 
   const handleClose = (closedSocket: NetSocket, closedProtocol: EngineProtocol): void => {
-    const hadSocket = socket === closedSocket;
-
     if (connectTimer !== undefined) {
       clearTimeout(connectTimer);
       connectTimer = undefined;
@@ -186,11 +184,8 @@ export function createEngineEventClient(
 
     if (socket !== closedSocket) return;
 
+    emitState("disconnected");
     socket = undefined;
-
-    if (socket === closedSocket) {
-      emitState("disconnected");
-    }
 
     closedProtocol.reset();
 
