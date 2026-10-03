@@ -95,7 +95,6 @@ export function createGatewayServer(
     maxMessageBytes: config.websocket.maxPayloadBytes,
     onOperationalEvent: (event) => {
       const fields = {
-        eventId: event.eventId,
         outcome: event.outcome,
         state: event.state,
       };
