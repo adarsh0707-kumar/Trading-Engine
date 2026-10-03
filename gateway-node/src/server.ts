@@ -94,7 +94,7 @@ export function createGatewayServer(
 
   if (config.rateLimit.enabled) {
     app.addHook("onRequest", async (request) => {
-      const path = request.url.split("?")[0];
+      const path = request.url.split("?")[0] ?? "";
 
       if (
         config.rateLimit.excludedPaths.includes(path) ||
