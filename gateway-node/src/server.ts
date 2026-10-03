@@ -104,7 +104,7 @@ export function createGatewayServer(
       }
 
       try {
-        assertRateLimit(rateLimiter, request.ip);
+        assertRateLimit(rateLimiter, request.ip ?? "unknown");
       } catch (error) {
         if (error instanceof ApiError && error.code === "RATE_LIMITED") {
           metrics.recordRateLimitRejection();
