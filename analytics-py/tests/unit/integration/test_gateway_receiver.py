@@ -61,6 +61,28 @@ def _wait_until(predicate, timeout: float = 2.0) -> None:
     assert predicate()
 
 
+def _connect_when_ready(
+    host: str,
+    port: int,
+    *,
+    timeout: float = 2.0,
+) -> socket.socket:
+    """Connect once the receiver has actually bound and started listening."""
+    deadline = time.monotonic() + timeout
+    last_error: OSError | None = None
+
+    while time.monotonic() < deadline:
+        try:
+            return socket.create_connection((host, port), timeout=0.5)
+        except OSError as exc:
+            last_error = exc
+            time.sleep(0.01)
+
+    raise AssertionError(
+        f"receiver did not accept a connection within {timeout:.1f}s"
+    ) from last_error
+
+
 def test_extracts_partial_and_multiple_frames() -> None:
     receiver = GatewayAnalyticsReceiver("127.0.0.1", 8000)
 
@@ -123,7 +145,7 @@ def test_receives_framed_gateway_message() -> None:
     try:
         _wait_until(lambda: receiver.is_running())
 
-        with socket.create_connection(("127.0.0.1", port), timeout=2.0) as client:
+        with _connect_when_ready("127.0.0.1", port) as client:
             framed = _frame(VALID_MESSAGE)
             client.sendall(framed[:3])
             client.sendall(framed[3:])
@@ -164,7 +186,7 @@ def test_receives_multiple_frames_in_one_tcp_write() -> None:
     try:
         _wait_until(lambda: receiver.is_running())
 
-        with socket.create_connection(("127.0.0.1", port), timeout=2.0) as client:
+        with _connect_when_ready("127.0.0.1", port) as client:
             client.sendall(_frame(VALID_MESSAGE) + _frame(second))
             _wait_until(received.is_set)
             _wait_until(lambda: len(messages) == 2)
@@ -206,12 +228,12 @@ def test_receiver_accepts_a_new_gateway_connection_after_disconnect() -> None:
     try:
         _wait_until(lambda: receiver.is_running())
 
-        with socket.create_connection(("127.0.0.1", port), timeout=2.0) as first:
+        with _connect_when_ready("127.0.0.1", port) as first:
             first.sendall(_frame(VALID_MESSAGE))
 
         _wait_until(lambda: disconnected_count == 1)
 
-        with socket.create_connection(("127.0.0.1", port), timeout=2.0) as second:
+        with _connect_when_ready("127.0.0.1", port) as second:
             second.sendall(
                 _frame(
                     VALID_MESSAGE.replace(
