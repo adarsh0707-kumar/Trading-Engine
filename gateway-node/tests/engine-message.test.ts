@@ -139,6 +139,53 @@ describe("engine message protocol", () => {
     );
   });
 
+
+  test("rejects unexpected envelope fields", () => {
+    expect(() =>
+      parseEngineMessage({
+        type: "TRADE",
+        request_id: "trade-1",
+        timestamp: "2026-10-01T12:00:00.000Z",
+        payload: "{}",
+        extra: true,
+      }),
+    ).toThrow(
+      new EngineMessageValidationError(
+        "Engine message contains unsupported field 'extra'",
+      ),
+    );
+  });
+
+  test("rejects malformed timestamps", () => {
+    expect(() =>
+      parseEngineMessage({
+        type: "TRADE",
+        request_id: "trade-1",
+        timestamp: "2026-10-01 12:00:00",
+        payload: "{}",
+      }),
+    ).toThrow(
+      new EngineMessageValidationError(
+        "Engine message field 'timestamp' must be an ISO-8601 UTC timestamp",
+      ),
+    );
+  });
+
+  test("rejects oversized request identifiers", () => {
+    expect(() =>
+      parseEngineMessage({
+        type: "TRADE",
+        request_id: "x".repeat(257),
+        timestamp: "2026-10-01T12:00:00.000Z",
+        payload: "{}",
+      }),
+    ).toThrow(
+      new EngineMessageValidationError(
+        "Engine message field 'request_id' exceeds the maximum length of 256",
+      ),
+    );
+  });
+
   test("preserves payload without interpreting it", () => {
     const payload = "{\"trade_id\":\"trade-1\",\"price\":100.25}";
 
