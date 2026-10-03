@@ -85,9 +85,14 @@ The project is intended to demonstrate:
 - Phase 3 — Python Analytics: ✅ Complete
 - Phase 4.1 — Gateway Foundation: ✅ Complete
 - Phase 4.2 — Gateway Configuration & Runtime Hardening: ✅ Complete
-- Phase 4.3 — Gateway HTTP API: ⏳ Next
+- Phase 4.3 — Gateway HTTP API: ✅ Complete
+- Phase 4.4 — Engine Protocol & Event Normalization: ✅ Complete
+- Phase 4.5 — WebSocket Gateway: ✅ Complete
+- Phase 4.6 — Python Analytics Integration: ✅ Complete
+- Phase 4.7 — Error Handling, Resilience & Backpressure: ✅ Complete
+- Phase 4.8 — Security Boundaries & Input Hardening: 🚧 Current
 
-The gateway currently provides health, configurable CORS, and optional Prometheus metrics. Versioned application routes under `/api/v1/...` are the next implementation milestone.
+Phase 4.7.5 is the latest completed Gateway milestone. Phase 4.8 is now the active milestone, focused on external-input validation, CORS hardening, request/message size enforcement, safe error exposure, rate-limit extension points, and future authentication/authorization boundaries.
 
 ## Documentation Rule
 
