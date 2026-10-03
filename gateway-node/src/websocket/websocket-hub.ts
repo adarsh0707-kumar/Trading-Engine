@@ -14,10 +14,18 @@ import {
   validateUniqueStringArray,
 } from "../security/input-validation.ts";
 
+export interface WebSocketOperationalEvent {
+  readonly level: "info" | "warn" | "error";
+  readonly event: string;
+  readonly outcome?: string;
+  readonly state?: string;
+}
+
 export interface WebSocketHubOptions {
   readonly maxQueueSize: number;
   readonly heartbeatIntervalMs: number;
   readonly maxMessageBytes?: number;
+  readonly onOperationalEvent?: (event: WebSocketOperationalEvent) => void;
 }
 
 export interface WebSocketHub {
@@ -116,6 +124,10 @@ export function createWebSocketHub(
     options.maxMessageBytes ?? MAX_TRANSPORT_PAYLOAD_BYTES;
   const clients = new Set<WebSocketConnection>();
 
+  const emitOperationalEvent = (event: WebSocketOperationalEvent): void => {
+    options.onOperationalEvent?.(event);
+  };
+
   const remove = (client: WebSocketConnection): void => {
     clients.delete(client);
     client.queue.length = 0;
@@ -162,6 +174,11 @@ export function createWebSocketHub(
     }
 
     if (client.queue.length >= options.maxQueueSize) {
+      emitOperationalEvent({
+        level: "warn",
+        event: "websocket_client_queue_overflow",
+        outcome: "degraded",
+      });
       remove(client);
       client.socket.close(1013, "WebSocket client queue is full");
       return;
@@ -181,6 +198,11 @@ export function createWebSocketHub(
     };
 
     clients.add(client);
+    emitOperationalEvent({
+      level: "info",
+      event: "websocket_client_connected",
+      outcome: "success",
+    });
 
     socket.on("message", (data) => {
       try {
@@ -204,6 +226,12 @@ export function createWebSocketHub(
           }
         }
 
+        emitOperationalEvent({
+          level: "info",
+          event: "websocket_subscription_updated",
+          outcome: "success",
+        });
+
         enqueue(
           client,
           JSON.stringify({
@@ -226,7 +254,15 @@ export function createWebSocketHub(
     });
 
     socket.on("close", () => {
-      remove(client);
+      const wasConnected = clients.delete(client);
+      client.queue.length = 0;
+      if (wasConnected) {
+        emitOperationalEvent({
+          level: "info",
+          event: "websocket_client_disconnected",
+          outcome: "success",
+        });
+      }
     });
 
     socket.on("error", () => {
@@ -267,6 +303,11 @@ export function createWebSocketHub(
         }
 
         if (!client.alive) {
+          emitOperationalEvent({
+            level: "warn",
+            event: "websocket_client_heartbeat_timeout",
+            outcome: "failure",
+          });
           remove(client);
           client.socket.terminate();
           continue;
