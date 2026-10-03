@@ -256,7 +256,7 @@ export function createAnalyticsClient(
 
     nextSocket.on("data", (data) => {
       try {
-        processInboundData(data);
+        processInboundData(Buffer.from(data));
       } catch (error) {
         emitError(error);
         nextSocket.destroy();
