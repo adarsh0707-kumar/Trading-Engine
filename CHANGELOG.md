@@ -7,6 +7,13 @@ This project is an educational trading-infrastructure simulation. It does not co
 ## [Unreleased]
 
 ### Phase 4.8 — Security Boundaries & Input Hardening
+### Phase 4.8.2 — HTTP/WebSocket Request Size & Boundary Enforcement
+- Centralized the Gateway's 1 MiB transport payload ceiling for HTTP and WebSocket configuration.
+- Prevented HTTP and WebSocket environment overrides from raising the configured payload boundary above 1 MiB.
+- Enforced the configured WebSocket message size in the hub in addition to the underlying WebSocket transport limit.
+- Mapped Fastify oversized HTTP request bodies to an explicit HTTP 413 response without exposing internal parser details.
+- Added regression coverage for default limits, smaller limits, oversized configuration, WebSocket 1009 closure, and HTTP 413 handling.
+
 ### Phase 4.8.1 — External Input Validation & Payload Hardening
 - Added shared validation primitives for strict object shapes, bounded strings, UTC timestamps, and bounded unique arrays.
 - Hardened engine message envelopes against unexpected fields, malformed timestamps, oversized request IDs, and oversized payload fields.

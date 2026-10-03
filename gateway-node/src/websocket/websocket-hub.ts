@@ -10,12 +10,14 @@ import { WEBSOCKET_EVENT_TYPES } from "./websocket.types.ts";
 import {
   assertExactKeys,
   isRecord,
+  MAX_TRANSPORT_PAYLOAD_BYTES,
   validateUniqueStringArray,
 } from "../security/input-validation.ts";
 
 export interface WebSocketHubOptions {
   readonly maxQueueSize: number;
   readonly heartbeatIntervalMs: number;
+  readonly maxMessageBytes?: number;
 }
 
 export interface WebSocketHub {
@@ -36,7 +38,18 @@ function isEventType(value: unknown): value is WebSocketEventType {
   );
 }
 
-function parseClientMessage(raw: string): WebSocketClientMessage {
+function parseClientMessage(
+  raw: string,
+  maxMessageBytes: number,
+): WebSocketClientMessage {
+  const messageBytes = Buffer.byteLength(raw, "utf8");
+
+  if (messageBytes > maxMessageBytes) {
+    throw new Error(
+      `WebSocket message exceeds the maximum size of ${maxMessageBytes} bytes`,
+    );
+  }
+
   let value: unknown;
 
   try {
@@ -99,6 +112,8 @@ function serializeError(message: string): string {
 export function createWebSocketHub(
   options: WebSocketHubOptions,
 ): WebSocketHub {
+  const maxMessageBytes =
+    options.maxMessageBytes ?? MAX_TRANSPORT_PAYLOAD_BYTES;
   const clients = new Set<WebSocketConnection>();
 
   const remove = (client: WebSocketConnection): void => {
@@ -169,7 +184,17 @@ export function createWebSocketHub(
 
     socket.on("message", (data) => {
       try {
-        const message = parseClientMessage(data.toString());
+        const rawMessage = data.toString();
+        if (Buffer.byteLength(rawMessage, "utf8") > maxMessageBytes) {
+          remove(client);
+          client.socket.close(
+            1009,
+            `WebSocket message exceeds the maximum size of ${maxMessageBytes} bytes`,
+          );
+          return;
+        }
+
+        const message = parseClientMessage(rawMessage, maxMessageBytes);
 
         for (const eventType of message.events) {
           if (message.action === "subscribe") {

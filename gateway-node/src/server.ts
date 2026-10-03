@@ -61,6 +61,7 @@ export function createGatewayServer(
   const websocketHub = createWebSocketHub({
     maxQueueSize: config.websocket.maxQueueSize,
     heartbeatIntervalMs: config.websocket.heartbeatIntervalMs,
+    maxMessageBytes: config.websocket.maxPayloadBytes,
   });
 
   const metrics = createGatewayMetrics();

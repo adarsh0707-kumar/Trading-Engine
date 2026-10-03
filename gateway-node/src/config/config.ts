@@ -1,3 +1,5 @@
+import { MAX_TRANSPORT_PAYLOAD_BYTES, validateBoundedPositiveInteger } from "../security/input-validation.ts";
+
 export interface GatewayConfig {
   readonly gateway: {
     readonly host: string;
@@ -209,6 +211,23 @@ function parseNonNegativeInteger(
   return parsed;
 }
 
+function parseBoundedPositiveInteger(
+  environment: Record<string, string | undefined>,
+  name: string,
+  fallback: number,
+  maxValue: number,
+): number {
+  const value = environment[name]?.trim();
+
+  if (value === undefined || value === "") {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+
+  return validateBoundedPositiveInteger(parsed, name, maxValue);
+}
+
 function parseBoolean(
   environment: Record<string, string | undefined>,
   name: string,
@@ -359,10 +378,11 @@ export function loadConfig(
         "WEBSOCKET_HEARTBEAT_INTERVAL_MS",
         DEFAULTS.websocket.heartbeatIntervalMs,
       ),
-      maxPayloadBytes: parsePositiveInteger(
+      maxPayloadBytes: parseBoundedPositiveInteger(
         environment,
         "WEBSOCKET_MAX_PAYLOAD_BYTES",
         DEFAULTS.websocket.maxPayloadBytes,
+        MAX_TRANSPORT_PAYLOAD_BYTES,
       ),
       maxQueueSize: parsePositiveInteger(
         environment,
@@ -377,10 +397,11 @@ export function loadConfig(
         "HTTP_REQUEST_TIMEOUT_MS",
         DEFAULTS.http.requestTimeoutMs,
       ),
-      bodyLimitBytes: parsePositiveInteger(
+      bodyLimitBytes: parseBoundedPositiveInteger(
         environment,
         "HTTP_BODY_LIMIT_BYTES",
         DEFAULTS.http.bodyLimitBytes,
+        MAX_TRANSPORT_PAYLOAD_BYTES,
       ),
     }),
 

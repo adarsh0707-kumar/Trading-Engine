@@ -39,6 +39,18 @@ export function registerErrorHandler(app: FastifyInstance): void {
   app.setErrorHandler((error: FastifyError, request, reply) => {
     const requestId = getRequestId(request);
 
+    if (error.code === "FST_ERR_CTP_BODY_TOO_LARGE") {
+      return reply
+        .status(413)
+        .send(
+          buildErrorBody(
+            requestId,
+            "INVALID_ARGUMENT",
+            "Request payload exceeds the configured maximum size",
+          ),
+        );
+    }
+
     if (error instanceof ApiError) {
       return reply
         .status(error.statusCode)

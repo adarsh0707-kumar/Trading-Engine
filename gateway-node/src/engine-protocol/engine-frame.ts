@@ -1,5 +1,7 @@
 export const ENGINE_FRAME_HEADER_SIZE = 4;
-export const ENGINE_MAX_PAYLOAD_SIZE = 1024 * 1024;
+import { MAX_TRANSPORT_PAYLOAD_BYTES } from "../security/input-validation.ts";
+
+export const ENGINE_MAX_PAYLOAD_SIZE = MAX_TRANSPORT_PAYLOAD_BYTES;
 
 export class EngineFrameError extends Error {
   constructor(message: string) {
