@@ -206,6 +206,7 @@ export function createGatewayServer(
     maxQueueSize: config.analytics.maxQueueSize,
     onAnalyticsUpdate: (message) => {
       metrics.recordAnalyticsUpdate();
+      metrics.recordWebSocketPublishedEvent("ANALYTICS_UPDATE");
       mutableAnalyticsProvider?.updateAnalytics(message);
 
       websocketHub.publish({
@@ -217,6 +218,7 @@ export function createGatewayServer(
     },
     onRiskEvent: (message) => {
       metrics.recordAnalyticsRiskEvent();
+      metrics.recordWebSocketPublishedEvent("RISK_EVENT");
       mutableAnalyticsProvider?.updateRiskEvent(message);
 
       websocketHub.publish({
