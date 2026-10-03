@@ -1,0 +1,100 @@
+groups:
+  - name: trading-engine-gateway
+    interval: 15s
+    rules:
+      - alert: GatewayNotReady
+        expr: gateway_ready == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: gateway
+        annotations:
+          summary: Trading Engine gateway is not ready
+          description: The gateway readiness gauge has remained false for at least one minute. Engine or Analytics may be unavailable.
+
+      - alert: GatewayEngineDisconnected
+        expr: gateway_engine_connected == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: gateway
+          dependency: engine
+        annotations:
+          summary: Gateway is disconnected from the trading engine
+          description: The gateway engine connection has remained disconnected for at least one minute.
+
+      - alert: GatewayAnalyticsDisconnected
+        expr: gateway_analytics_connected == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: gateway
+          dependency: analytics
+        annotations:
+          summary: Gateway is disconnected from analytics
+          description: The gateway analytics connection has remained disconnected for at least one minute.
+
+      - alert: GatewayEngineLivenessFailures
+        expr: increase(gateway_engine_liveness_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: gateway
+          dependency: engine
+        annotations:
+          summary: Gateway observed an engine liveness failure
+          description: At least one engine heartbeat liveness failure occurred during the last five minutes.
+
+      - alert: GatewayEngineConnectionFailures
+        expr: increase(gateway_engine_connection_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: gateway
+          dependency: engine
+        annotations:
+          summary: Gateway observed engine connection failures
+          description: At least one engine connection failure occurred during the last five minutes.
+
+      - alert: GatewayEngineProtocolFailures
+        expr: increase(gateway_engine_protocol_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: gateway
+          dependency: engine
+        annotations:
+          summary: Gateway observed engine protocol failures
+          description: At least one engine protocol failure occurred during the last five minutes.
+
+      - alert: GatewayAnalyticsQueueOverflow
+        expr: increase(gateway_analytics_queue_overflows_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: gateway
+          dependency: analytics
+        annotations:
+          summary: Gateway analytics queue overflow detected
+          description: At least one analytics outbound queue overflow occurred during the last five minutes.
+
+      - alert: GatewayAnalyticsSendFailures
+        expr: increase(gateway_analytics_trade_send_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: gateway
+          dependency: analytics
+        annotations:
+          summary: Gateway analytics trade delivery failures detected
+          description: At least one engine trade was rejected by the analytics client during the last five minutes.
+
+      - alert: GatewayHttp5xxRate
+        expr: sum(rate(gateway_http_requests_total{status_code=~"5.."}[5m])) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+          service: gateway
+        annotations:
+          summary: Gateway HTTP 5xx rate is elevated
+          description: The gateway has returned more than 0.1 HTTP 5xx responses per second for at least two minutes.
