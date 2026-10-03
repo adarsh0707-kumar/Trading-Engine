@@ -14,7 +14,7 @@ This project is an educational trading-infrastructure simulation. It does not co
 - Kept HTTP request IDs and asynchronous dependency event IDs separate; no synthetic correlation IDs are created when an upstream request context is unavailable.
 - Kept requestId/eventId out of Prometheus metric labels to preserve low-cardinality metrics.
 
-Status: In Progress
+Status: Complete
 
 ### Phase 4.9.2 — Metrics Completion
 
