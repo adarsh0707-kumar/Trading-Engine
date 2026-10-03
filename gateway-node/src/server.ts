@@ -243,6 +243,10 @@ export function createGatewayServer(
     },
     onStateChange: (state) => {
       metrics.recordAnalyticsState(state);
+      const status = statusProvider.getStatus();
+      metrics.setGatewayReadiness(
+        status.engine === "connected" && status.analytics === "connected",
+      );
       operationalLog.info("analytics_client_state_changed", { state });
     },
     onHealthEvent: ({ type }) => {
@@ -284,6 +288,10 @@ export function createGatewayServer(
     },
     onStateChange: (state) => {
       metrics.recordEngineState(state);
+      const status = statusProvider.getStatus();
+      metrics.setGatewayReadiness(
+        status.engine === "connected" && status.analytics === "connected",
+      );
       operationalLog.info("engine_event_client_state_changed", { state });
     },
     onHealthEvent: ({ type, timestamp }) => {
@@ -344,14 +352,19 @@ export function createGatewayServer(
     credentials: false,
   });
 
-  app.register(registerHealthRoutes);
-
   const statusProvider =
     options.statusProvider ??
     createStatusProvider({
       isEngineConnected: engineEventClient.isConnected,
       isAnalyticsConnected: analyticsClient.isConnected,
     });
+
+  app.register(registerHealthRoutes, {
+    statusProvider,
+    onReadinessChange: (ready) => {
+      metrics.setGatewayReadiness(ready);
+    },
+  });
 
   app.register(registerV1Routes, {
     statusProvider,
