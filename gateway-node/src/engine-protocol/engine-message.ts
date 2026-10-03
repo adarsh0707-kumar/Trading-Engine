@@ -93,6 +93,15 @@ export function normalizeEngineMessage(
     );
   }
 
+  try {
+    validateIsoTimestamp(
+      message.timestamp,
+      "Engine message field 'timestamp'",
+    );
+  } catch (error) {
+    throw toValidationError(error);
+  }
+
   return {
     type: message.type,
     eventId,
