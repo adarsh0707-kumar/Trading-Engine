@@ -106,7 +106,13 @@ describe("request size boundaries", () => {
     });
 
     expect(response.statusCode).toBe(413);
-    expect(response.json()).toEqual({
+    expect(response.json() as {
+      readonly error: {
+        readonly code: string;
+        readonly message: string;
+        readonly request_id: string;
+      };
+    }).toEqual({
       error: {
         code: "INVALID_ARGUMENT",
         message: "Request payload exceeds the configured maximum size",
