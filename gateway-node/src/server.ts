@@ -76,7 +76,12 @@ export function createGatewayServer(
 
   if (config.rateLimit.enabled) {
     app.addHook("onRequest", async (request) => {
-      if (config.rateLimit.excludedPaths.includes(request.url.split("?")[0])) {
+      const path = request.url.split("?")[0];
+
+      if (
+        config.rateLimit.excludedPaths.includes(path) ||
+        path === config.websocket.path
+      ) {
         return;
       }
 
