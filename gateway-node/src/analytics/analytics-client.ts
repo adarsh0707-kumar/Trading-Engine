@@ -13,6 +13,7 @@ import type {
 import type {
   NormalizedEngineEventResult,
 } from "../engine-protocol/engine-event.ts";
+import { QueueOverflow } from "../resilience/error-model.ts";
 
 export type AnalyticsClientState =
   | "connecting"
@@ -31,6 +32,10 @@ export interface AnalyticsClientOptions {
   readonly onRiskEvent?: (message: GatewayRiskEventMessage) => void;
   readonly onError?: (error: Error) => void;
   readonly onStateChange?: (state: AnalyticsClientState) => void;
+  readonly onHealthEvent?: (event: {
+    readonly type: "queue_overflow";
+    readonly timestamp: number;
+  }) => void;
   readonly socketFactory?: () => NetSocket;
 }
 
@@ -333,11 +338,14 @@ export function createAnalyticsClient(
     }
 
     if (queue.length >= options.maxQueueSize) {
-      emitError(
-        new Error(
-          `Analytics outbound queue is full at ${options.maxQueueSize} messages`,
-        ),
+      const error = new QueueOverflow(
+        `Analytics outbound queue is full at ${options.maxQueueSize} messages`,
       );
+      emitError(error);
+      options.onHealthEvent?.({
+        type: "queue_overflow",
+        timestamp: Date.now(),
+      });
       return false;
     }
 
