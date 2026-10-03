@@ -149,6 +149,7 @@ export function createGatewayServer(
     options.authenticationResolver ?? (() => anonymousAuthentication());
 
   const rateLimiter = createRateLimiter({
+    enabled: config.rateLimit.enabled,
     maxRequests: config.rateLimit.maxRequests,
     windowMs: config.rateLimit.windowMs,
     maxClients: config.rateLimit.maxClients,
@@ -160,7 +161,7 @@ export function createGatewayServer(
       config.rateLimit.excludedPaths.includes(path) ||
       path === config.websocket.path;
 
-    if (config.rateLimit.enabled && !rateLimitExcluded) {
+    if (!rateLimitExcluded) {
       try {
         assertRateLimit(rateLimiter, request.ip ?? "unknown");
       } catch (error) {
