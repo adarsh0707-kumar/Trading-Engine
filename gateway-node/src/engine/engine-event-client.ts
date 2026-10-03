@@ -137,8 +137,7 @@ export function createEngineEventClient(
   };
 
   const disconnect = (): void => {
-    if (connected) {
-      connected = false;
+    if (state !== "disconnected") {
       emitState("disconnected");
     }
 
@@ -189,11 +188,8 @@ export function createEngineEventClient(
 
     socket = undefined;
 
-    if (connected) {
-      connected = false;
+    if (socket === closedSocket) {
       emitState("disconnected");
-    } else if (hadSocket) {
-      options.onStateChange?.("disconnected");
     }
 
     closedProtocol.reset();
