@@ -3,6 +3,20 @@ import { describe, expect, test } from "bun:test";
 import { loadConfig } from "../src/config/config.ts";
 
 describe("gateway analytics configuration", () => {
+  test("loads the engine heartbeat liveness timeout default", () => {
+    const config = loadConfig({});
+
+    expect(config.engine.heartbeatTimeoutMs).toBe(15000);
+  });
+
+  test("loads the engine heartbeat liveness timeout override", () => {
+    const config = loadConfig({
+      ENGINE_HEARTBEAT_TIMEOUT_MS: "25000",
+    });
+
+    expect(config.engine.heartbeatTimeoutMs).toBe(25000);
+  });
+
   test("loads analytics transport defaults", () => {
     const config = loadConfig({});
 
