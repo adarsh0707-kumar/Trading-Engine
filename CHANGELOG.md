@@ -6,6 +6,12 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4.7.5 — Analytics Backpressure & Graceful Degradation
+- Classified analytics outbound queue saturation with the shared Phase 4.7 `queue_overflow` failure type.
+- Preserved the Gateway engine/WebSocket path when analytics is unavailable or its bounded outbound queue is full.
+- Added a dedicated analytics queue-overflow health event and Prometheus counter.
+- Added focused queue-overflow failure classification and metrics coverage.
+
 ### Phase 4.7.4 — Engine Liveness Failure & Recovery
 - Added configurable engine heartbeat liveness timeout detection.
 - Reset the liveness deadline after every valid engine HEARTBEAT.
@@ -104,7 +110,7 @@ This project is an educational trading-infrastructure simulation. It does not co
 | Phase 4.3 — Gateway HTTP API | ✅ Complete |
 | Phase 4.4 — Engine Protocol & Event Normalization | ✅ Complete |
 | Phase 4.5 — WebSocket Gateway | ✅ Complete |
-| Phase 4.6 — Python Analytics Integration | 🚧 In Progress |
+| Phase 4.6 — Python Analytics Integration | ✅ Complete |
 | Phase 4.7 — Error Handling, Resilience & Backpressure | 🚧 In Progress |
 | Phase 4.8 — Security Boundaries & Input Hardening | ⏳ Planned |
 | Phase 4.9 — Operational Logging & Metrics | ⏳ Planned |

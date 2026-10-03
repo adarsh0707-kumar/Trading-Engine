@@ -108,6 +108,14 @@ export function createGatewayServer(
     onStateChange: (state) => {
       app.log.info({ state }, "analytics_client_state_changed");
     },
+    onHealthEvent: ({ type }) => {
+      switch (type) {
+        case "queue_overflow":
+          metrics.recordAnalyticsQueueOverflow();
+          app.log.warn("analytics_outbound_queue_overflow");
+          break;
+      }
+    },
   });
 
   const engineEventClient = createEngineEventClient({
