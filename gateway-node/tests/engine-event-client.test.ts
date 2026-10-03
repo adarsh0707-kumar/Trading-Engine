@@ -137,8 +137,9 @@ describe("engine event client", () => {
       );
 
       socket.once("data", (data) => {
-        const payloadSize = data.readUInt32BE(0);
-        const payload = data.subarray(4, 4 + payloadSize).toString("utf8");
+        const buffer = Buffer.from(data);
+        const payloadSize = buffer.readUInt32BE(0);
+        const payload = buffer.subarray(4, 4 + payloadSize).toString("utf8");
         const message = JSON.parse(payload) as Record<string, unknown>;
 
         expect(message).toEqual({
