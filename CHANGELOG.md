@@ -7,6 +7,13 @@ This project is an educational trading-infrastructure simulation. It does not co
 ## [Unreleased]
 
 ### Phase 4.8 — Security Boundaries & Input Hardening
+### Phase 4.8.3 — CORS Security Hardening
+- Replaced the single runtime CORS origin with a strict exact-origin allowlist.
+- Added comma-separated `CORS_ORIGINS` configuration while preserving the existing `CORS_ORIGIN` setting for compatibility.
+- Rejected wildcard, `null`, credential-bearing, path-bearing, malformed, duplicate, and empty CORS origins.
+- Disabled credentialed CORS responses explicitly.
+- Added configuration and runtime regression coverage for allowed, denied, and preflight requests.
+
 ### Phase 4.8.2 — HTTP/WebSocket Request Size & Boundary Enforcement
 - Centralized the Gateway's 1 MiB transport payload ceiling for HTTP and WebSocket configuration.
 - Prevented HTTP and WebSocket environment overrides from raising the configured payload boundary above 1 MiB.
