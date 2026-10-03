@@ -45,7 +45,7 @@ const trade = {
 describe("websocket hub", () => {
   test("registers clients and sends the connection-ready message", () => {
     const socket = createSocket();
-    const hub = createWebSocketHub({ maxQueueSize: 8 });
+    const hub = createWebSocketHub({ maxQueueSize: 8, heartbeatIntervalMs: 30_000 });
 
     hub.add(socket);
 
@@ -58,7 +58,7 @@ describe("websocket hub", () => {
 
   test("updates subscriptions and publishes matching events", () => {
     const socket = createSocket();
-    const hub = createWebSocketHub({ maxQueueSize: 8 });
+    const hub = createWebSocketHub({ maxQueueSize: 8, heartbeatIntervalMs: 30_000 });
 
     hub.add(socket);
     socket.emit(
@@ -71,7 +71,7 @@ describe("websocket hub", () => {
 
     hub.publish(trade);
 
-    const messages = socket.sent.map((message) => JSON.parse(message));
+    const messages = socket.sent.map((message: string) => JSON.parse(message));
 
     expect(messages[1]).toEqual({
       type: "SUBSCRIPTION_UPDATED",
@@ -87,7 +87,7 @@ describe("websocket hub", () => {
 
   test("rejects unsupported subscription events", () => {
     const socket = createSocket();
-    const hub = createWebSocketHub({ maxQueueSize: 8 });
+    const hub = createWebSocketHub({ maxQueueSize: 8, heartbeatIntervalMs: 30_000 });
 
     hub.add(socket);
     socket.emit(
@@ -109,7 +109,7 @@ describe("websocket hub", () => {
 
   test("removes a client when its queue exceeds the configured limit", () => {
     const socket = createSocket();
-    const hub = createWebSocketHub({ maxQueueSize: 0 });
+    const hub = createWebSocketHub({ maxQueueSize: 0, heartbeatIntervalMs: 30_000 });
 
     hub.add(socket);
 
