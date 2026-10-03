@@ -228,15 +228,15 @@ describe("loadConfig", () => {
     );
 
     expect(() => loadConfig({ RATE_LIMIT_MAX_REQUESTS: "10001" })).toThrow(
-      "RATE_LIMIT_MAX_REQUESTS must not exceed 10000",
+      "RATE_LIMIT_MAX_REQUESTS must be at most 10000",
     );
 
     expect(() => loadConfig({ RATE_LIMIT_WINDOW_MS: "3600001" })).toThrow(
-      "RATE_LIMIT_WINDOW_MS must not exceed 3600000",
+      "RATE_LIMIT_WINDOW_MS must be at most 3600000",
     );
 
     expect(() => loadConfig({ RATE_LIMIT_MAX_CLIENTS: "100001" })).toThrow(
-      "RATE_LIMIT_MAX_CLIENTS must not exceed 100000",
+      "RATE_LIMIT_MAX_CLIENTS must be at most 100000",
     );
   });
 
