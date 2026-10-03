@@ -135,6 +135,148 @@ describe("engine event client health", () => {
     expect(health.state).toBe("disconnected");
   });
 
+  test("reconnects after an engine heartbeat liveness timeout", async () => {
+    let connections = 0;
+    const events: string[] = [];
+
+    const server = createServer((socket) => {
+      sockets.push(socket);
+      connections += 1;
+
+      if (connections === 1) {
+        socket.write(
+          frame(
+            JSON.stringify({
+              type: "HEARTBEAT",
+              request_id: "heartbeat-1",
+              timestamp: "2026-10-03T10:00:00.000Z",
+              payload: "PING",
+            }),
+          ),
+        );
+        return;
+      }
+
+      socket.write(
+        frame(
+          JSON.stringify({
+            type: "HEARTBEAT",
+            request_id: "heartbeat-2",
+            timestamp: "2026-10-03T10:00:01.000Z",
+            payload: "PING",
+          }),
+        ),
+      );
+    });
+    servers.push(server);
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, "127.0.0.1", resolve);
+    });
+
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("Test server did not expose an address");
+    }
+
+    const client = createEngineEventClient({
+      host: "127.0.0.1",
+      port: address.port,
+      connectTimeoutMs: 500,
+      heartbeatTimeoutMs: 30,
+      reconnectInitialDelayMs: 10,
+      reconnectMaxDelayMs: 20,
+      reconnectMaxAttempts: 2,
+      onEvent: () => {},
+      onHealthEvent: ({ type }) => events.push(type),
+    });
+
+    client.start();
+
+    await new Promise<void>((resolve) => {
+      const deadline = Date.now() + 1000;
+      const check = (): void => {
+        if (
+          connections >= 2 &&
+          events.includes("liveness_timeout") &&
+          events.includes("heartbeat")
+        ) {
+          resolve();
+          return;
+        }
+
+        if (Date.now() >= deadline) {
+          resolve();
+          return;
+        }
+
+        setTimeout(check, 5);
+      };
+      check();
+    });
+
+    const health = client.getHealth();
+    client.stop();
+
+    expect(events).toContain("liveness_timeout");
+    expect(events).toContain("reconnect_attempt");
+    expect(connections).toBeGreaterThanOrEqual(2);
+    expect(health.lastHeartbeatAt).toBeTypeOf("number");
+  });
+
+  test("resets the liveness deadline when heartbeats continue", async () => {
+    const server = createServer((socket) => {
+      sockets.push(socket);
+
+      const sendHeartbeat = (requestId: string): void => {
+        socket.write(
+          frame(
+            JSON.stringify({
+              type: "HEARTBEAT",
+              request_id: requestId,
+              timestamp: new Date().toISOString(),
+              payload: "PING",
+            }),
+          ),
+        );
+      };
+
+      sendHeartbeat("heartbeat-1");
+      const interval = setInterval(() => sendHeartbeat("heartbeat-live"), 10);
+      socket.once("close", () => clearInterval(interval));
+    });
+    servers.push(server);
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, "127.0.0.1", resolve);
+    });
+
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("Test server did not expose an address");
+    }
+
+    const events: string[] = [];
+    const client = createEngineEventClient({
+      host: "127.0.0.1",
+      port: address.port,
+      connectTimeoutMs: 500,
+      heartbeatTimeoutMs: 40,
+      reconnectInitialDelayMs: 10,
+      reconnectMaxDelayMs: 20,
+      reconnectMaxAttempts: 1,
+      onEvent: () => {},
+      onHealthEvent: ({ type }) => events.push(type),
+    });
+
+    client.start();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    client.stop();
+
+    expect(events).not.toContain("liveness_timeout");
+    expect(events.filter((event) => event === "heartbeat").length).toBeGreaterThan(2);
+  });
+
   test("classifies malformed frames as protocol health events", async () => {
     const server = createServer((socket) => {
       sockets.push(socket);
