@@ -31,6 +31,7 @@ import {
   type AuthenticationState,
 } from "./security/auth.ts";
 import { assertRateLimit, createRateLimiter } from "./security/rate-limit.ts";
+import { createOperationalLogger } from "./logging/operational-logger.ts";
 
 export interface GatewayServer {
   readonly app: FastifyInstance;
@@ -68,10 +69,44 @@ export function createGatewayServer(
     connectionTimeout: config.http.requestTimeoutMs,
   });
 
+  const operationalLog = createOperationalLogger(app.log, "gateway");
+
+  app.addHook("onRequest", async (request) => {
+    operationalLog.info("http_request_started", {
+      requestId: request.id,
+      method: request.method,
+      path: request.url.split("?")[0] ?? "",
+    });
+  });
+
+  app.addHook("onResponse", async (request, reply) => {
+    operationalLog.info("http_request_completed", {
+      requestId: request.id,
+      method: request.method,
+      path: request.url.split("?")[0] ?? "",
+      statusCode: reply.statusCode,
+      outcome: reply.statusCode >= 500 ? "failure" : "success",
+    });
+  });
+
   const websocketHub = createWebSocketHub({
     maxQueueSize: config.websocket.maxQueueSize,
     heartbeatIntervalMs: config.websocket.heartbeatIntervalMs,
     maxMessageBytes: config.websocket.maxPayloadBytes,
+    onOperationalEvent: (event) => {
+      const fields = {
+        outcome: event.outcome,
+        state: event.state,
+      };
+
+      if (event.level === "error") {
+        operationalLog.error(event.event, fields);
+      } else if (event.level === "warn") {
+        operationalLog.warn(event.event, fields);
+      } else {
+        operationalLog.info(event.event, fields);
+      }
+    },
   });
 
   const metrics = createGatewayMetrics();
@@ -156,16 +191,16 @@ export function createGatewayServer(
       });
     },
     onError: (error) => {
-      app.log.warn({ error }, "analytics_client_error");
+      operationalLog.warn("analytics_client_error", { outcome: "failure", error });
     },
     onStateChange: (state) => {
-      app.log.info({ state }, "analytics_client_state_changed");
+      operationalLog.info("analytics_client_state_changed", { state });
     },
     onHealthEvent: ({ type }) => {
       switch (type) {
         case "queue_overflow":
           metrics.recordAnalyticsQueueOverflow();
-          app.log.warn("analytics_outbound_queue_overflow");
+          operationalLog.warn("analytics_outbound_queue_overflow", { outcome: "degraded" });
           break;
       }
     },
@@ -180,21 +215,20 @@ export function createGatewayServer(
     reconnectMaxDelayMs: config.engine.reconnectMaxDelayMs,
     reconnectMaxAttempts: config.engine.reconnectMaxAttempts,
     onEvent: (event) => {
+      operationalLog.info("engine_trade_event", {
+        eventId: event.eventId,
+        requestId: event.requestId,
+        outcome: "accepted",
+      });
       websocketHub.publish(event);
       analyticsClient.sendTrade(event);
     },
     onError: (error) => {
-      app.log.warn(
-        { error },
-        "engine_event_client_error",
-      );
+      operationalLog.warn("engine_event_client_error", { outcome: "failure", error });
     },
     onStateChange: (state) => {
       metrics.recordEngineState(state);
-      app.log.info(
-        { state },
-        "engine_event_client_state_changed",
-      );
+      operationalLog.info("engine_event_client_state_changed", { state });
     },
     onHealthEvent: ({ type, timestamp }) => {
       switch (type) {
@@ -208,18 +242,23 @@ export function createGatewayServer(
           break;
         case "reconnect_attempt":
           metrics.recordEngineReconnectAttempt();
+          operationalLog.warn("engine_reconnect_attempt", { outcome: "degraded" });
           break;
         case "connection_failure":
           metrics.recordEngineConnectionFailure();
+          operationalLog.error("engine_connection_failure", { outcome: "failure" });
           break;
         case "protocol_failure":
           metrics.recordEngineProtocolFailure();
+          operationalLog.error("engine_protocol_failure", { outcome: "failure" });
           break;
         case "timeout_failure":
           metrics.recordEngineTimeoutFailure();
+          operationalLog.error("engine_timeout_failure", { outcome: "failure" });
           break;
         case "liveness_timeout":
           metrics.recordEngineLivenessFailure();
+          operationalLog.error("engine_liveness_timeout", { outcome: "failure" });
           break;
       }
     },
@@ -291,6 +330,7 @@ export function createGatewayServer(
     websocketHub.startHeartbeat();
     engineEventClient.start();
     analyticsClient.start();
+    operationalLog.info("gateway_started", { outcome: "success", host: config.gateway.host, port: config.gateway.port });
     started = true;
   };
 
@@ -303,6 +343,7 @@ export function createGatewayServer(
     engineEventClient.stop();
     websocketHub.stopHeartbeat();
     websocketHub.closeAll();
+    operationalLog.info("gateway_stopping", { outcome: "requested" });
     await app.close();
     started = false;
   };

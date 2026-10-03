@@ -6,7 +6,17 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
-### Phase 4.9 — Operational Logging & Metrics
+### Phase 4.9.1 — Structured Operational Logging
+
+- Added a shared structured Gateway operational logger with canonical service, component, event, outcome, requestId, eventId, and state fields.
+- Standardized HTTP request lifecycle logging and Gateway startup/shutdown events.
+- Standardized Engine and Analytics dependency lifecycle/failure logging without changing the public error contract.
+- Added WebSocket connection, subscription, queue-overflow, and heartbeat-timeout operational events without logging client payload contents.
+- Added regression coverage for the canonical operational log shape.
+
+Status: In Progress
+
+## Phase 4.9 — Operational Logging & Metrics
 - Phase 4.9 is the next active Gateway milestone after completion of the Phase 4.8 security hardening gate.
 - Scope begins with structured operational logging, metric consistency, request/event correlation, and dependency observability across HTTP, engine, analytics, and WebSocket boundaries.
 - Existing security boundaries remain unchanged while observability is extended.
