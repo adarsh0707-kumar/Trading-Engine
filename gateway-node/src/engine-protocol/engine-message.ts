@@ -4,18 +4,19 @@ import {
   type EngineMessageType,
   type NormalizedEngineEvent,
 } from "./engine-message.types.ts";
+import {
+  assertExactKeys,
+  isRecord,
+  validateBoundedString,
+  validateIsoTimestamp,
+  MAX_ENGINE_REQUEST_ID_LENGTH,
+} from "../security/input-validation.ts";
 
 export class EngineMessageValidationError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "EngineMessageValidationError";
   }
-}
-
-function isRecord(
-  value: unknown,
-): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 function isEngineMessageType(
@@ -27,17 +28,12 @@ function isEngineMessageType(
   );
 }
 
-function requireString(
-  value: unknown,
-  field: string,
-): string {
-  if (typeof value !== "string") {
-    throw new EngineMessageValidationError(
-      `Engine message field '${field}' must be a string`,
-    );
-  }
-
-  return value;
+function toValidationError(error: unknown): EngineMessageValidationError {
+  return new EngineMessageValidationError(
+    error instanceof Error
+      ? error.message
+      : "Engine message validation failed",
+  );
 }
 
 export function parseEngineMessage(
@@ -49,29 +45,41 @@ export function parseEngineMessage(
     );
   }
 
-  const type = value["type"];
-
-  if (!isEngineMessageType(type)) {
-    throw new EngineMessageValidationError(
-      "Engine message field 'type' is unsupported",
+  try {
+    assertExactKeys(
+      value,
+      ["type", "request_id", "timestamp", "payload"],
+      "Engine message",
     );
-  }
 
-  return {
-    type,
-    requestId: requireString(
-      value["request_id"],
-      "request_id",
-    ),
-    timestamp: requireString(
-      value["timestamp"],
-      "timestamp",
-    ),
-    payload: requireString(
-      value["payload"],
-      "payload",
-    ),
-  };
+    const type = value["type"];
+
+    if (!isEngineMessageType(type)) {
+      throw new Error(
+        "Engine message field 'type' is unsupported",
+      );
+    }
+
+    return {
+      type,
+      requestId: validateBoundedString(
+        value["request_id"],
+        "Engine message field 'request_id'",
+        MAX_ENGINE_REQUEST_ID_LENGTH,
+      ),
+      timestamp: validateIsoTimestamp(
+        value["timestamp"],
+        "Engine message field 'timestamp'",
+      ),
+      payload: validateBoundedString(
+        value["payload"],
+        "Engine message field 'payload'",
+        1024 * 1024,
+      ),
+    };
+  } catch (error) {
+    throw toValidationError(error);
+  }
 }
 
 export function normalizeEngineMessage(
@@ -85,10 +93,13 @@ export function normalizeEngineMessage(
     );
   }
 
-  if (message.timestamp.trim().length === 0) {
-    throw new EngineMessageValidationError(
-      "Engine message field 'timestamp' must not be empty",
+  try {
+    validateIsoTimestamp(
+      message.timestamp,
+      "Engine message field 'timestamp'",
     );
+  } catch (error) {
+    throw toValidationError(error);
   }
 
   return {
@@ -99,7 +110,6 @@ export function normalizeEngineMessage(
     payload: message.payload,
   };
 }
-
 
 export function parseAndNormalizeEngineMessage(
   value: unknown,

@@ -7,6 +7,11 @@ import type {
   WebSocketEventType,
 } from "./websocket.types.ts";
 import { WEBSOCKET_EVENT_TYPES } from "./websocket.types.ts";
+import {
+  assertExactKeys,
+  isRecord,
+  validateUniqueStringArray,
+} from "../security/input-validation.ts";
 
 export interface WebSocketHubOptions {
   readonly maxQueueSize: number;
@@ -37,31 +42,37 @@ function parseClientMessage(raw: string): WebSocketClientMessage {
   try {
     value = JSON.parse(raw);
   } catch {
-    throw new Error("WebSocket message must contain valid JSON");
+    throw new Error("WebSocket message contains invalid JSON");
   }
 
-  if (typeof value !== "object" || value === null) {
+  if (!isRecord(value)) {
     throw new Error("WebSocket message must be a JSON object");
   }
 
-  const record = value as Record<string, unknown>;
+  assertExactKeys(
+    value,
+    ["action", "events"],
+    "WebSocket message",
+  );
 
-  if (record.action !== "subscribe" && record.action !== "unsubscribe") {
+  if (value.action !== "subscribe" && value.action !== "unsubscribe") {
     throw new Error("WebSocket action must be subscribe or unsubscribe");
   }
 
-  if (!Array.isArray(record.events) || record.events.length === 0) {
-    throw new Error("WebSocket events must be a non-empty array");
-  }
+  const eventValues = validateUniqueStringArray(
+    value.events,
+    "WebSocket events",
+    WEBSOCKET_EVENT_TYPES.length,
+  );
 
-  const events = record.events.filter(isEventType);
+  const events = eventValues.filter(isEventType);
 
-  if (events.length !== record.events.length) {
+  if (events.length !== eventValues.length) {
     throw new Error("WebSocket message contains an unsupported event type");
   }
 
   return {
-    action: record.action,
+    action: value.action,
     events,
   } as WebSocketClientMessage;
 }

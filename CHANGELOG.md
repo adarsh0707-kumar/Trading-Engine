@@ -7,6 +7,13 @@ This project is an educational trading-infrastructure simulation. It does not co
 ## [Unreleased]
 
 ### Phase 4.8 — Security Boundaries & Input Hardening
+### Phase 4.8.1 — External Input Validation & Payload Hardening
+- Added shared validation primitives for strict object shapes, bounded strings, UTC timestamps, and bounded unique arrays.
+- Hardened engine message envelopes against unexpected fields, malformed timestamps, oversized request IDs, and oversized payload fields.
+- Hardened WebSocket subscription messages against unexpected fields, duplicate event subscriptions, and oversized event lists.
+- Preserved the existing 1 MiB transport boundary while adding field-level validation before downstream normalization.
+- Added focused security-boundary regression coverage for engine and WebSocket inputs.
+
 - Established the Phase 4.8 security/input-hardening milestone as the next Gateway development target.
 - Phase 4.7 resilience milestones 4.7.1–4.7.5 are complete and integrated on `main`.
 - Phase 4.8 scope covers external-input validation, CORS hardening, request/message size enforcement, safe error exposure, rate-limit extension points, and future authentication/authorization boundaries.

@@ -85,6 +85,51 @@ describe("websocket hub", () => {
     });
   });
 
+  test("rejects unexpected subscription fields", () => {
+    const socket = createSocket();
+    const hub = createWebSocketHub({ maxQueueSize: 8, heartbeatIntervalMs: 30_000 });
+
+    hub.add(socket);
+    socket.emit(
+      "message",
+      JSON.stringify({
+        action: "subscribe",
+        events: ["TRADE"],
+        extra: true,
+      }),
+    );
+
+    expect(JSON.parse(socket.sent[1])).toEqual({
+      type: "ERROR",
+      error: {
+        code: "INVALID_CLIENT_MESSAGE",
+        message: "WebSocket message contains unsupported field 'extra'",
+      },
+    });
+  });
+
+  test("rejects duplicate subscription events", () => {
+    const socket = createSocket();
+    const hub = createWebSocketHub({ maxQueueSize: 8, heartbeatIntervalMs: 30_000 });
+
+    hub.add(socket);
+    socket.emit(
+      "message",
+      JSON.stringify({
+        action: "subscribe",
+        events: ["TRADE", "TRADE"],
+      }),
+    );
+
+    expect(JSON.parse(socket.sent[1])).toEqual({
+      type: "ERROR",
+      error: {
+        code: "INVALID_CLIENT_MESSAGE",
+        message: "WebSocket events must not contain duplicate values",
+      },
+    });
+  });
+
   test("rejects unsupported subscription events", () => {
     const socket = createSocket();
     const hub = createWebSocketHub({ maxQueueSize: 8, heartbeatIntervalMs: 30_000 });
