@@ -27,7 +27,7 @@ describe("loadConfig", () => {
     expect(config.metrics.enabled).toBe(true);
     expect(config.metrics.path).toBe("/metrics");
 
-    expect(config.cors.origin).toBe("http://localhost:5173");
+    expect(config.cors.origins).toEqual(["http://localhost:5173"]);
   });
 
   test("loads gateway, engine, and analytics values from environment", () => {
@@ -112,7 +112,7 @@ describe("loadConfig", () => {
     expect(config.metrics.enabled).toBe(false);
     expect(config.metrics.path).toBe("/internal/metrics");
 
-    expect(config.cors.origin).toBe("https://example.com");
+    expect(config.cors.origins).toEqual(["https://example.com"]);
   });
 
   test("rejects invalid ports", () => {
@@ -172,7 +172,7 @@ describe("loadConfig", () => {
       loadConfig({
         HTTP_BODY_LIMIT_BYTES: "0",
       }),
-    ).toThrow("Invalid HTTP_BODY_LIMIT_BYTES");
+    ).toThrow("HTTP_BODY_LIMIT_BYTES must be a positive integer");
 
     expect(() =>
       loadConfig({
