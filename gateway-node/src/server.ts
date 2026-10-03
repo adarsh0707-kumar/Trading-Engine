@@ -70,8 +70,11 @@ export function createGatewayServer(
   });
 
   const operationalLog = createOperationalLogger(app.log, "gateway");
+  const requestStartTimes = new WeakMap<object, bigint>();
 
   app.addHook("onRequest", async (request) => {
+    requestStartTimes.set(request, process.hrtime.bigint());
+
     operationalLog.info("http_request_started", {
       requestId: request.id,
       method: request.method,
@@ -80,6 +83,15 @@ export function createGatewayServer(
   });
 
   app.addHook("onResponse", async (request, reply) => {
+    const start = requestStartTimes.get(request);
+    if (start !== undefined) {
+      const durationSeconds =
+        Number(process.hrtime.bigint() - start) / 1_000_000_000;
+      metrics.observeHttpRequestDuration(request.method, durationSeconds);
+    }
+
+    metrics.recordHttpRequest(request.method, reply.statusCode);
+
     operationalLog.info("http_request_completed", {
       requestId: request.id,
       method: request.method,
@@ -89,11 +101,35 @@ export function createGatewayServer(
     });
   });
 
+  const metrics = createGatewayMetrics();
+
   const websocketHub = createWebSocketHub({
     maxQueueSize: config.websocket.maxQueueSize,
     heartbeatIntervalMs: config.websocket.heartbeatIntervalMs,
     maxMessageBytes: config.websocket.maxPayloadBytes,
     onOperationalEvent: (event) => {
+      switch (event.event) {
+        case "websocket_client_connected":
+          metrics.recordWebSocketConnection();
+          metrics.setWebSocketClients(websocketHub.size());
+          break;
+        case "websocket_client_disconnected":
+          metrics.recordWebSocketDisconnection();
+          metrics.setWebSocketClients(websocketHub.size());
+          break;
+        case "websocket_subscription_updated":
+          metrics.recordWebSocketSubscriptionUpdate();
+          break;
+        case "websocket_client_queue_overflow":
+          metrics.recordWebSocketQueueOverflow();
+          metrics.setWebSocketClients(websocketHub.size());
+          break;
+        case "websocket_client_heartbeat_timeout":
+          metrics.recordWebSocketHeartbeatTimeout();
+          metrics.setWebSocketClients(websocketHub.size());
+          break;
+      }
+
       const fields = {
         outcome: event.outcome,
         state: event.state,
@@ -108,8 +144,6 @@ export function createGatewayServer(
       }
     },
   });
-
-  const metrics = createGatewayMetrics();
 
   if (config.auth.enabled && config.auth.enforcementEnabled) {
     const authenticationResolver =
@@ -171,6 +205,8 @@ export function createGatewayServer(
     reconnectMaxAttempts: config.analytics.reconnectMaxAttempts,
     maxQueueSize: config.analytics.maxQueueSize,
     onAnalyticsUpdate: (message) => {
+      metrics.recordAnalyticsUpdate();
+      metrics.recordWebSocketPublishedEvent("ANALYTICS_UPDATE");
       mutableAnalyticsProvider?.updateAnalytics(message);
 
       websocketHub.publish({
@@ -181,6 +217,8 @@ export function createGatewayServer(
       });
     },
     onRiskEvent: (message) => {
+      metrics.recordAnalyticsRiskEvent();
+      metrics.recordWebSocketPublishedEvent("RISK_EVENT");
       mutableAnalyticsProvider?.updateRiskEvent(message);
 
       websocketHub.publish({
@@ -191,9 +229,11 @@ export function createGatewayServer(
       });
     },
     onError: (error) => {
+      metrics.recordAnalyticsError();
       operationalLog.warn("analytics_client_error", { outcome: "failure", error });
     },
     onStateChange: (state) => {
+      metrics.recordAnalyticsState(state);
       operationalLog.info("analytics_client_state_changed", { state });
     },
     onHealthEvent: ({ type }) => {
@@ -215,13 +255,20 @@ export function createGatewayServer(
     reconnectMaxDelayMs: config.engine.reconnectMaxDelayMs,
     reconnectMaxAttempts: config.engine.reconnectMaxAttempts,
     onEvent: (event) => {
+      metrics.recordEngineTrade();
       operationalLog.info("engine_trade_event", {
         eventId: event.eventId,
         requestId: event.requestId,
         outcome: "accepted",
       });
       websocketHub.publish(event);
-      analyticsClient.sendTrade(event);
+      metrics.recordWebSocketPublishedEvent(event.type);
+      const sentToAnalytics = analyticsClient.sendTrade(event);
+      if (sentToAnalytics) {
+        metrics.recordAnalyticsTradeSent();
+      } else {
+        metrics.recordAnalyticsTradeSendFailure();
+      }
     },
     onError: (error) => {
       operationalLog.warn("engine_event_client_error", { outcome: "failure", error });
@@ -330,7 +377,11 @@ export function createGatewayServer(
     websocketHub.startHeartbeat();
     engineEventClient.start();
     analyticsClient.start();
-    operationalLog.info("gateway_started", { outcome: "success", host: config.gateway.host, port: config.gateway.port });
+    operationalLog.info("gateway_started", {
+      outcome: "success",
+      host: config.gateway.host,
+      port: config.gateway.port,
+    });
     started = true;
   };
 
