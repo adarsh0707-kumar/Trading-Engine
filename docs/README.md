@@ -93,7 +93,7 @@ The project is intended to demonstrate:
 - Phase 4.8 — Security Boundaries & Input Hardening: 🚧 Current
 - Phase 4.8.5 — Rate-Limit Boundary: 🚧 Complete on milestone branch
 
-Phase 4.8.5 is the latest completed Gateway milestone on its milestone branch. Phase 4.8 remains the active security milestone, with rate limiting now implemented and authentication/authorization boundaries still remaining.
+Phase 4.8.6 is the latest completed Gateway milestone on its milestone branch. Phase 4.8 remains the active security milestone, with rate limiting and the authentication/authorization boundary preparation are now implemented; concrete identity-provider integration remains.
 
 ## Documentation Rule
 
