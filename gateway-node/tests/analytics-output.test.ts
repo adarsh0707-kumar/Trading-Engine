@@ -92,6 +92,7 @@ describe("analytics output protocol", () => {
     );
 
     expect(message.type).toBe("ANALYTICS_UPDATE");
+    if (message.type !== "ANALYTICS_UPDATE") throw new Error("Expected ANALYTICS_UPDATE");
     expect(message.payload.equity).toBe(10000);
     expect(message.payload.drawdown).toBe(0);
   });
@@ -102,6 +103,7 @@ describe("analytics output protocol", () => {
     );
 
     expect(message.type).toBe("RISK_EVENT");
+    if (message.type !== "RISK_EVENT") throw new Error("Expected RISK_EVENT");
     expect(message.payload.status).toBe("breached");
     expect(message.payload.limitType).toBe("MAX_DRAWDOWN");
   });
