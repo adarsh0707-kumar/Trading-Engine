@@ -6,6 +6,17 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4.9.2 — Metrics Completion
+
+- Completed Gateway Prometheus metric coverage across HTTP, Engine, Analytics, WebSocket, and rate-limit boundaries.
+- Added bounded HTTP request counters and duration histograms using low-cardinality method/status labels.
+- Added Engine trade, Analytics lifecycle/output/error, WebSocket lifecycle/queue/heartbeat, and published-event metrics.
+- Preserved existing Engine liveness/failure metrics and timestamp gauges while standardizing connection gauges.
+- Added focused regression coverage for metric values, labels, units, and default connection state.
+- No request IDs, event IDs, raw paths, client addresses, or payload contents are used as metric labels.
+
+Status: In Progress
+
 ### Phase 4.9.1 — Structured Operational Logging
 
 - Added a shared structured Gateway operational logger with canonical service, component, event, outcome, requestId, eventId, and state fields.
