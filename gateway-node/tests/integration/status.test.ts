@@ -71,7 +71,15 @@ describe("GET /api/v1/status", () => {
     });
 
     expect(engineHealthResponse.statusCode).toBe(200);
-    expect(engineHealthResponse.json()).toEqual({
+    expect(engineHealthResponse.json() as {
+      data: {
+        state: "connecting" | "connected" | "disconnected";
+        connectedAt: number | null;
+        lastMessageAt: number | null;
+        lastHeartbeatAt: number | null;
+        reconnectAttempts: number;
+      };
+    }).toEqual({
       data: {
         state: "disconnected",
         connectedAt: null,
