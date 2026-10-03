@@ -145,15 +145,8 @@ export function createGatewayServer(
     },
   });
 
-  if (config.auth.enabled && config.auth.enforcementEnabled) {
-    const authenticationResolver =
-      options.authenticationResolver ?? (() => anonymousAuthentication());
-
-    app.addHook("onRequest", async (request) => {
-      const authentication = await authenticationResolver(request);
-      requireAuthentication(authentication);
-    });
-  }
+  const authenticationResolver =
+    options.authenticationResolver ?? (() => anonymousAuthentication());
 
   const rateLimiter = createRateLimiter({
     maxRequests: config.rateLimit.maxRequests,
@@ -161,17 +154,13 @@ export function createGatewayServer(
     maxClients: config.rateLimit.maxClients,
   });
 
-  if (config.rateLimit.enabled) {
-    app.addHook("onRequest", async (request) => {
-      const path = request.url.split("?")[0] ?? "";
+  app.addHook("onRequest", async (request) => {
+    const path = request.url.split("?")[0] ?? "";
+    const rateLimitExcluded =
+      config.rateLimit.excludedPaths.includes(path) ||
+      path === config.websocket.path;
 
-      if (
-        config.rateLimit.excludedPaths.includes(path) ||
-        path === config.websocket.path
-      ) {
-        return;
-      }
-
+    if (config.rateLimit.enabled && !rateLimitExcluded) {
       try {
         assertRateLimit(rateLimiter, request.ip ?? "unknown");
       } catch (error) {
@@ -184,8 +173,13 @@ export function createGatewayServer(
         }
         throw error;
       }
-    });
-  }
+    }
+
+    if (config.auth.enabled && config.auth.enforcementEnabled) {
+      const authentication = await authenticationResolver(request);
+      requireAuthentication(authentication);
+    }
+  });
 
   const analyticsProvider =
     options.analyticsProvider ?? createAnalyticsProvider();
