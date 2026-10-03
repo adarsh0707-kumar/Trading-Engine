@@ -32,7 +32,7 @@ describe("GET /api/v1/analytics", () => {
     const body = response.json() as ErrorResponse;
 
     expect(body.error.code).toBe("DEPENDENCY_UNAVAILABLE");
-    expect(body.error.message).toBe("Analytics data is unavailable");
+    expect(body.error.message).toBe("Required dependency is unavailable");
     expect(body.error.request_id).toBeTruthy();
 
     await gateway.stop();
