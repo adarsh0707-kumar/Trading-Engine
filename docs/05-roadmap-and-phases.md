@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest Completed Milestone:** Phase 4.6.4 — Analytics Output Back to Gateway
+**Latest Completed Milestone:** Phase 4.7.5 — Analytics Backpressure & Graceful Degradation
 
-**Current Milestone:** Phase 4.7.1 — Error Model & Failure Boundaries
+**Current Milestone:** Phase 4.8 — Security Boundaries & Input Hardening
 
 ### Current validated path
 
@@ -412,7 +412,7 @@ Exit criteria:
 
 ## Phase 4.6 — Python Analytics Integration
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
 Integrate the completed analytics service without duplicating analytics calculations.
 
@@ -482,34 +482,73 @@ Implemented:
 - Connected live engine and analytics connection state to /api/v1/status.
 - Added cross-service contract, transport, provider, and serialization tests.
 
-### Remaining Phase 4.6 scope
+### Phase 4.6 exit status
 
-- Full end-to-end Gateway → Python → Gateway validation against the real C++ engine and PostgreSQL runtime.
-- Final Phase 4.6 documentation and integration exit validation.
+The Phase 4.6 Gateway ↔ Python analytics integration milestones 4.6.1–4.6.4 are complete. Runtime validation against the full C++ engine/PostgreSQL stack remains part of the broader Phase 4.10 integration-validation work.
 
 ## Phase 4.7 — Error Handling, Resilience & Backpressure
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
-Apply bounded reliability and recovery behavior to gateway requests, upstream connections, and real-time clients.
+Phase 4.7 establishes bounded failure handling, recovery, liveness monitoring, and graceful degradation across Gateway engine and analytics boundaries.
 
 ### Phase 4.7.1 — Error Model & Failure Boundaries
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
-Implemented the initial cross-service failure taxonomy and failure-boundary policy.
-
-- Defined stable connection, timeout, protocol, validation, queue-overflow, dependency-unavailable, processing, and shutdown categories.
-- Defined recoverability semantics without changing runtime reconnect/backpressure behavior.
-- Added Python integration failure types and tests.
-- Added Gateway failure types, classification helper, and tests.
+- Stable connection, timeout, protocol, validation, queue-overflow, dependency-unavailable, processing, and shutdown failure categories.
+- Explicit recoverability semantics.
+- Python analytics integration failure types and tests.
+- Gateway failure types, classification, and tests.
 - Documented logging, recovery, queue, and connection-close boundaries.
 
-Remaining 4.7 scope will implement runtime resilience policies incrementally in Phases 4.7.2–4.7.8.
+### Phase 4.7.2 — Engine Connection Resilience
+
+**Status:** ✅ Complete
+
+- Hardened engine socket lifecycle handling.
+- Isolated protocol state per socket and ignored stale socket events.
+- Classified connection, timeout, and protocol failures through the Phase 4.7 error model.
+- Preserved bounded reconnect/backoff behavior.
+- Added reconnect and failure-classification coverage.
+
+### Phase 4.7.3 — Engine Health & Liveness Monitoring
+
+**Status:** ✅ Complete
+
+- Exposed engine connection state and health timestamps.
+- Tracked last message and heartbeat activity.
+- Tracked reconnect attempts and health events.
+- Added Prometheus engine health/liveness metrics.
+- Added `GET /api/v1/status/engine`.
+- Added focused health, metrics, and status integration coverage.
+
+### Phase 4.7.4 — Engine Liveness Failure & Recovery
+
+**Status:** ✅ Complete
+
+- Added configurable `ENGINE_HEARTBEAT_TIMEOUT_MS` with a 15-second default.
+- Reset the liveness deadline after every valid engine HEARTBEAT.
+- Emitted a dedicated `liveness_timeout` health event for stale heartbeats.
+- Reused the existing reconnect lifecycle for recovery.
+- Added `gateway_engine_liveness_failures_total` Prometheus telemetry.
+- Added liveness recovery and continuous-heartbeat coverage.
+
+### Phase 4.7.5 — Analytics Backpressure & Graceful Degradation
+
+**Status:** ✅ Complete
+
+- Classified analytics outbound queue saturation as `queue_overflow`.
+- Preserved engine and WebSocket processing when analytics is unavailable or its bounded queue is full.
+- Emitted a dedicated analytics queue-overflow health event.
+- Added `gateway_analytics_queue_overflows_total` Prometheus telemetry.
+- Added focused queue-overflow classification and metrics coverage.
+
+**Phase 4.7 exit status:** ✅ Complete
 
 ## Phase 4.8 — Security Boundaries & Input Hardening
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress
 
 Harden external inputs, CORS, request/message sizes, error exposure, rate-limit hooks, and future authentication/authorization boundaries.
 
@@ -531,7 +570,7 @@ Complete gateway unit, integration, contract, failure-recovery, and end-to-end v
 
 Phase 4 is complete when the gateway connects the completed Phase 1–3 platform to the future dashboard with validated REST/WebSocket contracts, resilience, security boundaries, observability, tests, and CI coverage.
 
-**Phase 4 overall status:** 🚧 In Progress
+**Phase 4 overall status:** 🚧 In Progress — 4.1 through 4.7 complete; 4.8 is the active milestone.
 
 # Phase 5 — React Dashboard
 
