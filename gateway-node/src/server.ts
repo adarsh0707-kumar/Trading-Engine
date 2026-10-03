@@ -114,6 +114,7 @@ export function createGatewayServer(
     host: config.engine.host,
     port: config.engine.port,
     connectTimeoutMs: config.engine.connectTimeoutMs,
+    heartbeatTimeoutMs: config.engine.heartbeatTimeoutMs,
     reconnectInitialDelayMs: config.engine.reconnectInitialDelayMs,
     reconnectMaxDelayMs: config.engine.reconnectMaxDelayMs,
     reconnectMaxAttempts: config.engine.reconnectMaxAttempts,
@@ -155,6 +156,9 @@ export function createGatewayServer(
           break;
         case "timeout_failure":
           metrics.recordEngineTimeoutFailure();
+          break;
+        case "liveness_timeout":
+          metrics.recordEngineLivenessFailure();
           break;
       }
     },
