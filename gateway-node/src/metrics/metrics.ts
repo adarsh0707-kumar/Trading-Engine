@@ -1,11 +1,5 @@
 import client from "prom-client";
 
-const registry = new client.Registry();
-
-client.collectDefaultMetrics({
-  register: registry,
-});
-
 export type EngineMetricState =
   | "connecting"
   | "connected"
@@ -27,6 +21,12 @@ export interface GatewayMetrics {
 }
 
 export function createGatewayMetrics(): GatewayMetrics {
+  const registry = new client.Registry();
+
+  client.collectDefaultMetrics({
+    register: registry,
+  });
+
   const engineConnected = new client.Gauge({
     name: "gateway_engine_connected",
     help: "Whether the gateway engine connection is currently established.",
