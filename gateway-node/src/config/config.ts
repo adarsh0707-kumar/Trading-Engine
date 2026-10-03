@@ -1,4 +1,5 @@
 import { MAX_TRANSPORT_PAYLOAD_BYTES, validateBoundedPositiveInteger } from "../security/input-validation.ts";
+import { parseCorsOrigins } from "../security/cors.ts";
 
 export interface GatewayConfig {
   readonly gateway: {
@@ -50,7 +51,7 @@ export interface GatewayConfig {
   };
 
   readonly cors: {
-    readonly origin: string;
+    readonly origins: readonly string[];
   };
 }
 
@@ -104,7 +105,7 @@ const DEFAULTS = {
   },
 
   cors: {
-    origin: "http://localhost:5173",
+    origins: ["http://localhost:5173"] as const,
   },
 } as const;
 
@@ -427,11 +428,7 @@ export function loadConfig(
     }),
 
     cors: Object.freeze({
-      origin: getString(
-        environment,
-        "CORS_ORIGIN",
-        DEFAULTS.cors.origin,
-      ),
+      origins: parseCorsOrigins(environment),
     }),
   });
 
