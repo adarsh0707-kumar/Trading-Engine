@@ -24,6 +24,7 @@ import type { MarketProvider } from "./market/market.types.ts";
 import type { OrderBookProvider } from "./orderbook/orderbook.types.ts";
 import type { TradesProvider } from "./trades/trades.types.ts";
 import { createWebSocketHub, type WebSocketHub } from "./websocket/websocket-hub.ts";
+import { createCorsOriginValidator } from "./security/cors.ts";
 
 export interface GatewayServer {
   readonly app: FastifyInstance;
@@ -193,7 +194,8 @@ export function createGatewayServer(
   registerErrorHandler(app);
 
   app.register(cors, {
-    origin: config.cors.origin,
+    origin: createCorsOriginValidator(config.cors.origins),
+    credentials: false,
   });
 
   app.register(registerHealthRoutes);
