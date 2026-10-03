@@ -41,7 +41,7 @@ describe("gateway metrics", () => {
 
     const output = await metrics.getMetrics();
 
-    expect(output).toContain("gateway_http_requests_total{method="GET",status_code="200"} 1");
+    expect(output).toContain(`gateway_http_requests_total{method="GET",status_code="200"} 1`);
     expect(output).toContain("gateway_http_request_duration_seconds");
     expect(output).toContain("gateway_engine_connected 1");
     expect(output).toContain("gateway_engine_messages_total 1");
@@ -67,7 +67,7 @@ describe("gateway metrics", () => {
     expect(output).toContain("gateway_websocket_subscription_updates_total 1");
     expect(output).toContain("gateway_websocket_queue_overflows_total 1");
     expect(output).toContain("gateway_websocket_heartbeat_timeouts_total 1");
-    expect(output).toContain("gateway_websocket_published_events_total{event_type="TRADE"} 1");
+    expect(output).toContain(`gateway_websocket_published_events_total{event_type="TRADE"} 1`);
     expect(output).toContain("gateway_rate_limit_rejections_total 1");
   });
 
