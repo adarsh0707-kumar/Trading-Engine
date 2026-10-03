@@ -48,7 +48,9 @@ describe("gateway analytics message contract", () => {
   });
 
   test("serializes the stable Python-compatible wire envelope", () => {
-    expect(JSON.parse(serializeGatewayTradeMessage(validMessage))).toEqual({
+    const normalized = normalizeGatewayTradeMessage(validMessage);
+
+    expect(JSON.parse(serializeGatewayTradeMessage(normalized))).toEqual({
       version: 1,
       type: "TRADE",
       event_id: "trade-00000001-buy-1-sell-1",
