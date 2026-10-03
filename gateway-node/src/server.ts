@@ -209,9 +209,16 @@ export function createGatewayServer(
       metrics.recordWebSocketPublishedEvent("ANALYTICS_UPDATE");
       mutableAnalyticsProvider?.updateAnalytics(message);
 
+      operationalLog.info("analytics_update_received", {
+        eventId: message.eventId,
+        requestId: message.requestId,
+        outcome: "accepted",
+      });
+
       websocketHub.publish({
         type: "ANALYTICS_UPDATE",
         eventId: message.eventId,
+        requestId: message.requestId,
         timestamp: message.timestamp,
         payload: message.payload,
       });
@@ -221,9 +228,16 @@ export function createGatewayServer(
       metrics.recordWebSocketPublishedEvent("RISK_EVENT");
       mutableAnalyticsProvider?.updateRiskEvent(message);
 
+      operationalLog.info("analytics_risk_event_received", {
+        eventId: message.eventId,
+        requestId: message.requestId,
+        outcome: "accepted",
+      });
+
       websocketHub.publish({
         type: "RISK_EVENT",
         eventId: message.eventId,
+        requestId: message.requestId,
         timestamp: message.timestamp,
         payload: message.payload,
       });
