@@ -24,7 +24,7 @@ import type { MarketProvider } from "./market/market.types.ts";
 import type { OrderBookProvider } from "./orderbook/orderbook.types.ts";
 import type { TradesProvider } from "./trades/trades.types.ts";
 import { createWebSocketHub, type WebSocketHub } from "./websocket/websocket-hub.ts";
-import { createCorsOriginValidator } from "./security/cors.ts";
+import { ApiError } from "./errors/api-error.ts";
 import { assertRateLimit, createRateLimiter } from "./security/rate-limit.ts";
 
 export interface GatewayServer {
@@ -83,7 +83,7 @@ export function createGatewayServer(
       try {
         assertRateLimit(rateLimiter, request.ip);
       } catch (error) {
-        if (error instanceof Error && "code" in error && (error as { code?: unknown }).code === "RATE_LIMITED") {
+        if (error instanceof ApiError && error.code === "RATE_LIMITED") {
           metrics.recordRateLimitRejection();
           app.log.warn(
             { ip: request.ip, method: request.method, url: request.url },
