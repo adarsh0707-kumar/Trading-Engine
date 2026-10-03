@@ -65,6 +65,7 @@ jobs:
       - name: Test
         working-directory: analytics-py
         run: python -m pytest -q
+
   gateway-node:
     runs-on: ubuntu-latest
 
@@ -91,3 +92,22 @@ jobs:
         working-directory: gateway-node
         run: bun test
 
+  observability:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Prometheus configuration
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/infra/prometheus:/etc/prometheus:ro" \
+            prom/prometheus:v2.55.1 \
+            promtool check config /etc/prometheus/prometheus.yml
+
+      - name: Validate Prometheus alert rules
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/infra/prometheus:/etc/prometheus:ro" \
+            prom/prometheus:v2.55.1 \
+            promtool check rules /etc/prometheus/alerts.yml
