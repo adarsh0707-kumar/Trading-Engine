@@ -3,11 +3,7 @@
 A production-style, polyglot trading simulation platform designed to demonstrate how modern algorithmic trading infrastructure can be structured across high-performance systems, analytics, APIs, real-time communication, and visualization.
 
 > **Project status:** Active development
-> **Current milestone:** Phase 4.9 — Operational Logging & Metrics
-> **Latest completed milestone:** Phase 4.8.7 — Security Regression & Integration Validation
-> **Primary goal:** Build a realistic, modular trading-engine simulation for learning, experimentation, benchmarking, and portfolio demonstration. <br>
-If this project was useful to you, consider [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee\&logoColor=white)](https://buymeacoffee.com/adarsh12kumar)
----
+> **Current milestone: **Phase 4.9 — Operational Logging & Metrics**
 
 
 ## Table of Contents
