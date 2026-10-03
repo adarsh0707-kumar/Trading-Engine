@@ -6,6 +6,16 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4.9.3 — Request & Event Correlation
+
+- Propagated stable requestId and eventId correlation fields through Gateway engine, analytics, and WebSocket event boundaries.
+- Preserved analytics requestId values when publishing ANALYTICS_UPDATE and RISK_EVENT events to WebSocket consumers.
+- Added structured operational logs for accepted analytics outputs with both eventId and requestId.
+- Kept HTTP request IDs and asynchronous dependency event IDs separate; no synthetic correlation IDs are created when an upstream request context is unavailable.
+- Kept requestId/eventId out of Prometheus metric labels to preserve low-cardinality metrics.
+
+Status: In Progress
+
 ### Phase 4.9.2 — Metrics Completion
 
 - Completed Gateway Prometheus metric coverage across HTTP, Engine, Analytics, WebSocket, and rate-limit boundaries.
