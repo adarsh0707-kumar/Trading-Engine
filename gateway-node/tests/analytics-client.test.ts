@@ -168,6 +168,7 @@ describe("analytics client", () => {
 
   test("rejects trades when the bounded queue is full", () => {
     const errors: Error[] = [];
+    const healthEvents: string[] = [];
 
     const client = createAnalyticsClient({
       host: "127.0.0.1",
@@ -180,11 +181,17 @@ describe("analytics client", () => {
       onError: (error) => {
         errors.push(error);
       },
+      onHealthEvent: ({ type }) => {
+        healthEvents.push(type);
+      },
     });
 
     expect(client.sendTrade(tradeEvent())).toBe(true);
     expect(client.sendTrade(tradeEvent())).toBe(false);
     expect(client.getQueueSize()).toBe(1);
-    expect(errors[0]?.message).toContain("queue is full");
+    expect(errors[0]?.name).toBe("GatewayFailure");
+    expect((errors[0] as { category?: string }).category).toBe("queue_overflow");
+    expect((errors[0] as { recoverable?: boolean }).recoverable).toBe(true);
+    expect(healthEvents).toEqual(["queue_overflow"]);
   });
 });
