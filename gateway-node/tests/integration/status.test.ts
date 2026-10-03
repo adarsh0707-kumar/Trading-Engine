@@ -65,6 +65,22 @@ describe("GET /api/v1/status", () => {
       },
     });
 
+    const engineHealthResponse = await gateway.app.inject({
+      method: "GET",
+      url: "/api/v1/status/engine",
+    });
+
+    expect(engineHealthResponse.statusCode).toBe(200);
+    expect(engineHealthResponse.json()).toEqual({
+      data: {
+        state: "disconnected",
+        connectedAt: null,
+        lastMessageAt: null,
+        lastHeartbeatAt: null,
+        reconnectAttempts: 0,
+      },
+    });
+
     await gateway.stop();
   });
 });
