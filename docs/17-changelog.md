@@ -213,6 +213,32 @@ Readiness is cleared when the trading-engine connection is lost or the service s
 
 ---
 
+# 2026-10-03 — Phase 4.7 Completion & Phase 4.8 Start
+
+**Status:** Phase 4.7 complete; Phase 4.8 active
+
+Phase 4.7 is complete through the following milestones:
+
+- 4.7.1 — Error Model & Failure Boundaries
+- 4.7.2 — Engine Connection Resilience
+- 4.7.3 — Engine Health & Liveness Monitoring
+- 4.7.4 — Engine Liveness Failure & Recovery
+- 4.7.5 — Analytics Backpressure & Graceful Degradation
+
+Phase 4.8 — Security Boundaries & Input Hardening is now the active Gateway milestone.
+
+### Phase 4.8 Scope
+
+- External request and message input hardening.
+- CORS policy hardening.
+- Request and message size enforcement.
+- Safe and deterministic error exposure.
+- Rate-limit extension points.
+- Authentication and authorization boundary preparation.
+- Security-focused tests and validation.
+
+---
+
 # Status Legend
 
 * ✅ Complete
