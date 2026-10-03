@@ -242,3 +242,39 @@ export const engineHealthResponseSchema = {
     },
   },
 } as const;
+
+
+export const readinessResponseSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["status", "service", "dependencies"],
+  properties: {
+    status: {
+      type: "string",
+      enum: ["ready", "not_ready"],
+    },
+    service: {
+      type: "string",
+      enum: ["gateway"],
+    },
+    dependencies: {
+      type: "object",
+      additionalProperties: false,
+      required: ["gateway", "engine", "analytics"],
+      properties: {
+        gateway: {
+          type: "string",
+          enum: ["ok"],
+        },
+        engine: {
+          type: "string",
+          enum: ["connected", "disconnected"],
+        },
+        analytics: {
+          type: "string",
+          enum: ["connected", "disconnected"],
+        },
+      },
+    },
+  },
+} as const;
