@@ -16,6 +16,7 @@ export interface GatewayMetrics {
   readonly recordEngineConnectionFailure: () => void;
   readonly recordEngineProtocolFailure: () => void;
   readonly recordEngineTimeoutFailure: () => void;
+  readonly recordEngineLivenessFailure: () => void;
   readonly setEngineLastMessageAt: (timestampMs: number) => void;
   readonly setEngineLastHeartbeatAt: (timestampMs: number) => void;
 }
@@ -81,6 +82,12 @@ export function createGatewayMetrics(): GatewayMetrics {
     registers: [registry],
   });
 
+  const engineLivenessFailures = new client.Counter({
+    name: "gateway_engine_liveness_failures_total",
+    help: "Total engine heartbeat liveness failures observed by the gateway.",
+    registers: [registry],
+  });
+
   return {
     registry,
     contentType: registry.contentType,
@@ -105,6 +112,9 @@ export function createGatewayMetrics(): GatewayMetrics {
     },
     recordEngineTimeoutFailure: () => {
       engineTimeoutFailures.inc();
+    },
+    recordEngineLivenessFailure: () => {
+      engineLivenessFailures.inc();
     },
     setEngineLastMessageAt: (timestampMs) => {
       engineLastMessageTimestamp.set(timestampMs / 1000);

@@ -8,6 +8,7 @@ export interface GatewayConfig {
     readonly host: string;
     readonly port: number;
     readonly connectTimeoutMs: number;
+    readonly heartbeatTimeoutMs: number;
     readonly requestTimeoutMs: number;
     readonly reconnectInitialDelayMs: number;
     readonly reconnectMaxDelayMs: number;
@@ -61,6 +62,7 @@ const DEFAULTS = {
     host: "127.0.0.1",
     port: 9000,
     connectTimeoutMs: 5000,
+    heartbeatTimeoutMs: 15000,
     requestTimeoutMs: 5000,
     reconnectInitialDelayMs: 500,
     reconnectMaxDelayMs: 10000,
@@ -275,6 +277,11 @@ export function loadConfig(
         environment,
         "ENGINE_CONNECT_TIMEOUT_MS",
         DEFAULTS.engine.connectTimeoutMs,
+      ),
+      heartbeatTimeoutMs: parsePositiveInteger(
+        environment,
+        "ENGINE_HEARTBEAT_TIMEOUT_MS",
+        DEFAULTS.engine.heartbeatTimeoutMs,
       ),
       requestTimeoutMs: parsePositiveInteger(
         environment,

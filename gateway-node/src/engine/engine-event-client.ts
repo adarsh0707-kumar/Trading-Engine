@@ -25,6 +25,7 @@ export interface EngineEventClientOptions {
   readonly host: string;
   readonly port: number;
   readonly connectTimeoutMs: number;
+  readonly heartbeatTimeoutMs?: number;
   readonly reconnectInitialDelayMs: number;
   readonly reconnectMaxDelayMs: number;
   readonly reconnectMaxAttempts: number;
@@ -38,7 +39,8 @@ export interface EngineEventClientOptions {
       | "reconnect_attempt"
       | "connection_failure"
       | "protocol_failure"
-      | "timeout_failure";
+      | "timeout_failure"
+      | "liveness_timeout";
     readonly timestamp: number;
   }) => void;
   readonly socketFactory?: () => NetSocket;
@@ -84,6 +86,7 @@ export function createEngineEventClient(
   let socket: NetSocket | undefined;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let connectTimer: ReturnType<typeof setTimeout> | undefined;
+  let livenessTimer: ReturnType<typeof setTimeout> | undefined;
   let running = false;
   let connected = false;
   let reconnectAttempts = 0;
@@ -91,6 +94,13 @@ export function createEngineEventClient(
   let connectedAt: number | null = null;
   let lastMessageAt: number | null = null;
   let lastHeartbeatAt: number | null = null;
+
+  const clearLivenessTimer = (): void => {
+    if (livenessTimer !== undefined) {
+      clearTimeout(livenessTimer);
+      livenessTimer = undefined;
+    }
+  };
 
   const clearTimers = (): void => {
     if (reconnectTimer !== undefined) {
@@ -102,6 +112,8 @@ export function createEngineEventClient(
       clearTimeout(connectTimer);
       connectTimer = undefined;
     }
+
+    clearLivenessTimer();
   };
 
   const emitState = (nextState: EngineClientState): void => {
@@ -111,6 +123,7 @@ export function createEngineEventClient(
       connectedAt = Date.now();
     } else if (nextState === "disconnected") {
       connectedAt = null;
+      clearLivenessTimer();
     }
     options.onStateChange?.(nextState);
   };
@@ -122,7 +135,8 @@ export function createEngineEventClient(
       | "reconnect_attempt"
       | "connection_failure"
       | "protocol_failure"
-      | "timeout_failure",
+      | "timeout_failure"
+      | "liveness_timeout",
   ): void => {
     options.onHealthEvent?.({ type, timestamp: Date.now() });
   };
@@ -133,10 +147,41 @@ export function createEngineEventClient(
 
   const emitConnectionError = (error: unknown): void => {
     const normalized = toError(error);
-    emitError(normalized instanceof ConnectionFailure ? normalized : new ConnectionFailure(normalized.message));
+    emitError(
+      normalized instanceof ConnectionFailure
+        ? normalized
+        : new ConnectionFailure(normalized.message),
+    );
+  };
+
+  const scheduleLivenessTimeout = (nextSocket: NetSocket): void => {
+    clearLivenessTimer();
+
+    const timeoutMs = options.heartbeatTimeoutMs ?? 0;
+    if (timeoutMs <= 0 || !running || socket !== nextSocket) {
+      return;
+    }
+
+    livenessTimer = setTimeout(() => {
+      livenessTimer = undefined;
+
+      if (!running || socket !== nextSocket || !connected) {
+        return;
+      }
+
+      emitError(
+        new TimeoutFailure(
+          `Engine heartbeat liveness timed out after ${timeoutMs}ms`,
+        ),
+      );
+      emitHealthEvent("liveness_timeout");
+      nextSocket.destroy();
+    }, timeoutMs);
   };
 
   const disconnect = (): void => {
+    clearLivenessTimer();
+
     if (state !== "disconnected") {
       emitState("disconnected");
     }
@@ -146,7 +191,6 @@ export function createEngineEventClient(
       socket.destroy();
       socket = undefined;
     }
-
   };
 
   const scheduleReconnect = (): void => {
@@ -162,8 +206,7 @@ export function createEngineEventClient(
     }
 
     const delay = Math.min(
-      options.reconnectInitialDelayMs *
-        2 ** reconnectAttempts,
+      options.reconnectInitialDelayMs * 2 ** reconnectAttempts,
       options.reconnectMaxDelayMs,
     );
 
@@ -176,7 +219,10 @@ export function createEngineEventClient(
     }, delay);
   };
 
-  const handleClose = (closedSocket: NetSocket, closedProtocol: EngineProtocol): void => {
+  const handleClose = (
+    closedSocket: NetSocket,
+    closedProtocol: EngineProtocol,
+  ): void => {
     if (connectTimer !== undefined) {
       clearTimeout(connectTimer);
       connectTimer = undefined;
@@ -184,6 +230,7 @@ export function createEngineEventClient(
 
     if (socket !== closedSocket) return;
 
+    clearLivenessTimer();
     emitState("disconnected");
     socket = undefined;
 
@@ -194,7 +241,11 @@ export function createEngineEventClient(
     }
   };
 
-  const handleData = (nextSocket: NetSocket, nextProtocol: EngineProtocol, chunk: Buffer): void => {
+  const handleData = (
+    nextSocket: NetSocket,
+    nextProtocol: EngineProtocol,
+    chunk: Buffer,
+  ): void => {
     try {
       const messages = nextProtocol.push(
         new Uint8Array(
@@ -211,6 +262,7 @@ export function createEngineEventClient(
         if (message.type === "HEARTBEAT") {
           lastHeartbeatAt = lastMessageAt;
           emitHealthEvent("heartbeat");
+          scheduleLivenessTimeout(nextSocket);
 
           if (socket !== nextSocket) return;
           nextSocket.write(
@@ -273,9 +325,12 @@ export function createEngineEventClient(
 
       emitState("connected");
       reconnectAttempts = 0;
+      scheduleLivenessTimeout(nextSocket);
     });
 
-    nextSocket.on("data", (chunk) => handleData(nextSocket, nextProtocol, Buffer.from(chunk)));
+    nextSocket.on("data", (chunk) =>
+      handleData(nextSocket, nextProtocol, Buffer.from(chunk)),
+    );
 
     nextSocket.once("error", (error) => {
       if (socket === nextSocket) {
