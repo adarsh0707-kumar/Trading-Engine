@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import Fastify from "fastify";
+import Fastify, { type FastifyInstance } from "fastify";
 
 import {
   conflict,
@@ -12,7 +12,7 @@ import {
 } from "../src/errors/api-error.ts";
 import { registerErrorHandler } from "../src/errors/error-handler.ts";
 
-const apps = [];
+const apps: FastifyInstance[] = [];
 
 afterEach(async () => {
   await Promise.all(apps.splice(0).map((app) => app.close()));
