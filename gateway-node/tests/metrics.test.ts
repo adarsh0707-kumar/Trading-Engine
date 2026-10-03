@@ -15,6 +15,7 @@ describe("gateway engine metrics", () => {
     metrics.recordEngineProtocolFailure();
     metrics.recordEngineTimeoutFailure();
     metrics.recordEngineLivenessFailure();
+    metrics.recordAnalyticsQueueOverflow();
     metrics.setEngineLastMessageAt(now);
     metrics.setEngineLastHeartbeatAt(now);
 
@@ -28,6 +29,7 @@ describe("gateway engine metrics", () => {
     expect(output).toContain("gateway_engine_protocol_failures_total 1");
     expect(output).toContain("gateway_engine_timeout_failures_total 1");
     expect(output).toContain("gateway_engine_liveness_failures_total 1");
+    expect(output).toContain("gateway_analytics_queue_overflows_total 1");
     expect(output).toContain("gateway_engine_last_message_timestamp_seconds");
     expect(output).toContain("gateway_engine_last_heartbeat_timestamp_seconds");
   });
