@@ -133,7 +133,7 @@ describe("gateway websocket end-to-end", () => {
 
       setTimeout(() => {
         socket.write(tradeMessage());
-      }, 25);
+      }, 100);
     });
 
     await new Promise<void>((resolve) => {
