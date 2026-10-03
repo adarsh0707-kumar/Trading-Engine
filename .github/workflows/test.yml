@@ -101,13 +101,15 @@ jobs:
       - name: Validate Prometheus configuration
         run: |
           docker run --rm \
+            --entrypoint promtool \
             -v "${{ github.workspace }}/infra/prometheus:/etc/prometheus:ro" \
             prom/prometheus:v2.55.1 \
-            promtool check config /etc/prometheus/prometheus.yml
+            check config /etc/prometheus/prometheus.yml
 
       - name: Validate Prometheus alert rules
         run: |
           docker run --rm \
+            --entrypoint promtool \
             -v "${{ github.workspace }}/infra/prometheus:/etc/prometheus:ro" \
             prom/prometheus:v2.55.1 \
-            promtool check rules /etc/prometheus/alerts.yml
+            check rules /etc/prometheus/alerts.yml
