@@ -7,6 +7,12 @@ This project is an educational trading-infrastructure simulation. It does not co
 ## [Unreleased]
 
 ### Phase 4.8 — Security Boundaries & Input Hardening
+### Phase 4.8.4 — Safe Error Exposure / Public Error Contract
+- Sanitized Gateway API error messages so internal exception details are never returned to clients.
+- Added stable public messages for authentication, authorization, validation, not-found, conflict, dependency, and internal error classes.
+- Preserved request IDs for client-side correlation without exposing framework or dependency internals.
+- Added regression coverage for all public error codes, unexpected exceptions, and not-found responses.
+
 ### Phase 4.8.3 — CORS Security Hardening
 - Replaced the single runtime CORS origin with a strict exact-origin allowlist.
 - Added comma-separated `CORS_ORIGINS` configuration while preserving the existing `CORS_ORIGIN` setting for compatibility.

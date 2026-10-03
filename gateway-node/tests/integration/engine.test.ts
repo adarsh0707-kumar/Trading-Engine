@@ -33,7 +33,7 @@ describe("POST /api/v1/engine/*", () => {
       const body = response.json() as ErrorResponse;
 
       expect(body.error.code).toBe("DEPENDENCY_UNAVAILABLE");
-      expect(body.error.message).toBe("Engine control is unavailable");
+      expect(body.error.message).toBe("Required dependency is unavailable");
       expect(body.error.request_id).toBeTruthy();
     }
 

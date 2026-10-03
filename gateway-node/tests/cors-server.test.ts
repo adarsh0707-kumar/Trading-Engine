@@ -22,7 +22,7 @@ describe("Gateway CORS policy", () => {
 
     const response = await gateway.app.inject({
       method: "GET",
-      url: "/health",
+      url: "/api/health",
       headers: {
         origin: "https://app.example.com",
       },
@@ -44,7 +44,7 @@ describe("Gateway CORS policy", () => {
 
     const response = await gateway.app.inject({
       method: "GET",
-      url: "/health",
+      url: "/api/health",
       headers: {
         origin: "https://evil.example.com",
       },

@@ -194,7 +194,7 @@ export function createGatewayServer(
   registerErrorHandler(app);
 
   app.register(cors, {
-    origin: createCorsOriginValidator(config.cors.origins),
+    origin: [...config.cors.origins],
     credentials: false,
   });
 

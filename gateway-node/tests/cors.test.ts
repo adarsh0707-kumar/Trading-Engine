@@ -85,21 +85,13 @@ describe("CORS security", () => {
     expect(isCorsOriginAllowed(allowed, undefined)).toBe(true);
   });
 
-  test("creates a callback that denies untrusted origins", () => {
+  test("creates a Fastify-compatible validator that denies untrusted origins", () => {
     const validate = createCorsOriginValidator([
       "https://app.example.com",
     ]);
 
-    const results: Array<boolean | undefined> = [];
-
-    validate("https://app.example.com", (_error, allow) => {
-      results.push(allow);
-    });
-
-    validate("https://evil.example.com", (_error, allow) => {
-      results.push(allow);
-    });
-
-    expect(results).toEqual([true, false]);
+    expect(validate("https://app.example.com", {})).toBe(true);
+    expect(validate("https://evil.example.com", {})).toBe(false);
+    expect(validate(undefined, {})).toBe(true);
   });
 });

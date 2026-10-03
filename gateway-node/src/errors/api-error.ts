@@ -21,6 +21,14 @@ export function invalidArgument(message: string): ApiError {
   return new ApiError(400, "INVALID_ARGUMENT", message);
 }
 
+export function unauthorized(message: string): ApiError {
+  return new ApiError(401, "UNAUTHORIZED", message);
+}
+
+export function forbidden(message: string): ApiError {
+  return new ApiError(403, "FORBIDDEN", message);
+}
+
 export function notFound(message: string): ApiError {
   return new ApiError(404, "NOT_FOUND", message);
 }

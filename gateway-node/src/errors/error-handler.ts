@@ -9,6 +9,27 @@ function getRequestId(request: {
   return request.id;
 }
 
+function getPublicErrorMessage(
+  code: ApiErrorBody["error"]["code"],
+): string {
+  switch (code) {
+    case "INVALID_ARGUMENT":
+      return "Request validation failed";
+    case "UNAUTHORIZED":
+      return "Authentication required";
+    case "FORBIDDEN":
+      return "Access denied";
+    case "NOT_FOUND":
+      return "Resource not found";
+    case "CONFLICT":
+      return "Request conflicts with the current state";
+    case "DEPENDENCY_UNAVAILABLE":
+      return "Required dependency is unavailable";
+    case "INTERNAL_ERROR":
+      return "Internal server error";
+  }
+}
+
 function buildErrorBody(
   requestId: string,
   code: ApiErrorBody["error"]["code"],
@@ -54,7 +75,13 @@ export function registerErrorHandler(app: FastifyInstance): void {
     if (error instanceof ApiError) {
       return reply
         .status(error.statusCode)
-        .send(buildErrorBody(requestId, error.code, error.message));
+        .send(
+          buildErrorBody(
+            requestId,
+            error.code,
+            getPublicErrorMessage(error.code),
+          ),
+        );
     }
 
     if (error.validation) {
@@ -77,7 +104,7 @@ export function registerErrorHandler(app: FastifyInstance): void {
         buildErrorBody(
           requestId,
           "INTERNAL_ERROR",
-          "Internal server error",
+          getPublicErrorMessage("INTERNAL_ERROR"),
         ),
       );
   });

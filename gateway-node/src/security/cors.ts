@@ -93,7 +93,7 @@ export function isCorsOriginAllowed(
 
 export function createCorsOriginValidator(
   allowedOrigins: readonly string[],
-): (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => void {
+): (origin: string | undefined, request: unknown) => boolean {
   if (!Array.isArray(allowedOrigins) || allowedOrigins.length === 0) {
     throw new Error("At least one CORS origin must be configured");
   }
@@ -102,7 +102,6 @@ export function createCorsOriginValidator(
     validateCorsOrigin(origin);
   }
 
-  return (origin, callback) => {
-    callback(null, isCorsOriginAllowed(allowedOrigins, origin));
-  };
+  return (origin, _request) =>
+    isCorsOriginAllowed(allowedOrigins, origin);
 }
