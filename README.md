@@ -3,6 +3,8 @@
 A production-style, polyglot trading simulation platform designed to demonstrate how modern algorithmic trading infrastructure can be structured across high-performance systems, analytics, APIs, real-time communication, and visualization.
 
 > **Project status:** Active development
+> **Current milestone:** Phase 4.9 — Operational Logging & Metrics
+> **Latest completed milestone:** Phase 4.8.7 — Security Regression & Integration Validation
 > **Primary goal:** Build a realistic, modular trading-engine simulation for learning, experimentation, benchmarking, and portfolio demonstration. <br>
 If this project was useful to you, consider [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee\&logoColor=white)](https://buymeacoffee.com/adarsh12kumar)
 ---
@@ -1276,7 +1278,7 @@ GitHub Actions checks           PASS — 9/9
 
 ## Phase 4 — Node.js Gateway
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress
 
 **Implementation language:** TypeScript  
 **Runtime:** Bun  
@@ -1303,7 +1305,10 @@ Detailed implementation is tracked in docs/05-roadmap-and-phases.md.
 - 4.9 Security boundaries and input hardening.
 - 4.10 Operational logging and metrics.
 - 4.11 Unit, integration, and end-to-end gateway validation.
-- 4.12 Phase integration and exit criteria.
+- 4.8 Security boundaries and input hardening — complete.
+- 4.9 Operational logging and metrics — active.
+- 4.10 Testing and integration validation.
+- 4.11 Phase integration and exit criteria.
 
 Bun is the standard gateway development, test, and execution toolchain. npm is not the default package manager for Phase 4.
 
