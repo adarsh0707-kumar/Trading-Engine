@@ -63,6 +63,8 @@ export function createGatewayServer(
     heartbeatIntervalMs: config.websocket.heartbeatIntervalMs,
   });
 
+  const metrics = createGatewayMetrics();
+
   const analyticsProvider =
     options.analyticsProvider ?? createAnalyticsProvider();
 
@@ -126,10 +128,35 @@ export function createGatewayServer(
       );
     },
     onStateChange: (state) => {
+      metrics.recordEngineState(state);
       app.log.info(
         { state },
         "engine_event_client_state_changed",
       );
+    },
+    onHealthEvent: ({ type, timestamp }) => {
+      switch (type) {
+        case "message":
+          metrics.recordEngineMessage();
+          metrics.setEngineLastMessageAt(timestamp);
+          break;
+        case "heartbeat":
+          metrics.recordEngineHeartbeat();
+          metrics.setEngineLastHeartbeatAt(timestamp);
+          break;
+        case "reconnect_attempt":
+          metrics.recordEngineReconnectAttempt();
+          break;
+        case "connection_failure":
+          metrics.recordEngineConnectionFailure();
+          break;
+        case "protocol_failure":
+          metrics.recordEngineProtocolFailure();
+          break;
+        case "timeout_failure":
+          metrics.recordEngineTimeoutFailure();
+          break;
+      }
     },
   });
 
@@ -172,11 +199,10 @@ export function createGatewayServer(
     tradesProvider: options.tradesProvider,
     analyticsProvider,
     engineProvider: options.engineProvider,
+    engineEventClient,
   });
 
   if (config.metrics.enabled) {
-    const metrics = createGatewayMetrics();
-
     app.get(config.metrics.path, async (_request, reply) => {
       reply.header("Content-Type", metrics.contentType);
 

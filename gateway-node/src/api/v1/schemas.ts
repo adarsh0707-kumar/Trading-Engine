@@ -212,3 +212,33 @@ export const engineActionResponseSchema = {
     },
   },
 } as const;
+
+
+export const engineHealthResponseSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["data"],
+  properties: {
+    data: {
+      type: "object",
+      additionalProperties: false,
+      required: [
+        "state",
+        "connectedAt",
+        "lastMessageAt",
+        "lastHeartbeatAt",
+        "reconnectAttempts",
+      ],
+      properties: {
+        state: {
+          type: "string",
+          enum: ["connecting", "connected", "disconnected"],
+        },
+        connectedAt: { type: ["integer", "null"] },
+        lastMessageAt: { type: ["integer", "null"] },
+        lastHeartbeatAt: { type: ["integer", "null"] },
+        reconnectAttempts: { type: "integer", minimum: 0 },
+      },
+    },
+  },
+} as const;

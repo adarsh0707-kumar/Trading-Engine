@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 
 import { createEngineProvider } from "../../engine/engine.provider.ts";
 import type { EngineProvider } from "../../engine/engine.types.ts";
+import type { EngineEventClient } from "../../engine/engine-event-client.ts";
 import { createAnalyticsProvider } from "../../analytics/analytics.provider.ts";
 import type { AnalyticsProvider } from "../../analytics/analytics.types.ts";
 import { createMarketProvider } from "../../market/market.provider.ts";
@@ -14,6 +15,7 @@ import { createTradesProvider } from "../../trades/trades.provider.ts";
 import type { TradesProvider } from "../../trades/trades.types.ts";
 import { registerAnalyticsRoute } from "./analytics.ts";
 import { registerEngineRoutes } from "./engine.ts";
+import { registerEngineHealthRoute } from "./engine-health.ts";
 import { registerMarketRoute } from "./market.ts";
 import { registerOrderBookRoute } from "./orderbook.ts";
 import { registerStatusRoute } from "./status.ts";
@@ -26,6 +28,7 @@ export interface V1RouteOptions {
   readonly tradesProvider?: TradesProvider;
   readonly analyticsProvider?: AnalyticsProvider;
   readonly engineProvider?: EngineProvider;
+  readonly engineEventClient?: EngineEventClient;
 }
 
 export async function registerV1Routes(
@@ -42,6 +45,9 @@ export async function registerV1Routes(
   const engineProvider = options.engineProvider ?? createEngineProvider();
 
   await registerStatusRoute(app, statusProvider);
+  if (options.engineEventClient) {
+    await registerEngineHealthRoute(app, options.engineEventClient);
+  }
   await registerAnalyticsRoute(app, {
     analyticsProvider,
   });
