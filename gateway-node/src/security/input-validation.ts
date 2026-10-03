@@ -1,5 +1,6 @@
 export const MAX_ENGINE_REQUEST_ID_LENGTH = 256;
 export const MAX_ENGINE_TIMESTAMP_LENGTH = 64;
+export const MAX_TRANSPORT_PAYLOAD_BYTES = 1024 * 1024;
 
 export function isRecord(
   value: unknown,
@@ -66,6 +67,22 @@ export function validateIsoTimestamp(
   }
 
   return timestamp;
+}
+
+export function validateBoundedPositiveInteger(
+  value: unknown,
+  field: string,
+  maxValue: number,
+): number {
+  if (!Number.isInteger(value) || (value as number) <= 0) {
+    throw new Error(`${field} must be a positive integer`);
+  }
+
+  if ((value as number) > maxValue) {
+    throw new Error(`${field} must be at most ${maxValue}`);
+  }
+
+  return value as number;
 }
 
 export function validateUniqueStringArray(
