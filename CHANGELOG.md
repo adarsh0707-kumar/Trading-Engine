@@ -6,12 +6,18 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4.9 — Operational Logging & Metrics
+- Phase 4.9 is the next active Gateway milestone after completion of the Phase 4.8 security hardening gate.
+- Scope begins with structured operational logging, metric consistency, request/event correlation, and dependency observability across HTTP, engine, analytics, and WebSocket boundaries.
+- Existing security boundaries remain unchanged while observability is extended.
+
 ### Phase 4.8 — Security Boundaries & Input Hardening
 ### Phase 4.8.7 — Security Regression & Integration Validation
 - Added a dedicated Gateway security regression command covering Phase 4.8.1–4.8.6 boundaries.
 - Added CI coverage for the Gateway Bun build, security regression suite, and full Gateway test suite.
 - Kept the final Phase 4.8 gate validation-focused: no new authentication provider, credential verifier, or security feature is introduced.
 - Updated the security milestone status to complete after the regression gate passes.
+- Final Gateway validation completed with 182 tests passing and 0 failures.
 
 ### Phase 4.8.6 — AuthN/AuthZ Boundary Preparation
 - Added explicit authentication state and principal types without introducing a credential verifier.
@@ -165,8 +171,8 @@ This project is an educational trading-infrastructure simulation. It does not co
 | Phase 4.5 — WebSocket Gateway | ✅ Complete |
 | Phase 4.6 — Python Analytics Integration | ✅ Complete |
 | Phase 4.7 — Error Handling, Resilience & Backpressure | ✅ Complete |
-| Phase 4.8 — Security Boundaries & Input Hardening | 🚧 In Progress |
-| Phase 4.9 — Operational Logging & Metrics | ⏳ Planned |
+| Phase 4.8 — Security Boundaries & Input Hardening | ✅ Complete |
+| Phase 4.9 — Operational Logging & Metrics | 🚧 In Progress |
 | Phase 4.10 — Testing & Integration Validation | ⏳ Planned |
 | Phase 4.11 — Phase Integration & Exit Criteria | ⏳ Planned |
 | Phase 5 — React Dashboard | ⏳ Planned |
