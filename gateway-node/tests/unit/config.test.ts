@@ -33,7 +33,7 @@ describe("loadConfig", () => {
     expect(config.rateLimit.maxRequests).toBe(120);
     expect(config.rateLimit.windowMs).toBe(60_000);
     expect(config.rateLimit.maxClients).toBe(10_000);
-    expect(config.rateLimit.excludedPaths).toEqual(["/api/health", "/metrics"]);
+    expect(config.rateLimit.excludedPaths).toEqual(["/api/health", "/api/ready", "/metrics"]);
     expect(config.auth.enabled).toBe(false);
     expect(config.auth.enforcementEnabled).toBe(false);
   });
