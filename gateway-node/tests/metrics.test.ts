@@ -38,11 +38,13 @@ describe("gateway metrics", () => {
     metrics.recordHttpRequest("GET", 200);
     metrics.observeHttpRequestDuration("GET", 0.025);
     metrics.recordRateLimitRejection();
+    metrics.setGatewayReadiness(true);
 
     const output = await metrics.getMetrics();
 
     expect(output).toContain(`gateway_http_requests_total{method="GET",status_code="200"} 1`);
     expect(output).toContain("gateway_http_request_duration_seconds");
+    expect(output).toContain("gateway_ready 1");
     expect(output).toContain("gateway_engine_connected 1");
     expect(output).toContain("gateway_engine_messages_total 1");
     expect(output).toContain("gateway_engine_heartbeats_total 1");
@@ -75,6 +77,7 @@ describe("gateway metrics", () => {
     const metrics = createGatewayMetrics();
     const output = await metrics.getMetrics();
 
+    expect(output).toContain("gateway_ready 0");
     expect(output).toContain("gateway_engine_connected 0");
     expect(output).toContain("gateway_analytics_connected 0");
     expect(output).toContain("gateway_websocket_connected_clients 0");

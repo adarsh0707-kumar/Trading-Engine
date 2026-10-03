@@ -71,8 +71,6 @@ void ClientConnection::start(
     MessageHandler messageHandler,
     DisconnectHandler disconnectHandler)
 {
-    std::lock_guard<std::mutex> lock(threadMutex_);
-
     if (running_.exchange(true))
     {
         return;
@@ -81,20 +79,27 @@ void ClientConnection::start(
     messageHandler_ = std::move(messageHandler);
     disconnectHandler_ = std::move(disconnectHandler);
 
-    receiveThread_ =
-        std::thread(
-            &ClientConnection::receiveLoop,
-            this);
+    std::thread(
+        &ClientConnection::receiveLoop,
+        shared_from_this())
+        .detach();
 }
 
 void ClientConnection::stop()
 {
-    running_.exchange(false);
+    if (!running_.exchange(false))
+    {
+        return;
+    }
 
     /*
-     * Shutting down the descriptor unblocks recv(). The receive thread
-     * remains owned by this connection so callers can wait for it before
-     * destroying the connection or reusing its descriptor.
+     * The descriptor is only shut down here, never closed: the receive
+     * thread may be blocked in recv() on it, and a closed descriptor
+     * number is immediately reusable by the operating system. Shutting
+     * the socket down unblocks the thread and closes the connection at
+     * the protocol level; the descriptor itself is released by the
+     * destructor, which cannot run before the receive thread exits
+     * because that thread holds a shared_ptr to this connection.
      */
     if (socketFd_ >= 0)
     {
@@ -102,28 +107,6 @@ void ClientConnection::stop()
             socketFd_,
             SHUT_RDWR);
     }
-
-    std::lock_guard<std::mutex> lock(threadMutex_);
-
-    if (!receiveThread_.joinable())
-    {
-        return;
-    }
-
-    if (receiveThread_.get_id() ==
-        std::this_thread::get_id())
-    {
-        /*
-         * A naturally disconnected client can be destroyed from its own
-         * receive thread after the server removes it from its client map.
-         * A thread cannot join itself, so detach only in this terminal
-         * self-destruction case.
-         */
-        receiveThread_.detach();
-        return;
-    }
-
-    receiveThread_.join();
 }
 
 bool ClientConnection::isRunning() const

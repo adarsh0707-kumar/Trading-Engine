@@ -66,6 +66,25 @@ describe("HTTP rate limit boundary", () => {
     expect(responses.every((response) => response.statusCode === 200)).toBe(true);
   });
 
+  test("does not rate-limit excluded readiness endpoint", async () => {
+    const gateway = createGatewayServer({
+      RATE_LIMIT_MAX_REQUESTS: "1",
+      RATE_LIMIT_WINDOW_MS: "60000",
+    });
+    gateways.push(gateway);
+
+    const responses = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        gateway.app.inject({
+          method: "GET",
+          url: "/api/ready",
+        }),
+      ),
+    );
+
+    expect(responses.every((response) => response.statusCode === 503)).toBe(true);
+  });
+
   test("can be disabled without changing endpoint behavior", async () => {
     const gateway = createGatewayServer({
       RATE_LIMIT_ENABLED: "false",

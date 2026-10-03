@@ -126,7 +126,7 @@ const DEFAULTS = {
     maxRequests: 120,
     windowMs: 60_000,
     maxClients: 10_000,
-    excludedPaths: ["/api/health", "/metrics"] as const,
+    excludedPaths: ["/api/health", "/api/ready", "/metrics"] as const,
   },
 
   auth: {

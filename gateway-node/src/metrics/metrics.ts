@@ -44,6 +44,7 @@ export interface GatewayMetrics {
   readonly setWebSocketClients: (count: number) => void;
 
   readonly recordRateLimitRejection: () => void;
+  readonly setGatewayReadiness: (ready: boolean) => void;
 }
 
 function createCounter(
@@ -233,6 +234,12 @@ export function createGatewayMetrics(): GatewayMetrics {
     ["event_type"],
   );
 
+  const gatewayReady = new client.Gauge({
+    name: "gateway_ready",
+    help: "Whether the gateway is currently ready to serve traffic.",
+    registers: [registry],
+  });
+
   const rateLimitRejections = createCounter(
     registry,
     "gateway_rate_limit_rejections_total",
@@ -290,5 +297,6 @@ export function createGatewayMetrics(): GatewayMetrics {
     setWebSocketClients: (count) => websocketConnectedClients.set(count),
 
     recordRateLimitRejection: () => rateLimitRejections.inc(),
+    setGatewayReadiness: (ready) => gatewayReady.set(ready ? 1 : 0),
   };
 }

@@ -9,7 +9,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace trading
@@ -78,14 +77,11 @@ private:
     std::atomic<bool> running_{false};
 
     std::mutex sendMutex_;
-    std::mutex threadMutex_;
 
     std::vector<std::uint8_t> receiveBuffer_;
 
     MessageHandler messageHandler_;
     DisconnectHandler disconnectHandler_;
-
-    std::thread receiveThread_;
 
     // Heartbeat tracking
     mutable std::mutex heartbeatMutex_;
