@@ -3,14 +3,15 @@ import type { StatusProvider } from "../status/status.types.ts";
 import type { HealthResponse, ReadinessResponse } from "../types/health.types.ts";
 
 export interface HealthRouteOptions {
+  readonly statusProvider: StatusProvider;
   readonly onReadinessChange?: (ready: boolean) => void;
 }
 
 export async function registerHealthRoutes(
   app: FastifyInstance,
-  statusProvider: StatusProvider,
-  options: HealthRouteOptions = {},
+  options: HealthRouteOptions,
 ): Promise<void> {
+  const { statusProvider } = options;
   app.get<{ Reply: HealthResponse }>("/api/health", async () => ({
     status: "ok",
     service: "gateway",
