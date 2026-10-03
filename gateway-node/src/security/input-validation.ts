@@ -58,7 +58,11 @@ export function validateIsoTimestamp(
     MAX_ENGINE_TIMESTAMP_LENGTH,
   );
 
-  if (!/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?Z$/.test(timestamp)) {
+  if (timestamp.trim() === "") {
+    throw new Error(`${field} must not be empty`);
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/.test(timestamp)) {
     throw new Error(`${field} must be an ISO-8601 UTC timestamp`);
   }
 
