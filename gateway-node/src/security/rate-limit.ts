@@ -1,6 +1,7 @@
 import { rateLimited } from "../errors/api-error.ts";
 
 export interface RateLimitOptions {
+  readonly enabled?: boolean;
   readonly maxRequests: number;
   readonly windowMs: number;
   readonly maxClients?: number;
@@ -18,6 +19,7 @@ export interface RateLimitDecision {
 }
 
 export interface RateLimiter {
+  readonly enabled: boolean;
   readonly check: (key: string) => RateLimitDecision;
   readonly reset: () => void;
   readonly size: () => number;
@@ -39,6 +41,7 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
     throw new Error("maxClients must be a positive integer");
   }
 
+  const enabled = options.enabled ?? true;
   const now = options.now ?? Date.now;
   const buckets = new Map<string, Bucket>();
 
@@ -90,6 +93,7 @@ export function createRateLimiter(options: RateLimitOptions): RateLimiter {
   };
 
   return {
+    enabled,
     check,
     reset: () => buckets.clear(),
     size: () => buckets.size,
@@ -100,6 +104,10 @@ export function assertRateLimit(
   limiter: RateLimiter,
   key: string,
 ): void {
+  if (!limiter.enabled) {
+    return;
+  }
+
   const decision = limiter.check(key);
 
   if (!decision.allowed) {
