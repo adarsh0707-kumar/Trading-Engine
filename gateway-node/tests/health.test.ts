@@ -9,10 +9,10 @@ describe("health routes", () => {
 
     await registerHealthRoutes(app, {
       statusProvider: {
-        getStatus: () => ({
-        gateway: "ok",
-        engine: "disconnected",
-        analytics: "disconnected",
+          getStatus: () => ({
+          gateway: "ok",
+          engine: "disconnected",
+          analytics: "disconnected",
         }),
       },
     });
@@ -35,11 +35,13 @@ describe("health routes", () => {
     const app = Fastify();
 
     await registerHealthRoutes(app, {
-      getStatus: () => ({
-        gateway: "ok",
-        engine: "connected",
-        analytics: "connected",
-      }),
+      statusProvider: {
+        getStatus: () => ({
+          gateway: "ok",
+          engine: "connected",
+          analytics: "connected",
+        }),
+      },
     });
 
     const response = await app.inject({
@@ -65,11 +67,13 @@ describe("health routes", () => {
     const app = Fastify();
 
     await registerHealthRoutes(app, {
-      getStatus: () => ({
-        gateway: "ok",
-        engine: "disconnected",
-        analytics: "connected",
-      }),
+      statusProvider: {
+        getStatus: () => ({
+          gateway: "ok",
+          engine: "disconnected",
+          analytics: "connected",
+        }),
+      },
     });
 
     const response = await app.inject({
