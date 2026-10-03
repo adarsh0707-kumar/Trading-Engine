@@ -160,7 +160,7 @@ export function createGatewayServer(
       config.rateLimit.excludedPaths.includes(path) ||
       path === config.websocket.path;
 
-    if (config.rateLimit.enabled && !rateLimitExcluded) {
+    if (!rateLimitExcluded) {
       try {
         assertRateLimit(rateLimiter, request.ip ?? "unknown");
       } catch (error) {
