@@ -6,6 +6,13 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4.7.4 — Engine Liveness Failure & Recovery
+- Added configurable engine heartbeat liveness timeout detection.
+- Reset the liveness deadline after every valid engine HEARTBEAT.
+- Classified stale-heartbeat failures as timeout failures and routed them through the existing reconnect lifecycle.
+- Added a dedicated Prometheus liveness-failure counter.
+- Preserved engine health timestamps and reconnect state for operational visibility.
+
 ### Phase 4.7.1 — Error Model & Failure Boundaries
 - Added a stable failure taxonomy for connection, timeout, protocol, validation, queue overflow, dependency unavailability, processing, and shutdown failures.
 - Added explicit recoverability semantics without changing existing reconnect or backpressure runtime behavior.
