@@ -7,6 +7,14 @@ This project is an educational trading-infrastructure simulation. It does not co
 ## [Unreleased]
 
 ### Phase 4.8 — Security Boundaries & Input Hardening
+### Phase 4.8.5 — Rate-Limit Boundary
+- Added a bounded in-process HTTP rate limiter with per-client fixed-window buckets.
+- Added configurable request limits, windows, retained-client bounds, and an enable/disable switch.
+- Added a stable HTTP 429 RATE_LIMITED error contract with sanitized messaging and Retry-After.
+- Excluded health and Prometheus endpoints from the application rate-limit boundary.
+- Added a Prometheus rejection counter and structured rejection logging.
+- Added configuration, limiter, public-error, endpoint, and metrics regression coverage.
+
 ### Phase 4.8.4 — Safe Error Exposure / Public Error Contract
 - Sanitized Gateway API error messages so internal exception details are never returned to clients.
 - Added stable public messages for authentication, authorization, validation, not-found, conflict, dependency, and internal error classes.
