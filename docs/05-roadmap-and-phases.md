@@ -548,6 +548,30 @@ Phase 4.7 establishes bounded failure handling, recovery, liveness monitoring, a
 
 ## Phase 4.8 — Security Boundaries & Input Hardening
 
+## Phase 4.8.6 — AuthN/AuthZ Boundary Preparation
+
+**Status:** 🚧 Complete on milestone branch; pending merge
+
+Implemented:
+
+- Explicit authenticated/unauthenticated request state.
+- Authenticated principal model with subject, roles, and scopes.
+- Reusable authentication and authorization guards.
+- Injectable Gateway authentication resolver seam.
+- Opt-in authentication enforcement via AUTH_ENABLED and AUTH_ENFORCEMENT_ENABLED.
+- Enforcement remains disabled by default.
+- No bearer-token parsing or credential verification is introduced until a concrete identity provider contract is selected.
+- Existing sanitized UNAUTHORIZED and FORBIDDEN public error contracts remain the external failure boundary.
+
+Environment variables:
+
+- AUTH_ENABLED
+- AUTH_ENFORCEMENT_ENABLED
+
+Future 4.8.x work can provide the concrete credential verifier/identity-provider adapter and route-level authorization policy without changing the Gateway's core request boundary.
+
+
+
 ## Phase 4.8.5 — Rate-Limit Boundary
 
 **Status:** 🚧 Complete on milestone branch; pending merge

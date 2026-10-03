@@ -25,6 +25,11 @@ import type { OrderBookProvider } from "./orderbook/orderbook.types.ts";
 import type { TradesProvider } from "./trades/trades.types.ts";
 import { createWebSocketHub, type WebSocketHub } from "./websocket/websocket-hub.ts";
 import { ApiError } from "./errors/api-error.ts";
+import {
+  anonymousAuthentication,
+  requireAuthentication,
+  type AuthenticationState,
+} from "./security/auth.ts";
 import { assertRateLimit, createRateLimiter } from "./security/rate-limit.ts";
 
 export interface GatewayServer {
@@ -39,6 +44,9 @@ export interface GatewayServer {
 
 export interface GatewayServerOptions {
   readonly statusProvider?: StatusProvider;
+  readonly authenticationResolver?: (
+    request: unknown,
+  ) => AuthenticationState | Promise<AuthenticationState>;
   readonly marketProvider?: MarketProvider;
   readonly orderBookProvider?: OrderBookProvider;
   readonly tradesProvider?: TradesProvider;
@@ -67,6 +75,16 @@ export function createGatewayServer(
   });
 
   const metrics = createGatewayMetrics();
+
+  if (config.auth.enabled && config.auth.enforcementEnabled) {
+    const authenticationResolver =
+      options.authenticationResolver ?? (() => anonymousAuthentication());
+
+    app.addHook("onRequest", async (request) => {
+      const authentication = await authenticationResolver(request);
+      requireAuthentication(authentication);
+    });
+  }
 
   const rateLimiter = createRateLimiter({
     maxRequests: config.rateLimit.maxRequests,

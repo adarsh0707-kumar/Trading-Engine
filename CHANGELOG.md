@@ -7,6 +7,13 @@ This project is an educational trading-infrastructure simulation. It does not co
 ## [Unreleased]
 
 ### Phase 4.8 — Security Boundaries & Input Hardening
+### Phase 4.8.6 — AuthN/AuthZ Boundary Preparation
+- Added explicit authentication state and principal types without introducing a credential verifier.
+- Added reusable authentication and role/scope authorization guards for future protected routes.
+- Added an injectable authentication resolver seam at the Gateway server boundary.
+- Added opt-in authentication enforcement configuration; enforcement remains disabled by default.
+- Preserved sanitized public 401/403 error handling and added regression coverage.
+
 ### Phase 4.8.5 — Rate-Limit Boundary
 - Added a bounded in-process HTTP rate limiter with per-client fixed-window buckets.
 - Added configurable request limits, windows, retained-client bounds, and an enable/disable switch.
