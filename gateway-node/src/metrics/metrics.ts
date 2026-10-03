@@ -17,6 +17,7 @@ export interface GatewayMetrics {
   readonly recordEngineProtocolFailure: () => void;
   readonly recordEngineTimeoutFailure: () => void;
   readonly recordEngineLivenessFailure: () => void;
+  readonly recordAnalyticsQueueOverflow: () => void;
   readonly setEngineLastMessageAt: (timestampMs: number) => void;
   readonly setEngineLastHeartbeatAt: (timestampMs: number) => void;
 }
@@ -88,6 +89,12 @@ export function createGatewayMetrics(): GatewayMetrics {
     registers: [registry],
   });
 
+  const analyticsQueueOverflows = new client.Counter({
+    name: "gateway_analytics_queue_overflows_total",
+    help: "Total analytics outbound queue overflow failures observed by the gateway.",
+    registers: [registry],
+  });
+
   return {
     registry,
     contentType: registry.contentType,
@@ -115,6 +122,9 @@ export function createGatewayMetrics(): GatewayMetrics {
     },
     recordEngineLivenessFailure: () => {
       engineLivenessFailures.inc();
+    },
+    recordAnalyticsQueueOverflow: () => {
+      analyticsQueueOverflows.inc();
     },
     setEngineLastMessageAt: (timestampMs) => {
       engineLastMessageTimestamp.set(timestampMs / 1000);
