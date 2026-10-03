@@ -56,7 +56,7 @@ describe("analytics client", () => {
 
     const server = createServer((socket) => {
       socket.once("data", (data) => {
-        received = decodeFrame(data);
+        received = decodeFrame(Buffer.from(data));
       });
     });
 
@@ -124,7 +124,7 @@ describe("analytics client", () => {
     const server = createServer((socket) => {
       socket.on("data", (data) => {
         received += 1;
-        expect(decodeFrame(data).type).toBe("TRADE");
+        expect(decodeFrame(Buffer.from(data)).type).toBe("TRADE");
       });
     });
 
