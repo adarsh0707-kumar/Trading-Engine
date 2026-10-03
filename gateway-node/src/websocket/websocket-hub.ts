@@ -77,3 +77,210 @@ function parseClientMessage(raw: string): WebSocketClientMessage {
   } as WebSocketClientMessage;
 }
 
+function serializeEvent(event: GatewayWebSocketEvent): string {
+  return JSON.stringify({
+    type: event.type,
+    eventId: event.eventId,
+    timestamp: event.timestamp,
+    payload: event.payload,
+  });
+}
+
+function serializeError(message: string): string {
+  return JSON.stringify({
+    type: "ERROR",
+    error: {
+      code: "INVALID_CLIENT_MESSAGE",
+      message,
+    },
+  });
+}
+
+export function createWebSocketHub(
+  options: WebSocketHubOptions,
+): WebSocketHub {
+  const clients = new Set<WebSocketConnection>();
+
+  const remove = (client: WebSocketConnection): void => {
+    clients.delete(client);
+    client.queue.length = 0;
+  };
+
+  const flush = (client: WebSocketConnection): void => {
+    if (client.flushing || client.socket.readyState !== OPEN) {
+      return;
+    }
+
+    const next = client.queue.shift();
+
+    if (next === undefined) {
+      return;
+    }
+
+    client.flushing = true;
+
+    try {
+      client.socket.send(next, (error?: Error) => {
+        client.flushing = false;
+
+        if (error !== undefined) {
+          remove(client);
+          client.socket.terminate();
+          return;
+        }
+
+        flush(client);
+      });
+    } catch {
+      client.flushing = false;
+      remove(client);
+      client.socket.terminate();
+    }
+  };
+
+  const enqueue = (
+    client: WebSocketConnection,
+    message: string,
+  ): void => {
+    if (client.socket.readyState !== OPEN) {
+      return;
+    }
+
+    if (client.queue.length >= options.maxQueueSize) {
+      remove(client);
+      client.socket.close(1013, "WebSocket client queue is full");
+      return;
+    }
+
+    client.queue.push(message);
+    flush(client);
+  };
+
+  const add = (socket: WebSocket): void => {
+    const client: WebSocketConnection = {
+      socket,
+      subscriptions: new Set<WebSocketEventType>(),
+      queue: [],
+      flushing: false,
+      alive: true,
+    };
+
+    clients.add(client);
+
+    socket.on("message", (data) => {
+      try {
+        const message = parseClientMessage(data.toString());
+
+        for (const eventType of message.events) {
+          if (message.action === "subscribe") {
+            client.subscriptions.add(eventType);
+          } else {
+            client.subscriptions.delete(eventType);
+          }
+        }
+
+        enqueue(
+          client,
+          JSON.stringify({
+            type: "SUBSCRIPTION_UPDATED",
+            subscriptions: [...client.subscriptions],
+          }),
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Invalid WebSocket client message";
+
+        enqueue(client, serializeError(message));
+      }
+    });
+
+    socket.on("pong", () => {
+      client.alive = true;
+    });
+
+    socket.on("close", () => {
+      remove(client);
+    });
+
+    socket.on("error", () => {
+      remove(client);
+    });
+
+    enqueue(
+      client,
+      JSON.stringify({
+        type: "CONNECTION_READY",
+        subscriptions: [],
+      }),
+    );
+  };
+
+  const publish = (event: GatewayWebSocketEvent): void => {
+    for (const client of clients) {
+      if (!client.subscriptions.has(event.type)) {
+        continue;
+      }
+
+      enqueue(client, serializeEvent(event));
+    }
+  };
+
+  let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+
+  const startHeartbeat = (): void => {
+    if (heartbeatTimer !== undefined) {
+      return;
+    }
+
+    heartbeatTimer = setInterval(() => {
+      for (const client of clients) {
+        if (client.socket.readyState !== OPEN) {
+          remove(client);
+          continue;
+        }
+
+        if (!client.alive) {
+          remove(client);
+          client.socket.terminate();
+          continue;
+        }
+
+        client.alive = false;
+        client.socket.ping();
+      }
+    }, options.heartbeatIntervalMs);
+  };
+
+  const stopHeartbeat = (): void => {
+    if (heartbeatTimer === undefined) {
+      return;
+    }
+
+    clearInterval(heartbeatTimer);
+    heartbeatTimer = undefined;
+  };
+
+  const closeAll = (
+    code = 1001,
+    reason = "Gateway is shutting down",
+  ): void => {
+    for (const client of clients) {
+      remove(client);
+
+      if (client.socket.readyState === OPEN) {
+        client.socket.close(code, reason);
+      }
+    }
+  };
+
+  return {
+    add,
+    publish,
+    closeAll,
+    size: () => clients.size,
+    startHeartbeat,
+    stopHeartbeat,
+  };
+}
