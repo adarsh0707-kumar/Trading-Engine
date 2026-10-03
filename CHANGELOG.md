@@ -25,7 +25,7 @@ Status: In Progress
 - Added focused regression coverage for metric values, labels, units, and default connection state.
 - No request IDs, event IDs, raw paths, client addresses, or payload contents are used as metric labels.
 
-Status: In Progress
+Status: Complete
 
 ### Phase 4.9.1 — Structured Operational Logging
 
@@ -35,7 +35,7 @@ Status: In Progress
 - Added WebSocket connection, subscription, queue-overflow, and heartbeat-timeout operational events without logging client payload contents.
 - Added regression coverage for the canonical operational log shape.
 
-Status: In Progress
+Status: Complete
 
 ## Phase 4.9 — Operational Logging & Metrics
 - Phase 4.9 is the next active Gateway milestone after completion of the Phase 4.8 security hardening gate.
