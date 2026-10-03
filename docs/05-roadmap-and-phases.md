@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest Completed Milestone:** Phase 4.8.5 — Rate-Limit Boundary
+**Latest Completed Milestone:** Phase 4.8.7 — Security Regression & Integration Validation
 
-**Current Milestone:** Phase 4.8 — Security Boundaries & Input Hardening
+**Current Milestone:** Phase 4.9 — Operational Logging & Metrics
 
 ### Current validated path
 
@@ -548,9 +548,22 @@ Phase 4.7 establishes bounded failure handling, recovery, liveness monitoring, a
 
 ## Phase 4.8 — Security Boundaries & Input Hardening
 
-## Phase 4.8.6 — AuthN/AuthZ Boundary Preparation
+**Status:** ✅ Complete
 
-**Status:** 🚧 Complete on milestone branch; pending merge
+Phase 4.8 is fully integrated on `main`. The security hardening gate covers external input validation, transport/request boundaries, strict CORS, sanitized public errors, rate limiting, and the opt-in authentication/authorization boundary.
+
+### Phase 4.8.7 — Security Regression & Integration Validation
+
+**Status:** ✅ Complete
+
+- Dedicated Gateway security regression command covering Phase 4.8.1–4.8.6.
+- CI Gateway build, security regression, and full Gateway test execution.
+- Final local Gateway validation: 182 tests passed, 0 failed.
+- No new identity provider, credential verifier, or authentication feature was introduced by the validation gate.
+
+### Phase 4.8.6 — AuthN/AuthZ Boundary Preparation
+
+**Status:** ✅ Complete
 
 Implemented:
 
@@ -574,7 +587,7 @@ Future 4.8.x work can provide the concrete credential verifier/identity-provider
 
 ## Phase 4.8.5 — Rate-Limit Boundary
 
-**Status:** 🚧 Complete on milestone branch; pending merge
+**Status:** ✅ Complete
 
 Implemented:
 
@@ -614,9 +627,55 @@ Harden external inputs, CORS, request/message sizes, error exposure, rate-limit 
 
 ## Phase 4.9 — Operational Logging & Metrics
 
+**Status:** 🚧 In Progress
+
+Extend structured operational logging and metrics across gateway HTTP, engine, analytics, and WebSocket boundaries. The basic Prometheus exposition endpoint is already implemented; this milestone focuses on consistent operational instrumentation rather than changing business behavior.
+
+### Phase 4.9.1 — Structured Operational Logging
+
 **Status:** ⏳ Planned
 
-Extend structured operational logging and metrics across gateway HTTP, upstream connections, and WebSocket behavior. The basic Prometheus exposition endpoint is already implemented in Phase 4.2; this milestone adds the broader metric set and operational instrumentation.
+- Standardize structured Gateway lifecycle, request, dependency, and failure events.
+- Define consistent operational fields for service, component, event, outcome, request identity, and event identity.
+- Preserve sanitized public errors while keeping detailed diagnostics in server-side logs.
+- Cover engine and analytics connection lifecycle transitions and WebSocket operational events.
+
+### Phase 4.9.2 — Metrics Completion
+
+**Status:** ⏳ Planned
+
+- Review existing Gateway Prometheus metrics for naming and label consistency.
+- Add missing HTTP, WebSocket, engine, and analytics operational counters/gauges.
+- Keep security and health endpoint boundaries explicit.
+
+### Phase 4.9.3 — Request & Event Correlation
+
+**Status:** ⏳ Planned
+
+- Propagate request/event identity across Gateway processing boundaries where available.
+- Make engine, analytics, HTTP, and WebSocket failures operationally traceable without exposing internal details to clients.
+
+### Phase 4.9.4 — Health & Readiness Observability
+
+**Status:** ⏳ Planned
+
+- Review health, readiness, and dependency-state semantics.
+- Ensure monitoring endpoints remain compatible with existing security and rate-limit boundaries.
+
+### Phase 4.9.5 — Observability Regression Validation
+
+**Status:** ⏳ Planned
+
+- Add focused logging and metrics regression coverage.
+- Run Gateway build, focused tests, and the complete Gateway suite.
+- Update operational documentation and changelog entries.
+
+### Phase 4.9.6 — Operational Observability Integration
+
+**Status:** ⏳ Planned
+
+- Complete the Gateway observability integration across engine, analytics, HTTP, and WebSocket paths.
+- Confirm the resulting instrumentation is bounded, deterministic, and compatible with the existing contracts.
 
 ## Phase 4.10 — Testing & Integration Validation
 
@@ -630,7 +689,7 @@ Complete gateway unit, integration, contract, failure-recovery, and end-to-end v
 
 Phase 4 is complete when the gateway connects the completed Phase 1–3 platform to the future dashboard with validated REST/WebSocket contracts, resilience, security boundaries, observability, tests, and CI coverage.
 
-**Phase 4 overall status:** 🚧 In Progress — 4.1 through 4.7 complete; 4.8 is the active milestone.
+**Phase 4 overall status:** 🚧 In Progress — 4.1 through 4.8 complete; 4.9 is the active milestone.
 
 # Phase 5 — React Dashboard
 
@@ -800,10 +859,10 @@ Planned:
 | 4.3 | Gateway HTTP API | ✅ Complete |
 | 4.4 | Engine Protocol & Event Normalization | ✅ Complete |
 | 4.5 | WebSocket Gateway | ✅ Complete |
-| 4.6 | Python Analytics Integration | 🚧 In Progress |
-| 4.7 | Error Handling, Resilience & Backpressure | 🚧 In Progress |
-| 4.8 | Security Boundaries & Input Hardening | ⏳ Planned |
-| 4.9 | Operational Logging & Metrics | ⏳ Planned |
+| 4.6 | Python Analytics Integration | ✅ Complete |
+| 4.7 | Error Handling, Resilience & Backpressure | ✅ Complete |
+| 4.8 | Security Boundaries & Input Hardening | ✅ Complete |
+| 4.9 | Operational Logging & Metrics | 🚧 In Progress |
 | 4.10 | Testing & Integration Validation | ⏳ Planned |
 | 4.11 | Phase Integration & Exit Criteria | ⏳ Planned |
 | 5 | React Dashboard | ⏳ Planned |
