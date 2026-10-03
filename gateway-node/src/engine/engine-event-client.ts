@@ -1,5 +1,7 @@
 import { Socket, type Socket as NetSocket } from "node:net";
 
+import { ConnectionFailure, ProtocolFailure, TimeoutFailure } from "../resilience/error-model.ts";
+
 import {
   createEngineProtocol,
   type EngineProtocol,
@@ -82,6 +84,11 @@ export function createEngineEventClient(
     options.onError?.(toError(error));
   };
 
+  const emitConnectionError = (error: unknown): void => {
+    const normalized = toError(error);
+    emitError(normalized instanceof ConnectionFailure ? normalized : new ConnectionFailure(normalized.message));
+  };
+
   const disconnect = (): void => {
     if (connected) {
       connected = false;
@@ -94,7 +101,6 @@ export function createEngineEventClient(
       socket = undefined;
     }
 
-    protocol.reset();
   };
 
   const scheduleReconnect = (): void => {
@@ -123,13 +129,15 @@ export function createEngineEventClient(
     }, delay);
   };
 
-  const handleClose = (): void => {
-    const hadSocket = socket !== undefined;
+  const handleClose = (closedSocket: NetSocket, closedProtocol: EngineProtocol): void => {
+    const hadSocket = socket === closedSocket;
 
     if (connectTimer !== undefined) {
       clearTimeout(connectTimer);
       connectTimer = undefined;
     }
+
+    if (socket !== closedSocket) return;
 
     socket = undefined;
 
@@ -140,16 +148,16 @@ export function createEngineEventClient(
       options.onStateChange?.("disconnected");
     }
 
-    protocol.reset();
+    closedProtocol.reset();
 
     if (running) {
       scheduleReconnect();
     }
   };
 
-  const handleData = (chunk: Buffer): void => {
+  const handleData = (nextSocket: NetSocket, nextProtocol: EngineProtocol, chunk: Buffer): void => {
     try {
-      const messages = protocol.push(
+      const messages = nextProtocol.push(
         new Uint8Array(
           chunk.buffer,
           chunk.byteOffset,
@@ -159,7 +167,8 @@ export function createEngineEventClient(
 
       for (const message of messages) {
         if (message.type === "HEARTBEAT") {
-          socket?.write(
+          if (socket !== nextSocket) return;
+          nextSocket.write(
             heartbeatResponse(
               message.requestId,
               message.timestamp,
@@ -175,8 +184,9 @@ export function createEngineEventClient(
         options.onEvent(normalizeEngineEvent(message));
       }
     } catch (error) {
-      emitError(error);
-      socket?.destroy();
+      const normalized = toError(error);
+      emitError(normalized instanceof ProtocolFailure ? normalized : new ProtocolFailure(normalized.message));
+      if (socket === nextSocket) nextSocket.destroy();
     }
   };
 
@@ -191,7 +201,7 @@ export function createEngineEventClient(
       options.socketFactory?.() ?? new Socket();
 
     socket = nextSocket;
-    protocol =
+    const nextProtocol =
       options.protocolFactory?.() ?? createEngineProtocol();
 
     const cleanupConnectTimer = (): void => {
@@ -216,13 +226,13 @@ export function createEngineEventClient(
       options.onStateChange?.("connected");
     });
 
-    nextSocket.on("data", handleData);
+    nextSocket.on("data", (chunk) => handleData(nextSocket, nextProtocol, chunk));
 
     nextSocket.once("error", (error) => {
-      emitError(error);
+      if (socket === nextSocket) emitConnectionError(error);
     });
 
-    nextSocket.once("close", handleClose);
+    nextSocket.once("close", () => handleClose(nextSocket, nextProtocol));
 
     connectTimer = setTimeout(() => {
       connectTimer = undefined;
