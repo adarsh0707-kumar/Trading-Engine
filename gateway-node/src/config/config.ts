@@ -61,6 +61,11 @@ export interface GatewayConfig {
     readonly maxClients: number;
     readonly excludedPaths: readonly string[];
   };
+
+  readonly auth: {
+    readonly enabled: boolean;
+    readonly enforcementEnabled: boolean;
+  };
 }
 
 const DEFAULTS = {
@@ -122,6 +127,11 @@ const DEFAULTS = {
     windowMs: 60_000,
     maxClients: 10_000,
     excludedPaths: ["/api/health", "/metrics"] as const,
+  },
+
+  auth: {
+    enabled: false,
+    enforcementEnabled: false,
   },
 } as const;
 
@@ -445,6 +455,19 @@ export function loadConfig(
 
     cors: Object.freeze({
       origins: parseCorsOrigins(environment),
+    }),
+
+    auth: Object.freeze({
+      enabled: parseBoolean(
+        environment,
+        "AUTH_ENABLED",
+        DEFAULTS.auth.enabled,
+      ),
+      enforcementEnabled: parseBoolean(
+        environment,
+        "AUTH_ENFORCEMENT_ENABLED",
+        DEFAULTS.auth.enforcementEnabled,
+      ),
     }),
 
     rateLimit: Object.freeze({
