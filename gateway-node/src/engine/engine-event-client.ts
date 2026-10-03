@@ -60,7 +60,6 @@ export function createEngineEventClient(
   options: EngineEventClientOptions,
 ): EngineEventClient {
   let socket: NetSocket | undefined;
-  let protocol = options.protocolFactory?.() ?? createEngineProtocol();
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let connectTimer: ReturnType<typeof setTimeout> | undefined;
   let running = false;
@@ -233,7 +232,7 @@ export function createEngineEventClient(
       }
 
       emitError(
-        new Error(
+        new TimeoutFailure(
           `Engine connection timed out after ${options.connectTimeoutMs}ms`,
         ),
       );
