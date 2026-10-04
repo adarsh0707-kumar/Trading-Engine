@@ -2,6 +2,7 @@
 #include "engine/EngineConfig.hpp"
 
 #include <csignal>
+#include <cstdlib>
 #include <iostream>
 #include <thread>
 
@@ -19,6 +20,12 @@ int main()
         signalHandler);
 
     trading::engine_runtime::EngineConfig config;
+
+    if (const char *bind_address = std::getenv("ENGINE_BIND_ADDRESS");
+        bind_address != nullptr && *bind_address != '\0')
+    {
+        config.bind_address = bind_address;
+    }
 
     config.symbol = "SIM";
     config.port = 9000;
@@ -42,7 +49,8 @@ int main()
     std::cout
         << "Trading Engine running\n"
         << "Symbol: " << config.symbol << "\n"
-        << "Transport: 127.0.0.1:" << engine.port() << "\n"
+        << "Bind: " << config.bind_address << "\n"
+        << "Transport: " << config.bind_address << ":" << engine.port() << "\n"
         << "Press Ctrl+C to stop.\n"
         << std::flush;
 
