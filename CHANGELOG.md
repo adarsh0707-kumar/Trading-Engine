@@ -6,6 +6,15 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4.10 — Testing & Integration Validation
+
+- Started the Phase 4.10 integration-validation milestone.
+- Added a dedicated Gateway full-stack integration test covering Engine TRADE ingress, Analytics TCP forwarding, analytics output normalization, and WebSocket delivery.
+- Added a dedicated `bun run test:integration` CI gate while retaining the existing service-level regression suites.
+- Documented the remaining full-stack C++ Engine + Python Analytics + PostgreSQL validation required before Phase 4 exit.
+
+Status: In Progress
+
 ### Phase 4.9.3 — Request & Event Correlation
 
 - Propagated stable requestId and eventId correlation fields through Gateway engine, analytics, and WebSocket event boundaries.
