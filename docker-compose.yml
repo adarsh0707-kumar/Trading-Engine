@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: trading_engine
+      POSTGRES_PASSWORD: trading_engine
+      POSTGRES_DB: trading_engine
+    ports:
+      - "5432:5432"
+    volumes:
+      - trading-engine-postgres:/var/lib/postgresql/data
+      - ./analytics-py/docker/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trading_engine -d trading_engine"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  engine:
+    build:
+      context: ./engine-cpp
+      dockerfile: Dockerfile
+    environment:
+      ENGINE_BIND_ADDRESS: 0.0.0.0
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+
+  analytics:
+    build:
+      context: ./analytics-py
+      dockerfile: Dockerfile
+    environment:
+      ANALYTICS_GATEWAY_HOST: gateway
+      ANALYTICS_GATEWAY_PORT: 8000
+      TRADING_ENGINE_DATABASE_URL: postgresql://trading_engine:trading_engine@postgres:5432/trading_engine
+      TRADING_ENGINE_METRICS_HOST: 0.0.0.0
+      TRADING_ENGINE_METRICS_PORT: 9101
+      TRADING_ENGINE_LOG_LEVEL: INFO
+    ports:
+      - "9101:9101"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  gateway:
+    build:
+      context: ./gateway-node
+      dockerfile: Dockerfile
+    environment:
+      GATEWAY_HOST: 0.0.0.0
+      GATEWAY_PORT: 8080
+      ENGINE_HOST: engine
+      ENGINE_PORT: 9000
+      ANALYTICS_HOST: analytics
+      ANALYTICS_PORT: 8000
+      CORS_ORIGINS: http://localhost:5173
+      RATE_LIMIT_ENABLED: "true"
+      AUTH_ENABLED: "false"
+      AUTH_ENFORCEMENT_ENABLED: "false"
+    ports:
+      - "8080:8080"
+    depends_on:
+      engine:
+        condition: service_started
+      analytics:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  trading-engine-postgres:
