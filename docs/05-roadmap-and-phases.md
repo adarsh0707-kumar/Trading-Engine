@@ -722,36 +722,1055 @@ Phase 4 exit criteria are satisfied:
 
 **Status:** 🚧 In Progress — next milestone
 
-Phase 5 starts the user-facing product layer. The existing backend contracts are the source of truth; the dashboard must consume the Gateway REST and WebSocket boundaries rather than bypassing Gateway services.
+Phase 5 is the user-facing product layer of the trading platform. The backend runtime and service boundaries are already established in Phases 1–4. The dashboard must consume those existing Gateway REST and WebSocket contracts and must not bypass the Gateway to connect directly to the C++ engine or Python analytics service.
 
-Planned:
+## Phase 5 Objective
 
-- Live market data
-- Order-book visualization
-- Recent trades
-- VWAP / SMA / EMA / volatility charts
-- Position and P&L display
-- Equity curve
-- Drawdown visualization
-- Risk-event display
-- Connection and engine status
-- Real-time updates
-- Dashboard unit/component tests
-- Browser-level end-to-end coverage for critical live-data flows
-- Responsive desktop/mobile layouts
-- Clear loading, empty, stale-data, and dependency-error states
+Build a production-structured React dashboard that provides:
 
-### Phase 5 recommended implementation order
+- Live market state.
+- Order-book visualization.
+- Recent trade activity.
+- Technical analytics.
+- Portfolio and P&L state.
+- Risk-limit and risk-event visibility.
+- Engine, analytics, database/readiness, and WebSocket status.
+- Real-time updates through Gateway WebSocket events.
+- Clear loading, empty, stale, disconnected, and dependency-error states.
+- Responsive desktop, tablet, and mobile layouts.
+- Automated dashboard tests.
+- Browser-level validation against the real Phase 4 runtime stack.
 
-1. Dashboard foundation and application shell.
-2. Gateway REST client and typed API models.
-3. WebSocket client, subscriptions, reconnect, and stale-connection handling.
-4. Live market data, recent trades, and order book.
-5. Analytics charts and portfolio/risk views.
-6. Engine/analytics status and operational states.
-7. Dashboard E2E validation against the runtime stack.
+## Phase 5 Architecture Contract
+
+```text
+React Dashboard
+      │
+      ├── REST ────────────────┐
+      │                        │
+      └── WebSocket ──────────┤
+                               ▼
+                       Node.js Gateway
+                               │
+             ┌─────────────────┴─────────────────┐
+             │                                   │
+        C++ Trading Engine                Python Analytics
+             │                                   │
+             └─────────────────┬─────────────────┘
+                               ▼
+                         PostgreSQL
+```
+
+### Dashboard rules
+
+1. React communicates only with the Gateway.
+2. REST is used for initial snapshots and request/response data.
+3. WebSocket is used for live event delivery.
+4. Existing Gateway contracts are the source of truth.
+5. Analytics calculations remain in Python; React only renders returned values.
+6. The dashboard must remain usable when one upstream dependency is unavailable.
+7. Environment-specific Gateway URLs must come from Vite environment configuration.
+8. WebSocket reconnects must restore the required subscriptions.
+9. Components should be independently testable.
+10. UI state must distinguish loading, empty, stale, disconnected, and error conditions.
 
 ---
+
+## Phase 5.0 — Repository Inspection & Dashboard Baseline
+
+**Status:** ⏳ Planned
+
+Before implementation, establish the actual dashboard scaffold and verify the Gateway contracts that Phase 5 will consume.
+
+### Objectives
+
+- Inspect the existing dashboard-react structure.
+- Confirm the existing React/Vite/TypeScript setup.
+- Identify the package manager and available scripts.
+- Verify the dashboard can build before feature work.
+- Inspect implemented Gateway REST and WebSocket contracts.
+- Avoid replacing existing working code unnecessarily.
+
+### Inspect
+
+```text
+dashboard-react/
+├── package.json
+├── src/
+├── public/
+└── ...
+```
+
+Gateway contracts to review:
+
+```text
+GET /api/v1/status
+GET /api/v1/status/engine
+GET /api/v1/market
+GET /api/v1/orderbook
+GET /api/v1/trades
+GET /api/v1/analytics
+WS /ws
+```
+
+### Validation
+
+```text
+Install dependencies       PASS
+Development server starts  PASS
+Production build           PASS
+Gateway contract review    PASS
+```
+
+### Exit criteria
+
+- [ ] Dashboard baseline builds.
+- [ ] Existing source structure is understood.
+- [ ] Gateway endpoint contracts are documented for dashboard use.
+- [ ] No unnecessary backend changes are introduced.
+
+---
+
+## Phase 5.1 — Dashboard Foundation & Application Shell
+
+**Status:** ⏳ Planned
+
+Create the reusable frontend foundation before implementing trading views.
+
+### Objectives
+
+- Establish the React application shell.
+- Add routing.
+- Add dashboard layout.
+- Add navigation.
+- Add shared UI primitives.
+- Establish design tokens and trading-dashboard styling.
+- Establish reusable loading, error, empty, and connection-state components.
+
+### Recommended structure
+
+```text
+dashboard-react/src/
+├── app/
+│   ├── App.tsx
+│   ├── router.tsx
+│   └── providers.tsx
+├── components/
+│   ├── common/
+│   ├── layout/
+│   ├── market/
+│   ├── orderbook/
+│   ├── trades/
+│   ├── analytics/
+│   ├── portfolio/
+│   ├── risk/
+│   └── system/
+├── hooks/
+├── pages/
+├── services/
+│   ├── api/
+│   └── websocket/
+├── types/
+├── utils/
+└── styles/
+```
+
+### Application shell
+
+```text
+App
+ ↓
+Router
+ ↓
+DashboardLayout
+ ├── Header
+ ├── Sidebar / Navigation
+ └── MainContent
+```
+
+### Initial routes
+
+```text
+/dashboard
+/markets
+/trades
+/analytics
+/risk
+/system
+```
+
+### Shared UI
+
+Create reusable components for:
+
+- Card/panel.
+- Metric/stat display.
+- Loading state.
+- Empty state.
+- Error state.
+- Connection badge.
+- Timestamp/stale-data indicator.
+- Responsive grid/container.
+
+### Exit criteria
+
+- [ ] Dashboard route renders.
+- [ ] Navigation works.
+- [ ] Shared UI primitives exist.
+- [ ] Design tokens are centralized.
+- [ ] Desktop and mobile shell layouts render.
+- [ ] Production build passes.
+
+---
+
+## Phase 5.2 — Gateway REST Client & Typed API Models
+
+**Status:** ⏳ Planned
+
+Build one typed REST boundary for all initial dashboard snapshots.
+
+### Objectives
+
+- Centralize HTTP communication.
+- Keep Gateway URL configurable.
+- Define frontend models matching Gateway response contracts.
+- Normalize transport errors into dashboard-friendly errors.
+- Prevent individual components from implementing their own fetch logic.
+
+### Recommended files
+
+```text
+src/services/api/client.ts
+src/services/api/status.ts
+src/services/api/market.ts
+src/services/api/orderbook.ts
+src/services/api/trades.ts
+src/services/api/analytics.ts
+
+src/types/status.ts
+src/types/market.ts
+src/types/orderbook.ts
+src/types/trade.ts
+src/types/analytics.ts
+```
+
+### Environment configuration
+
+```text
+VITE_GATEWAY_URL
+```
+
+No hardcoded environment-specific Gateway URL should exist in components.
+
+### API responsibilities
+
+| Client | Endpoint | Responsibility |
+| --- | --- | --- |
+| status | /api/v1/status | Overall service status |
+| engine status | /api/v1/status/engine | Engine health/liveness |
+| market | /api/v1/market | Current market state |
+| orderbook | /api/v1/orderbook | Initial book snapshot |
+| trades | /api/v1/trades | Recent trades |
+| analytics | /api/v1/analytics | Latest analytics/risk state |
+
+### Failure handling
+
+Map:
+
+```text
+HTTP 4xx  → client/request error
+HTTP 5xx  → Gateway/dependency error
+timeout   → request timeout state
+network   → disconnected dependency state
+invalid   → contract/data error
+```
+
+### Exit criteria
+
+- [ ] All required REST clients implemented.
+- [ ] Models match Gateway contracts.
+- [ ] Gateway URL is environment-driven.
+- [ ] HTTP errors are normalized.
+- [ ] REST client tests cover success and failure paths.
+
+---
+
+## Phase 5.3 — WebSocket Client, Protocol & Reconnection
+
+**Status:** ⏳ Planned
+
+Create the browser WebSocket layer for live Gateway events.
+
+### Objectives
+
+- Connect to Gateway /ws.
+- Subscribe to supported event types.
+- Parse and validate incoming events.
+- Dispatch events to dashboard state.
+- Handle close/error/reconnect.
+- Restore subscriptions after reconnect.
+- Detect stale connections.
+
+### Recommended files
+
+```text
+src/services/websocket/client.ts
+src/services/websocket/protocol.ts
+src/services/websocket/reconnect.ts
+src/hooks/useGatewayWebSocket.ts
+```
+
+### Supported dashboard events
+
+```text
+TRADE
+ANALYTICS_UPDATE
+RISK_EVENT
+```
+
+### Lifecycle
+
+```text
+CONNECT
+  ↓
+CONNECTED
+  ↓
+SUBSCRIBE
+  ↓
+RECEIVE EVENTS
+  ↓
+CLOSE / ERROR
+  ↓
+BACKOFF
+  ↓
+RECONNECT
+  ↓
+RESUBSCRIBE
+  ↓
+RECEIVE EVENTS
+```
+
+### Failure handling
+
+- Invalid event → reject/ignore safely and record a client-side protocol error.
+- Unexpected close → reconnect with bounded backoff.
+- Reconnect success → restore subscriptions.
+- Repeated failure → expose disconnected state without crashing the UI.
+- Stale connection → show stale/disconnected status.
+
+### Exit criteria
+
+- [ ] WebSocket connects to Gateway.
+- [ ] Subscribe/unsubscribe works.
+- [ ] TRADE events are parsed.
+- [ ] ANALYTICS_UPDATE events are parsed.
+- [ ] RISK_EVENT events are parsed.
+- [ ] Reconnect works.
+- [ ] Subscriptions are restored after reconnect.
+- [ ] Invalid messages do not crash the application.
+- [ ] WebSocket tests pass.
+
+---
+
+## Phase 5.4 — Dashboard Layout & Navigation
+
+**Status:** ⏳ Planned
+
+Turn the application shell into the main trading dashboard experience.
+
+### Main dashboard layout
+
+```text
+┌─────────────────────────────────────────────────────┐
+│ Header: Symbol / Connection / Engine Status         │
+├───────────────────────┬─────────────────────────────┤
+│ Market Summary        │ Analytics Summary            │
+├───────────────────────┼─────────────────────────────┤
+│ Price / Analytics     │ Order Book                   │
+│ Chart                 │                              │
+├───────────────────────┼─────────────────────────────┤
+│ Recent Trades         │ Portfolio / Risk             │
+├───────────────────────┴─────────────────────────────┤
+│ System / Dependency Status                           │
+└─────────────────────────────────────────────────────┘
+```
+
+### Navigation
+
+```text
+Dashboard
+Markets
+Trades
+Analytics
+Risk
+System
+```
+
+### Exit criteria
+
+- [ ] All primary pages/routes exist.
+- [ ] Dashboard has a coherent information hierarchy.
+- [ ] Navigation works without page reloads.
+- [ ] Shared header shows connection state.
+- [ ] Layout adapts to smaller screens.
+
+---
+
+## Phase 5.5 — Live Market Data & Recent Trades
+
+**Status:** ⏳ Planned
+
+Connect the first live trading views to the Gateway.
+
+### Market view
+
+Display:
+
+- Symbol.
+- Last traded price.
+- Last trade quantity.
+- Bid.
+- Ask.
+- Spread when available.
+- Market update timestamp.
+
+### Recent trades
+
+Display:
+
+- Trade ID/event ID.
+- Symbol.
+- Price.
+- Quantity.
+- Taker side.
+- Timestamp.
+- Buy order ID.
+- Sell order ID.
+
+### Data flow
+
+```text
+REST snapshot
+     ↓
+Initial React state
+     ↓
+WebSocket TRADE
+     ↓
+Update trade state
+     ↓
+Update market summary
+     ↓
+Render
+```
+
+### Requirements
+
+- New TRADE events appear without page refresh.
+- Recent-trade history is bounded in the browser.
+- Duplicate events are handled deterministically.
+- Old/stale data is visibly identified when appropriate.
+
+### Exit criteria
+
+- [ ] Initial market state loads from REST.
+- [ ] Initial trades load from REST.
+- [ ] Live TRADE events update the UI.
+- [ ] Market summary updates from live events.
+- [ ] Duplicate handling is deterministic.
+- [ ] Loading/empty/error states work.
+
+---
+
+## Phase 5.6 — Order Book Visualization
+
+**Status:** ⏳ Planned
+
+Render the current bid/ask book from the Gateway order-book snapshot.
+
+### Display
+
+```text
+ASKS
+Price       Quantity
+---------   --------
+...
+
+Spread
+...
+
+BIDS
+Price       Quantity
+---------   --------
+...
+```
+
+### Requirements
+
+- Render bids and asks separately.
+- Sort each side according to the Gateway contract.
+- Highlight best bid/ask.
+- Show quantity/price accurately.
+- Handle an empty book.
+- Handle unavailable book data.
+- Avoid client-side matching or order-book calculation.
+
+### Data flow
+
+```text
+GET /api/v1/orderbook
+        ↓
+Typed snapshot
+        ↓
+OrderBook component
+        ↓
+Bid/ask visualization
+```
+
+If a future Gateway WebSocket order-book event is introduced, the component should consume it through the same typed state boundary rather than implementing a second data path.
+
+### Exit criteria
+
+- [ ] Snapshot loads correctly.
+- [ ] Bids/asks render correctly.
+- [ ] Best levels are clear.
+- [ ] Empty/error states work.
+- [ ] No trading-engine connection is made from React.
+
+---
+
+## Phase 5.7 — Analytics Charts & Indicator Views
+
+**Status:** ⏳ Planned
+
+Render the analytics already calculated by Python.
+
+### Required analytics
+
+```text
+VWAP
+SMA
+EMA
+Volatility
+```
+
+### Requirements
+
+- Consume /api/v1/analytics for initial state.
+- Consume ANALYTICS_UPDATE for live updates.
+- Preserve server-provided numeric precision.
+- Display the source timestamp.
+- Do not recalculate analytics in React.
+- Handle missing/partial analytics values.
+
+### Recommended views
+
+```text
+Price + VWAP
+Price + SMA
+Price + EMA
+Volatility
+Analytics summary cards
+```
+
+### Data flow
+
+```text
+Python Analytics
+      ↓
+Gateway analytics state
+      ↓
+REST snapshot / WebSocket update
+      ↓
+React analytics state
+      ↓
+Charts
+```
+
+### Exit criteria
+
+- [ ] VWAP visible.
+- [ ] SMA visible.
+- [ ] EMA visible.
+- [ ] Volatility visible.
+- [ ] Initial analytics load works.
+- [ ] Live ANALYTICS_UPDATE works.
+- [ ] Missing-data states work.
+- [ ] React performs no duplicate analytics calculation.
+
+---
+
+## Phase 5.8 — Portfolio, P&L & Risk Dashboard
+
+**Status:** ⏳ Planned
+
+Expose the portfolio/risk state already produced by Python analytics.
+
+### Portfolio metrics
+
+```text
+Position
+Average Entry Price
+Realized P&L
+Unrealized P&L
+Equity
+Peak Equity
+Drawdown
+```
+
+### Risk metrics
+
+Display:
+
+- Risk-limit status.
+- Warning state.
+- Breach state.
+- Current value.
+- Configured threshold.
+- Warning threshold.
+- Risk-limit type.
+- Symbol.
+- Risk-event timestamp.
+
+### Risk events
+
+Consume:
+
+```text
+RISK_EVENT
+```
+
+Display recent events with clear severity/state.
+
+### Requirements
+
+- No risk calculations in React.
+- Preserve Decimal/string precision from the backend contract.
+- Distinguish warning and breached states.
+- Keep recent risk events bounded.
+- Show when risk data is stale.
+
+### Exit criteria
+
+- [ ] Portfolio metrics render.
+- [ ] P&L values render correctly.
+- [ ] Equity/drawdown state renders.
+- [ ] Risk status renders.
+- [ ] RISK_EVENT updates appear live.
+- [ ] Warning/breach states are visually distinguishable.
+- [ ] Missing risk data is handled safely.
+
+---
+
+## Phase 5.9 — Engine, Analytics & System Status
+
+**Status:** ⏳ Planned
+
+Expose operational health so the dashboard can explain whether missing data is caused by the runtime.
+
+### Status sources
+
+```text
+GET /api/v1/status
+GET /api/v1/status/engine
+WebSocket connection state
+```
+
+Where available through the Gateway, surface:
+
+```text
+Engine connection
+Engine heartbeat/liveness
+Analytics connection
+Gateway availability
+PostgreSQL/readiness state
+WebSocket connection
+Last update timestamp
+```
+
+### Status states
+
+```text
+HEALTHY
+DEGRADED
+DISCONNECTED
+STALE
+ERROR
+```
+
+### Requirements
+
+- Status must be understandable without reading logs.
+- A dependency failure must not make the whole dashboard blank.
+- Last successful update time should be visible for live data.
+
+### Exit criteria
+
+- [ ] Engine status displayed.
+- [ ] Analytics status displayed.
+- [ ] WebSocket status displayed.
+- [ ] Gateway status displayed.
+- [ ] Available database/readiness information displayed.
+- [ ] Stale/disconnected conditions are visible.
+
+---
+
+## Phase 5.10 — Loading, Empty, Error & Stale-Data UX
+
+**Status:** ⏳ Planned
+
+Make dependency and data failures explicit instead of silently showing incorrect values.
+
+### Required states
+
+```text
+LOADING
+EMPTY
+READY
+STALE
+DISCONNECTED
+ERROR
+```
+
+### Apply to
+
+- Market.
+- Trades.
+- Order book.
+- Analytics.
+- Portfolio.
+- Risk.
+- System status.
+- WebSocket connection.
+
+### Rules
+
+- Never display a missing value as a valid zero unless the Gateway contract explicitly says zero.
+- Do not replace stale data with fabricated values.
+- Preserve the last known valid state when appropriate and mark it stale.
+- Error messages shown to users must be concise and safe.
+
+### Exit criteria
+
+- [ ] Every data panel has loading behavior.
+- [ ] Every data panel has an empty state.
+- [ ] Every data panel has an error state.
+- [ ] Stale data is identifiable.
+- [ ] WebSocket disconnect is visible.
+- [ ] Recovery returns the UI to READY state.
+
+---
+
+## Phase 5.11 — Responsive UI & Accessibility
+
+**Status:** ⏳ Planned
+
+Make the dashboard usable across laptop, tablet, and mobile displays.
+
+### Targets
+
+```text
+Desktop / Laptop
+Tablet
+Mobile
+```
+
+### Requirements
+
+- Responsive grid layout.
+- Collapsible navigation.
+- Horizontally scrollable dense tables where necessary.
+- Touch-friendly controls.
+- Readable typography.
+- Keyboard-accessible navigation.
+- Visible focus states.
+- Semantic headings and labels.
+- Charts remain readable on smaller screens.
+
+### Exit criteria
+
+- [ ] Desktop layout works.
+- [ ] Tablet layout works.
+- [ ] Mobile layout works.
+- [ ] Navigation remains usable.
+- [ ] Dense trading data remains readable.
+- [ ] Basic keyboard accessibility passes.
+
+---
+
+## Phase 5.12 — Dashboard Testing
+
+**Status:** ⏳ Planned
+
+Establish automated frontend confidence before full runtime validation.
+
+### Test layers
+
+```text
+Unit
+  ↓
+Component
+  ↓
+Service/API
+  ↓
+WebSocket
+  ↓
+Browser E2E
+```
+
+### Unit/component coverage
+
+Test:
+
+- Formatters.
+- Data normalization.
+- Metric cards.
+- Market components.
+- Trade table.
+- Order book.
+- Analytics cards/charts.
+- Portfolio/risk components.
+- Status components.
+- Loading/error/empty states.
+
+### REST tests
+
+Cover:
+
+```text
+200 success
+4xx failure
+5xx failure
+timeout
+network failure
+malformed response
+```
+
+### WebSocket tests
+
+Cover:
+
+```text
+connect
+subscribe
+event receive
+invalid event
+close
+error
+reconnect
+resubscribe
+stale state
+```
+
+### State tests
+
+Verify:
+
+- REST snapshot + WebSocket event ordering.
+- Duplicate event handling.
+- Reconnect state recovery.
+- Bounded recent-event history.
+- Stale-state transitions.
+
+### Browser E2E
+
+Critical flow:
+
+```text
+Open Dashboard
+     ↓
+Gateway connection established
+     ↓
+REST snapshots loaded
+     ↓
+WebSocket connected
+     ↓
+TRADE received
+     ↓
+Market/trades UI updates
+     ↓
+ANALYTICS_UPDATE received
+     ↓
+Analytics UI updates
+     ↓
+RISK_EVENT received
+     ↓
+Risk UI updates
+```
+
+### Exit criteria
+
+- [ ] Unit tests pass.
+- [ ] Component tests pass.
+- [ ] REST tests pass.
+- [ ] WebSocket tests pass.
+- [ ] Browser E2E critical flow passes.
+- [ ] No known console errors remain.
+
+---
+
+## Phase 5.13 — Full Runtime Integration Validation
+
+**Status:** ⏳ Planned
+
+Validate the dashboard against the real backend stack rather than mocks alone.
+
+### Runtime
+
+```text
+PostgreSQL
+    ↑
+Python Analytics
+    ↑
+Node.js Gateway
+    ↑
+React Dashboard
+    ↑
+C++ Trading Engine
+```
+
+### Validation sequence
+
+```text
+1. Start PostgreSQL.
+2. Start Python Analytics.
+3. Start C++ Trading Engine.
+4. Start Gateway.
+5. Start React Dashboard.
+6. Open the dashboard.
+7. Verify REST snapshots.
+8. Verify WebSocket connection.
+9. Generate a real engine trade.
+10. Verify TRADE reaches the dashboard.
+11. Verify analytics update reaches the dashboard.
+12. Verify risk update/event reaches the dashboard when generated.
+13. Verify trade/analytics persistence in PostgreSQL.
+14. Stop/restart a dependency.
+15. Verify dashboard stale/disconnected state.
+16. Restore dependency.
+17. Verify automatic recovery.
+```
+
+### Required end-to-end path
+
+```text
+C++ Engine
+   ↓ TRADE
+Gateway
+   ├──→ WebSocket → React Dashboard
+   └──→ Analytics TCP
+              ↓
+       Python Analytics
+              ↓
+          PostgreSQL
+              ↓
+       Analytics output
+              ↓
+          Gateway
+              ↓
+       WebSocket
+              ↓
+       React Dashboard
+```
+
+### Exit criteria
+
+- [ ] Real engine trade reaches React.
+- [ ] Real analytics result reaches React.
+- [ ] Real risk event reaches React when generated.
+- [ ] PostgreSQL persistence is verified.
+- [ ] WebSocket reconnect/recovery works.
+- [ ] Dependency failure states are visible.
+- [ ] Recovery returns the dashboard to live state.
+- [ ] Runtime validation passes without bypassing Gateway.
+
+---
+
+## Phase 5.14 — Documentation, Cleanup & Phase Exit
+
+**Status:** ⏳ Planned
+
+Close Phase 5 only after implementation, tests, runtime validation, and documentation are aligned.
+
+### Documentation
+
+Update:
+
+```text
+docs/05-roadmap-and-phases.md
+docs/17-changelog.md
+README.md
+```
+
+Document:
+
+- Dashboard architecture.
+- Routes/pages.
+- Gateway REST usage.
+- WebSocket event usage.
+- Environment variables.
+- Local development startup.
+- Runtime integration.
+- Test commands.
+- Known limitations.
+- Production-readiness boundaries.
+
+### Cleanup
+
+- Remove dead frontend code.
+- Remove unused dependencies.
+- Remove temporary mock data used only during implementation.
+- Resolve TypeScript/build warnings.
+- Resolve browser console errors.
+- Verify formatting/linting.
+- Verify no hardcoded environment URLs.
+- Verify no direct engine/analytics connections from React.
+
+### Phase 5 exit checklist
+
+- [ ] Dashboard foundation complete.
+- [ ] REST client complete.
+- [ ] WebSocket client complete.
+- [ ] Reconnect/resubscribe complete.
+- [ ] Dashboard navigation complete.
+- [ ] Live market data complete.
+- [ ] Recent trades complete.
+- [ ] Order book complete.
+- [ ] VWAP/SMA/EMA/volatility views complete.
+- [ ] Portfolio/P&L complete.
+- [ ] Risk state/events complete.
+- [ ] Engine/analytics/system status complete.
+- [ ] Loading/empty/error/stale states complete.
+- [ ] Responsive UI complete.
+- [ ] Accessibility baseline complete.
+- [ ] Automated tests complete.
+- [ ] Browser E2E complete.
+- [ ] Full runtime validation complete.
+- [ ] Documentation updated.
+- [ ] Cleanup complete.
+- [ ] CI passes.
+
+**Phase 5 overall status:** ⏳ Planned until the implementation and exit checklist are completed.
+
+### Recommended Phase 5 commit sequence
+
+```text
+feat(dashboard): establish React dashboard foundation
+feat(dashboard): add Gateway REST client
+feat(dashboard): add Gateway WebSocket client
+feat(dashboard): add dashboard layout and navigation
+feat(dashboard): add live market and trade views
+feat(dashboard): add order book visualization
+feat(dashboard): add analytics views
+feat(dashboard): add portfolio and risk views
+feat(dashboard): add system status views
+feat(dashboard): add dashboard loading and error states
+feat(dashboard): add responsive and accessible UI
+test(dashboard): add frontend and browser validation
+test(dashboard): validate full runtime integration
+docs(dashboard): document Phase 5 and closeout
+```
+
+This sequence keeps each milestone independently reviewable and makes it possible to stop at any completed step without mixing dashboard UI work with backend contract changes.
 
 # Phase 6 — Historical Analytics
 
