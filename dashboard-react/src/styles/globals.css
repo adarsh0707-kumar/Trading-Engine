@@ -14,8 +14,8 @@ body,
 body {
   min-width: 320px;
   background:
-    radial-gradient(circle at 78% -10%, rgb(204 85 0 / 18%), transparent 32rem),
-    radial-gradient(circle at 20% 35%, rgb(248 244 231 / 7%), transparent 28rem),
+    radial-gradient(circle at 78% -10%, rgb(204 85 0 / 16%), transparent 32rem),
+    radial-gradient(circle at 20% 35%, rgb(78 52 46 / 8%), transparent 28rem),
     var(--color-bg);
   color: var(--color-text);
   font-family:
@@ -30,8 +30,8 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background-image:
-    linear-gradient(rgb(248 244 231 / 2%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(248 244 231 / 2%) 1px, transparent 1px);
+    linear-gradient(rgb(78 52 46 / 5%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(78 52 46 / 5%) 1px, transparent 1px);
   background-size: 48px 48px;
   content: "";
   mask-image: linear-gradient(to bottom, black, transparent 80%);
@@ -102,7 +102,7 @@ button {
   width: var(--sidebar-width);
   flex-direction: column;
   border-right: 1px solid var(--color-border);
-  background: rgb(78 52 46 / 72%);
+  background: rgb(248 244 231 / 82%);
   padding: 22px 14px;
   backdrop-filter: blur(24px);
 }
@@ -223,7 +223,7 @@ button {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid rgb(248 244 231 / 18%);
-  background: rgb(78 52 46 / 70%);
+  background: rgb(248 244 231 / 82%);
   padding: 0 32px;
   backdrop-filter: blur(24px);
 }
@@ -254,7 +254,7 @@ button {
   gap: 7px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
-  background: rgb(78 52 46 / 70%);
+  background: rgb(248 244 231 / 82%);
   padding: 6px 11px;
   color: var(--color-text-muted);
   font-size: 0.76rem;

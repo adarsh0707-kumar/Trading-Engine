@@ -947,8 +947,8 @@ The Phase 5 dashboard uses **only these three colors**. No blue, green, red, amb
 
 | Color | Hex | Usage |
 | --- | --- | --- |
-| Chocolate Brown | `#4E342E` | Application background, dark surfaces, deep states |
-| Cream | `#F8F4E7` | Primary text, light contrast, readable content |
+| Cream | `#F8F4E7` | Primary application background, light canvas, readable contrast |
+| Chocolate Brown | `#4E342E` | Dark surfaces, primary text, deep states |
 | Burnt Orange | `#CC5500` | Brand accent, active states, actions, highlights |
 
 Opacity variants of these same three colors are allowed for glass, borders, shadows, gradients, and depth.
@@ -967,8 +967,8 @@ Semantic meaning must not introduce additional colors:
 1. Chocolate Brown, Cream, and Burnt Orange are the only dashboard colors.
 2. Opacity variants may be created only from those three colors.
 3. Burnt Orange is the primary interactive and active-state accent.
-4. Chocolate Brown provides the visual foundation and spatial depth.
-5. Cream provides contrast, typography, and light surfaces where needed.
+4. Cream provides the primary canvas and overall visual lightness.
+5. Chocolate Brown provides dark surfaces, typography, and spatial depth.
 6. Glass effects remain restrained; readability always wins over decoration.
 7. Trading data must remain visually scannable at a glance.
 8. No fabricated market, analytics, P&L, or risk values are introduced for visual polish.
