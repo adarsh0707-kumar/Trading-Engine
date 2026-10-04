@@ -191,7 +191,7 @@ describe("full gateway integration path", () => {
           type: "TRADE",
           eventId: "trade-request-1",
           requestId: "trade-request-1",
-          payload: TRADE.payload,
+          payload: JSON.parse(TRADE.payload),
         });
 
         expect(analytics).toMatchObject({
@@ -211,7 +211,7 @@ describe("full gateway integration path", () => {
           type: "TRADE",
           event_id: "trade-request-1",
           request_id: "trade-request-1",
-          payload: JSON.stringify(TRADE.payload),
+          payload: TRADE.payload,
         });
 
         expect(engineSocket).toBeDefined();
