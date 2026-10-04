@@ -5,7 +5,6 @@ import { createGatewayServer } from "../src/server.ts";
 
 const TRADE = {
   type: "TRADE",
-  event_id: "trade-event-1",
   request_id: "trade-request-1",
   timestamp: "2026-10-04T10:00:00.000Z",
   payload: {
@@ -190,7 +189,7 @@ describe("full gateway integration path", () => {
 
         expect(trade).toMatchObject({
           type: "TRADE",
-          eventId: "trade-event-1",
+          eventId: "trade-request-1",
           requestId: "trade-request-1",
           payload: TRADE.payload,
         });
@@ -210,7 +209,7 @@ describe("full gateway integration path", () => {
         expect(analyticsReceived).toMatchObject({
           version: 1,
           type: "TRADE",
-          event_id: "trade-event-1",
+          event_id: "trade-request-1",
           request_id: "trade-request-1",
           payload: JSON.stringify(TRADE.payload),
         });
