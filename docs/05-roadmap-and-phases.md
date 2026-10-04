@@ -923,6 +923,65 @@ Create reusable components for:
 
 ---
 
+## Phase 5 UI / Visual Design Contract
+
+**Status:** ✅ Defined
+
+Phase 5 uses a fixed visual language so dashboard implementation does not repeatedly revisit the UI direction.
+
+### Visual direction
+
+**Liquid Glass + Bento Grid + Spatial Minimalism**
+
+- **Liquid Glass:** translucent, layered panels with restrained blur and subtle borders.
+- **Bento Grid:** modular dashboard composition for market, trades, analytics, portfolio, risk, and system views.
+- **Spatial Minimalism:** clear hierarchy, generous spacing, shallow depth, and minimal visual noise.
+- **Neomorphism:** limited to small controls only when it improves affordance.
+- **Claymorphism:** not used.
+- **Skeuomorphism:** not used.
+- **Maximalism:** not used.
+
+### Core palette
+
+| Token | Value | Usage |
+| --- | --- | --- |
+| Background | `#000000` | Primary application canvas |
+| Surface | `#0A0A0D` | Main panels and cards |
+| Raised surface | `#111116` | Layered/hover surfaces |
+| Border | `#24242B` | Dividers and panel boundaries |
+| Primary text | `#FFFFFF` | Headings and primary values |
+| Secondary text | `#A1A1AA` | Supporting content |
+| Brand / active | `#2C3480` | Primary identity, navigation, active states |
+| Brand hover | `#20265F` | Interactive hover state |
+| Brand highlight | `#3B45A0` | Focus, glow, selected accents |
+
+### Semantic trading colors
+
+Green, red, and amber are **semantic only**, not the dashboard brand palette:
+
+- 🟢 **BUY / PROFIT / healthy** → success green.
+- 🔴 **SELL / LOSS / error / breached** → danger red.
+- 🟡 **RISK / WARNING / degraded** → warning amber.
+
+### UI rules
+
+1. Black, white, and deep cobalt blue define the product identity.
+2. Semantic colors must not dominate backgrounds, navigation, or primary surfaces.
+3. Use layered near-black surfaces instead of making every panel pure `#000000`.
+4. Cobalt is the primary interactive and active-state accent.
+5. Glass effects remain restrained; readability always wins over decoration.
+6. Trading data must remain visually scannable at a glance.
+7. No fabricated market, analytics, P&L, or risk values are introduced for visual polish.
+8. Loading, empty, stale, disconnected, and error states use the same design tokens.
+9. Responsive layouts must preserve the same visual hierarchy on smaller screens.
+10. New dashboard components must consume centralized tokens rather than introducing arbitrary colors.
+
+### Design reference
+
+This contract is the source of truth for Phase 5 dashboard styling and should be consulted before adding new visual components.
+
+---
+
 ## Phase 5.2 — Gateway REST Client & Typed API Models
 
 **Status:** ⏳ Planned
