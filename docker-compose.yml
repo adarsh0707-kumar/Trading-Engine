@@ -32,7 +32,7 @@ services:
       context: ./analytics-py
       dockerfile: Dockerfile
     environment:
-      ANALYTICS_GATEWAY_HOST: gateway
+      ANALYTICS_GATEWAY_HOST: 0.0.0.0
       ANALYTICS_GATEWAY_PORT: 8000
       TRADING_ENGINE_DATABASE_URL: postgresql://trading_engine:trading_engine@postgres:5432/trading_engine
       TRADING_ENGINE_METRICS_HOST: 0.0.0.0
