@@ -136,6 +136,7 @@ describe("full gateway integration path", () => {
       const enginePort = await listen(engineServer);
       const analyticsPort = await listen(analyticsServer);
       const gatewayPort = await getFreePort();
+      const gateway = createGatewayServer({
         GATEWAY_HOST: "127.0.0.1",
         GATEWAY_PORT: String(gatewayPort),
         ENGINE_HOST: "127.0.0.1",

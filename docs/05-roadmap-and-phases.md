@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest completed milestone: **Phase 4.9.3 — Request & Event Correlation**
+**Latest completed milestone: **Phase 4.9.6 — Observability Regression & Validation**
 
-**Current milestone: **Phase 4.9 — Operational Logging & Metrics**
+**Current milestone: **Phase 4.10 — Testing & Integration Validation**
 
 ### Current validated path
 
@@ -629,6 +629,12 @@ Harden external inputs, CORS, request/message sizes, error exposure, rate-limit 
 
 **Status:** Complete
 
+Extend structured operational logging and metrics across gateway HTTP, engine, analytics, and WebSocket boundaries. The basic Prometheus exposition endpoint is already implemented; this milestone focuses on consistent operational instrumentation rather than changing business behavior.
+
+### Phase 4.9 — Operational Logging & Metrics
+
+**Status:** Complete
+
 - **4.9.1 Structured Operational Logging** — Complete
 - **4.9.2 Metrics Completion** — Complete
 - **4.9.3 Request & Event Correlation** — Complete
@@ -637,6 +643,7 @@ Harden external inputs, CORS, request/message sizes, error exposure, rate-limit 
 - **4.9.6 Observability Regression & Validation** — Complete
 
 **Phase 4.9 exit status:** Complete
+
 
 ## Phase 4.10 — Testing & Integration Validation
 
@@ -663,9 +670,9 @@ Remaining validation focus:
 
 ## Phase 4.11 — Phase Integration & Exit Criteria
 
-**Status:** Planned
+**Status:** ⏳ Planned
 
-Phase 4 becomes complete when the Phase 1–3 platform and Gateway have passed full-stack integration validation, resilience/security/observability checks, and documented exit criteria before the React Dashboard begins.
+Phase 4 is complete when the gateway connects the completed Phase 1–3 platform to the future dashboard with validated REST/WebSocket contracts, resilience, security boundaries, observability, tests, and CI coverage.
 
 **Phase 4 overall status:** In Progress — 4.1 through 4.9 complete; 4.10 is active and 4.11 follows.
 
@@ -840,8 +847,8 @@ Planned:
 | 4.6 | Python Analytics Integration | ✅ Complete |
 | 4.7 | Error Handling, Resilience & Backpressure | ✅ Complete |
 | 4.8 | Security Boundaries & Input Hardening | ✅ Complete |
-| 4.9 | Operational Logging & Metrics | 🚧 In Progress |
-| 4.10 | Testing & Integration Validation | ⏳ Planned |
+| 4.9 | Operational Logging & Metrics | Complete |
+| 4.10 | Testing & Integration Validation | 🚧 In Progress |
 | 4.11 | Phase Integration & Exit Criteria | ⏳ Planned |
 | 5 | React Dashboard | ⏳ Planned |
 | 6 | Historical Analytics | ⏳ Planned |

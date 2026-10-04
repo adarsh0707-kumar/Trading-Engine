@@ -3,7 +3,7 @@
 A production-style, polyglot trading simulation platform designed to demonstrate how modern algorithmic trading infrastructure can be structured across high-performance systems, analytics, APIs, real-time communication, and visualization.
 
 > **Project status:** Active development
-> **Current milestone: **Phase 4.9 — Operational Logging & Metrics**
+> **Current milestone: **Phase 4.10 — Testing & Integration Validation**
 
 
 ## Table of Contents
@@ -1237,114 +1237,31 @@ Shared memory may be introduced later if profiling shows socket-based IPC to be 
 
 # Roadmap
 
-## Phase 1 — C++ Matching Engine
+## Current implementation status
 
-**Status:** ✅ Complete
+**Completed through:** Phase 4.9.6 — Observability Regression & Validation
 
-Deterministic order-book and price-time-priority matching engine implemented and validated.
+**Gateway milestone status:** Phase 4.1–4.9 complete, including security, resilience, observability, alerting, and regression validation.
 
-## Phase 2 — C++ TCP Transport
+**Remaining before the React Dashboard (Phase 5):**
+- Phase 4.10 — Testing & Integration Validation
+- Phase 4.11 — Phase Integration & Exit Criteria
 
-**Status:** ✅ Complete
+The project is **not yet feature-complete**: the core C++ engine, Python analytics platform, Gateway, persistence, security boundaries, and Gateway observability are implemented, while full-stack integration/exit validation and the React dashboard remain.
 
-TCP transport, framing, client lifecycle, heartbeat, reconnection, serialization, and graceful shutdown implemented and tested.
-
-## Phase 3 — Python Analytics
-
-**Status:** ✅ Complete
-
-Completed:
-
-- Streaming analytics and technical indicators.
-- Portfolio risk analytics and P&L tracking.
-- Risk limits and risk events.
-- PostgreSQL persistence and migrations.
-- Metrics, Prometheus exposition, Grafana provisioning, and service health.
-- Lifecycle hardening and configuration validation.
-- Resource cleanup and bounded backpressure handling.
-- Failure recovery and bounded retries.
-- Operational logging.
-
-### Phase 3.10 Validation
-
-```text
-Analytics Python test suite    PASS — 447 passed
-GitHub Actions checks           PASS — 9/9
-```
-
-## Phase 4 — Node.js Gateway
-
-**Status:** 🚧 In Progress
-
-**Implementation language:** TypeScript  
-**Runtime:** Bun  
-**Package manager:** Bun  
-**HTTP:** Fastify  
-**WebSocket:** ws  
-**Validation:** Zod  
-**Testing:** Bun test  
-**Logging:** Pino  
-**Metrics:** Prometheus-compatible
-
-Detailed implementation is tracked in docs/05-roadmap-and-phases.md.
-
-### Phase 4 milestones
-
-- 4.1 Gateway foundation and architecture.
-- 4.2 Typed configuration and environment management.
-- 4.3 C++ engine TCP client and reconnect handling.
-- 4.4 Engine protocol parsing and event normalization.
-- 4.5 REST API and request/response validation.
-- 4.6 WebSocket gateway, subscriptions, and client backpressure.
-- 4.7 Python analytics integration.
-- 4.8 Error handling, resilience, and resource cleanup.
-- 4.9 Security boundaries and input hardening.
-- 4.10 Operational logging and metrics.
-- 4.11 Unit, integration, and end-to-end gateway validation.
-- 4.8 Security boundaries and input hardening — complete.
-- 4.9 Operational logging and metrics — active.
-- 4.10 Testing and integration validation.
-- 4.11 Phase integration and exit criteria.
-
-Bun is the standard gateway development, test, and execution toolchain. npm is not the default package manager for Phase 4.
-
-## Phase 5 — React Dashboard
-
-**Status:** ⏳ Planned
-
-Real-time market, order-book, trade, analytics, risk, and engine-status visualization.
-
-## Phase 6 — Historical Analytics
-
-**Status:** ⏳ Planned
-
-Historical trade, analytics, position, and risk-event queries with indexing, retention, and reporting APIs.
-
-## Phase 7 — Authentication & Security
-
-**Status:** ⏳ Planned
-
-Authentication, authorization, token management, RBAC, input validation, rate limiting, audit logging, and security testing.
-
-## Phase 8 — Platform Observability
-
-**Status:** ⏳ Planned
-
-Platform-wide tracing, gateway/dashboard observability, error tracking, and resource monitoring.
-
-## Phase 9 — Deployment & Infrastructure
-
-**Status:** ⏳ Planned
-
-Docker orchestration, reverse proxy, service networking, health checks, deployment documentation, and operational runbook.
-
-## Phase 10 — Performance & Production Hardening
-
-**Status:** ⏳ Planned
-
-Benchmarking, load/stress testing, profiling, failure injection, capacity testing, regression testing, and deployment validation.
-
----
+| Area | Status |
+| --- | --- |
+| C++ matching engine + TCP transport | Complete |
+| Python analytics + risk + PostgreSQL | Complete |
+| Node/Bun Gateway + REST/WebSocket | Complete |
+| Gateway resilience + security | Complete |
+| Gateway observability + alerting | Complete |
+| Full Phase 4 integration/exit validation | Remaining |
+| React dashboard | Remaining |
+| Historical analytics APIs | Remaining |
+| Production authentication/security integration | Remaining |
+| Cloud deployment/infrastructure | Remaining |
+| Performance/production hardening | Remaining |
 
 # Future Improvements
 
