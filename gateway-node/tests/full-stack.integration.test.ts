@@ -84,6 +84,13 @@ async function listen(server: Server): Promise<number> {
   return address.port;
 }
 
+async function getFreePort(): Promise<number> {
+  const server = createServer();
+  const port = await listen(server);
+  await closeServer(server);
+  return port;
+}
+
 async function closeServer(server: Server): Promise<void> {
   if (!server.listening) return;
   await new Promise<void>((resolve, reject) => {
@@ -128,7 +135,7 @@ describe("full gateway integration path", () => {
 
       const enginePort = await listen(engineServer);
       const analyticsPort = await listen(analyticsServer);
-      const gatewayPort = await listen(createServer());
+      const gatewayPort = await getFreePort();
         GATEWAY_HOST: "127.0.0.1",
         GATEWAY_PORT: String(gatewayPort),
         ENGINE_HOST: "127.0.0.1",
