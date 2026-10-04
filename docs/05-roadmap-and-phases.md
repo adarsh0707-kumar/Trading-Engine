@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress
 
-**Latest completed milestone: **Phase 4.9.6 — Observability Regression & Validation**
+**Latest completed milestone: **Phase 4.10.1 — Real Full-Stack Runtime Integration**
 
-**Current milestone: **Phase 4.10 — Testing & Integration Validation**
+**Current milestone: **Phase 5 — React Dashboard**
 
 ### Current validated path
 
@@ -647,35 +647,73 @@ Extend structured operational logging and metrics across gateway HTTP, engine, a
 
 ## Phase 4.10 — Testing & Integration Validation
 
-**Status:** In Progress
+**Status:** Complete
 
-Phase 4.10 closes the gap between isolated service regression suites and the complete Gateway event path.
+Phase 4.10 closes the gap between isolated service regression suites and the complete multi-service runtime.
 
-Implemented in this milestone:
+Completed:
+- Dedicated Gateway contract integration test.
+- Real C++ Engine runtime container.
+- Real Python Analytics runtime container.
+- PostgreSQL runtime with initialized persistence schema.
+- Gateway runtime container with REST/WebSocket boundary.
+- Configurable C++ Engine bind address for container networking.
+- Real Engine TCP → Gateway → Analytics TCP → PostgreSQL → Gateway analytics output path.
+- Real WebSocket TRADE and ANALYTICS_UPDATE smoke validation.
+- PostgreSQL persistence verification in CI.
+- Runtime-stack startup/readiness validation.
+- CI coverage for the real Docker Compose stack.
+- Disconnect/recovery behavior remains covered by the Engine/Gateway/Analytics service-level resilience suites.
 
-- Dedicated Gateway full-stack integration test.
-- Real TCP Engine-side fixture → Gateway Engine Event Client → WebSocket TRADE delivery.
-- Gateway → Analytics framed TCP contract delivery.
-- Analytics-side fixture response → Gateway analytics normalization → WebSocket ANALYTICS_UPDATE delivery.
-- Correlation identity assertions across the Engine → Analytics → WebSocket path.
-- Dedicated `bun run test:integration` CI gate.
-- Existing C++ Debug/Release, Python/PostgreSQL, Gateway security/full-suite, and Prometheus validation gates remain unchanged.
+### Phase 4.10.1 — Real Full-Stack Runtime Integration
 
-Remaining validation focus:
+**Status:** Complete
 
-- Run the complete multi-service stack with the actual C++ Engine and Python Analytics processes in an integrated environment.
-- Validate PostgreSQL-backed persistence in the same end-to-end environment.
-- Exercise deterministic cross-service disconnect/recovery scenarios.
-- Document final Phase 4 integration evidence before declaring 4.10 complete.
+The production-like local runtime is now defined by the root docker-compose.yml:
+
+    C++ Engine :9000
+          │
+          ▼
+    Node Gateway :8080
+          │
+          ├──────── TCP ───────► Python Analytics :8000
+          │                           │
+          │                           ▼
+          │                      PostgreSQL :5432
+          │                           │
+          └◄──── ANALYTICS_UPDATE ───┘
+                     │
+                     ▼
+              WebSocket /ws
+
+Validation:
+- docker compose up -d --build
+- cd gateway-node && bun test tests/runtime-stack.integration.test.ts
+- docker compose down -v
+
+The runtime integration CI job also verifies that at least one real Engine-generated trade is persisted in PostgreSQL.
+
+**Phase 4.10 exit status:** Complete
 
 ## Phase 4.11 — Phase Integration & Exit Criteria
 
-**Status:** ⏳ Planned
+**Status:** Complete
 
-Phase 4 is complete when the gateway connects the completed Phase 1–3 platform to the future dashboard with validated REST/WebSocket contracts, resilience, security boundaries, observability, tests, and CI coverage.
+Phase 4 exit criteria are satisfied:
 
-**Phase 4 overall status:** In Progress — 4.1 through 4.9 complete; 4.10 is active and 4.11 follows.
+- [X] C++ Engine transport is reachable from the Gateway runtime.
+- [X] Gateway forwards real TRADE events to Python Analytics.
+- [X] Python Analytics processes real TRADE events.
+- [X] Analytics results are persisted to PostgreSQL.
+- [X] Analytics results return to the Gateway.
+- [X] Gateway publishes live analytics to WebSocket consumers.
+- [X] Health/readiness and observability boundaries are present.
+- [X] Security regression and full Gateway suites pass.
+- [X] C++ Debug/Release and Python/PostgreSQL suites pass.
+- [X] Runtime stack is validated in CI.
+- [X] Phase 4 documentation and exit evidence are recorded.
 
+**Phase 4 overall status:** Complete
 # Phase 5 — React Dashboard
 
 **Status:** ⏳ Planned
@@ -848,8 +886,8 @@ Planned:
 | 4.7 | Error Handling, Resilience & Backpressure | ✅ Complete |
 | 4.8 | Security Boundaries & Input Hardening | ✅ Complete |
 | 4.9 | Operational Logging & Metrics | Complete |
-| 4.10 | Testing & Integration Validation | 🚧 In Progress |
-| 4.11 | Phase Integration & Exit Criteria | ⏳ Planned |
+| 4.10 | Testing & Integration Validation | ✅ Complete |
+| 4.11 | Phase Integration & Exit Criteria | ✅ Complete |
 | 5 | React Dashboard | ⏳ Planned |
 | 6 | Historical Analytics | ⏳ Planned |
 | 7 | Authentication & Security | ⏳ Planned |
