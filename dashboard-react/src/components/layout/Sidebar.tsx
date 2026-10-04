@@ -8,12 +8,14 @@ export default function Sidebar() {
         <div className="sidebar-logo">TE</div>
         <div>
           <strong>Trading Engine</strong>
-          <span>Dashboard</span>
+          <span>Command Center</span>
         </div>
       </div>
 
+      <div className="sidebar-section-label">Workspace</div>
+
       <nav className="sidebar-nav" aria-label="Main navigation">
-        {dashboardRoutes.map((route) => (
+        {dashboardRoutes.map((route, index) => (
           <NavLink
             key={route.path}
             to={route.path}
@@ -21,10 +23,18 @@ export default function Sidebar() {
               `sidebar-link${isActive ? " sidebar-link-active" : ""}`
             }
           >
-            {route.label}
+            <span className="sidebar-link-index">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <span>{route.label}</span>
           </NavLink>
         ))}
       </nav>
+
+      <div className="sidebar-footer">
+        <span className="sidebar-footer-dot" aria-hidden="true" />
+        <span>Gateway boundary</span>
+      </div>
     </aside>
   );
 }

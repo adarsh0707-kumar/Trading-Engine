@@ -18,6 +18,47 @@ The project follows a phased implementation roadmap covering:
 
 ---
 
+## 2026-10-04 — Phase 5 Dashboard Visual Design
+
+### Status
+
+**Status:** 🚧 Active design foundation
+
+The React dashboard visual language is now defined and applied to the existing dashboard shell and overview page.
+
+### Visual direction
+
+**Liquid Glass + Bento Grid + Spatial Minimalism**
+
+The dashboard uses layered glass panels, a bento-style information layout, restrained depth, and minimal visual noise.
+
+### Palette
+
+- Background: `#000000`
+- Surface: `#0A0A0D`
+- Raised surface: `#111116`
+- Border: `#24242B`
+- Primary text: `#FFFFFF`
+- Secondary text: `#A1A1AA`
+- Brand / active: `#2C3480`
+- Brand hover: `#20265F`
+- Brand highlight: `#3B45A0`
+
+### Semantic colors
+
+Green remains reserved for **BUY / PROFIT / healthy** states, red for **SELL / LOSS / error / breached** states, and amber for **RISK / WARNING / degraded** states. These colors are not used as the product's primary branding.
+
+### Applied
+
+- Redesigned the application background, grid texture, sidebar, header, and connection badge.
+- Added cobalt active navigation treatment and restrained glass surfaces.
+- Redesigned the Dashboard overview as a responsive bento grid.
+- Kept live values empty until Gateway REST/WebSocket data is available.
+- Centralized all visual tokens in `dashboard-react/src/styles/tokens.css`.
+- Recorded the design contract in `docs/05-roadmap-and-phases.md`.
+
+---
+
 ## 2026-10-04 — Phase 4.10 / 4.10.1 / 4.11 — Phase 4 Runtime & Integration Closeout
 
 ### Status
