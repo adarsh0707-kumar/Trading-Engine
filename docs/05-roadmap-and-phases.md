@@ -941,39 +941,38 @@ Phase 5 uses a fixed visual language so dashboard implementation does not repeat
 - **Skeuomorphism:** not used.
 - **Maximalism:** not used.
 
-### Core palette
+### Exact three-color palette
 
-| Token | Value | Usage |
+The Phase 5 dashboard uses **only these three colors**. No blue, green, red, amber, gray, or additional brand colors may be introduced.
+
+| Color | Hex | Usage |
 | --- | --- | --- |
-| Background | `#000000` | Primary application canvas |
-| Surface | `#0A0A0D` | Main panels and cards |
-| Raised surface | `#111116` | Layered/hover surfaces |
-| Border | `#24242B` | Dividers and panel boundaries |
-| Primary text | `#FFFFFF` | Headings and primary values |
-| Secondary text | `#A1A1AA` | Supporting content |
-| Brand / active | `#2C3480` | Primary identity, navigation, active states |
-| Brand hover | `#20265F` | Interactive hover state |
-| Brand highlight | `#3B45A0` | Focus, glow, selected accents |
+| Chocolate Brown | `#4E342E` | Application background, dark surfaces, deep states |
+| Cream | `#F8F4E7` | Primary text, light contrast, readable content |
+| Burnt Orange | `#CC5500` | Brand accent, active states, actions, highlights |
 
-### Semantic trading colors
+Opacity variants of these same three colors are allowed for glass, borders, shadows, gradients, and depth.
 
-Green, red, and amber are **semantic only**, not the dashboard brand palette:
+### Status treatment
 
-- 🟢 **BUY / PROFIT / healthy** → success green.
-- 🔴 **SELL / LOSS / error / breached** → danger red.
-- 🟡 **RISK / WARNING / degraded** → warning amber.
+Semantic meaning must not introduce additional colors:
+
+- **BUY / PROFIT / healthy** → Burnt Orange `#CC5500` plus explicit label/icon.
+- **SELL / LOSS / error / breached** → Chocolate Brown `#4E342E` plus explicit label/icon and structural emphasis.
+- **RISK / WARNING / degraded** → Burnt Orange `#CC5500` plus explicit label/icon.
+- **Disconnected / neutral** → Cream `#F8F4E7` at reduced opacity on Chocolate Brown.
 
 ### UI rules
 
-1. Black, white, and deep cobalt blue define the product identity.
-2. Semantic colors must not dominate backgrounds, navigation, or primary surfaces.
-3. Use layered near-black surfaces instead of making every panel pure `#000000`.
-4. Cobalt is the primary interactive and active-state accent.
-5. Glass effects remain restrained; readability always wins over decoration.
-6. Trading data must remain visually scannable at a glance.
-7. No fabricated market, analytics, P&L, or risk values are introduced for visual polish.
-8. Loading, empty, stale, disconnected, and error states use the same design tokens.
-9. Responsive layouts must preserve the same visual hierarchy on smaller screens.
+1. Chocolate Brown, Cream, and Burnt Orange are the only dashboard colors.
+2. Opacity variants may be created only from those three colors.
+3. Burnt Orange is the primary interactive and active-state accent.
+4. Chocolate Brown provides the visual foundation and spatial depth.
+5. Cream provides contrast, typography, and light surfaces where needed.
+6. Glass effects remain restrained; readability always wins over decoration.
+7. Trading data must remain visually scannable at a glance.
+8. No fabricated market, analytics, P&L, or risk values are introduced for visual polish.
+9. Loading, empty, stale, disconnected, and error states use only the three palette colors.
 10. New dashboard components must consume centralized tokens rather than introducing arbitrary colors.
 
 ### Design reference

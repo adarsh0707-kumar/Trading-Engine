@@ -14,8 +14,8 @@ body,
 body {
   min-width: 320px;
   background:
-    radial-gradient(circle at 78% -10%, rgb(44 52 128 / 18%), transparent 32rem),
-    radial-gradient(circle at 20% 35%, rgb(44 52 128 / 7%), transparent 28rem),
+    radial-gradient(circle at 78% -10%, rgb(204 85 0 / 18%), transparent 32rem),
+    radial-gradient(circle at 20% 35%, rgb(248 244 231 / 7%), transparent 28rem),
     var(--color-bg);
   color: var(--color-text);
   font-family:
@@ -30,8 +30,8 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background-image:
-    linear-gradient(rgb(255 255 255 / 2%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 2%) 1px, transparent 1px);
+    linear-gradient(rgb(248 244 231 / 2%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(248 244 231 / 2%) 1px, transparent 1px);
   background-size: 48px 48px;
   content: "";
   mask-image: linear-gradient(to bottom, black, transparent 80%);
@@ -102,7 +102,7 @@ button {
   width: var(--sidebar-width);
   flex-direction: column;
   border-right: 1px solid var(--color-border);
-  background: rgb(0 0 0 / 72%);
+  background: rgb(78 52 46 / 72%);
   padding: 22px 14px;
   backdrop-filter: blur(24px);
 }
@@ -134,11 +134,11 @@ button {
   width: 38px;
   height: 38px;
   place-items: center;
-  border: 1px solid rgb(59 69 160 / 65%);
+  border: 1px solid rgb(204 85 0 / 65%);
   border-radius: 12px;
-  background: linear-gradient(145deg, var(--color-accent-highlight), var(--color-accent));
+  background: linear-gradient(145deg, var(--color-accent), var(--color-accent));
   box-shadow: var(--shadow-glow);
-  color: #fff;
+  color: var(--color-text);
   font-size: 0.8rem;
   font-weight: 900;
 }
@@ -173,20 +173,20 @@ button {
 
 .sidebar-link:hover {
   border-color: var(--color-border);
-  background: rgb(255 255 255 / 3%);
+  background: rgb(248 244 231 / 3%);
   color: var(--color-text);
   transform: translateX(2px);
 }
 
 .sidebar-link-active {
-  border-color: rgb(59 69 160 / 45%);
-  background: linear-gradient(90deg, rgb(44 52 128 / 28%), rgb(44 52 128 / 8%));
-  color: #fff;
-  box-shadow: inset 3px 0 0 var(--color-accent-highlight);
+  border-color: rgb(204 85 0 / 45%);
+  background: linear-gradient(90deg, rgb(204 85 0 / 28%), rgb(204 85 0 / 8%));
+  color: var(--color-text);
+  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 .sidebar-link-active .sidebar-link-index {
-  color: var(--color-accent-highlight);
+  color: var(--color-accent);
 }
 
 .sidebar-footer {
@@ -210,8 +210,8 @@ button {
 }
 
 .sidebar-footer-dot {
-  background: var(--color-accent-highlight);
-  box-shadow: 0 0 12px rgb(59 69 160 / 70%);
+  background: var(--color-accent);
+  box-shadow: 0 0 12px rgb(204 85 0 / 70%);
 }
 
 .header {
@@ -222,8 +222,8 @@ button {
   min-height: var(--header-height);
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgb(36 36 43 / 78%);
-  background: rgb(0 0 0 / 70%);
+  border-bottom: 1px solid rgb(248 244 231 / 18%);
+  background: rgb(78 52 46 / 70%);
   padding: 0 32px;
   backdrop-filter: blur(24px);
 }
@@ -254,7 +254,7 @@ button {
   gap: 7px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
-  background: rgb(17 17 22 / 70%);
+  background: rgb(78 52 46 / 70%);
   padding: 6px 11px;
   color: var(--color-text-muted);
   font-size: 0.76rem;
@@ -290,18 +290,18 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgb(59 69 160 / 35%);
+  border: 1px solid rgb(204 85 0 / 35%);
   border-radius: var(--radius-pill);
-  background: rgb(44 52 128 / 10%);
+  background: rgb(204 85 0 / 10%);
   padding: 8px 12px;
-  color: #c5c9ff;
+  color: var(--color-text);
   font-size: 0.72rem;
   white-space: nowrap;
 }
 
 .hero-badge-dot {
-  background: var(--color-accent-highlight);
-  box-shadow: 0 0 12px rgb(59 69 160 / 80%);
+  background: var(--color-accent);
+  box-shadow: 0 0 12px rgb(204 85 0 / 80%);
 }
 
 .bento-grid {
@@ -318,7 +318,7 @@ button {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background:
-    linear-gradient(145deg, rgb(255 255 255 / 3%), transparent 45%),
+    linear-gradient(145deg, rgb(248 244 231 / 3%), transparent 45%),
     var(--color-surface-glass);
   padding: 22px;
   box-shadow: var(--shadow-card);
@@ -332,16 +332,16 @@ button {
   width: 160px;
   height: 160px;
   border-radius: 50%;
-  background: rgb(44 52 128 / 10%);
+  background: rgb(204 85 0 / 10%);
   filter: blur(8px);
   content: "";
 }
 
 .bento-panel-primary {
   grid-column: span 2;
-  border-color: rgb(59 69 160 / 40%);
+  border-color: rgb(204 85 0 / 40%);
   background:
-    radial-gradient(circle at 90% 10%, rgb(59 69 160 / 18%), transparent 45%),
+    radial-gradient(circle at 90% 10%, rgb(204 85 0 / 18%), transparent 45%),
     var(--color-surface-glass);
   box-shadow: var(--shadow-card), var(--shadow-glow);
 }
@@ -375,7 +375,7 @@ button {
   position: relative;
   z-index: 1;
   margin: 0 0 8px;
-  color: #c5c9ff;
+  color: var(--color-accent);
   font-size: 1.35rem;
   font-weight: 700;
 }
@@ -413,7 +413,7 @@ button {
 
 .status-dot-warning {
   background: var(--color-warning);
-  box-shadow: 0 0 10px rgb(245 158 11 / 45%);
+  box-shadow: 0 0 10px rgb(204 85 0 / 45%);
 }
 
 .state-message {

@@ -1,22 +1,22 @@
 :root {
-  --color-bg: #000000;
-  --color-surface: #0a0a0d;
-  --color-surface-raised: #111116;
-  --color-surface-glass: rgb(17 17 22 / 78%);
-  --color-border: #24242b;
-  --color-border-strong: #343443;
+  --color-bg: #4e342e;
+  --color-surface: #4e342e;
+  --color-surface-raised: #4e342e;
+  --color-surface-glass: rgb(78 52 46 / 78%);
+  --color-border: rgb(248 244 231 / 18%);
+  --color-border-strong: rgb(248 244 231 / 30%);
 
-  --color-text: #ffffff;
-  --color-text-muted: #a1a1aa;
-  --color-text-subtle: #71717a;
+  --color-text: #f8f4e7;
+  --color-text-muted: rgb(248 244 231 / 72%);
+  --color-text-subtle: rgb(248 244 231 / 52%);
 
-  --color-accent: #2c3480;
-  --color-accent-hover: #20265f;
-  --color-accent-highlight: #3b45a0;
+  --color-accent: #cc5500;
+  --color-accent-hover: #cc5500;
+  --color-accent-highlight: #cc5500;
 
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
+  --color-success: #cc5500;
+  --color-warning: #cc5500;
+  --color-danger: #4e342e;
 
   --sidebar-width: 248px;
   --header-height: 72px;
@@ -26,6 +26,6 @@
   --radius-lg: 20px;
   --radius-pill: 999px;
 
-  --shadow-card: 0 18px 50px rgb(0 0 0 / 35%);
-  --shadow-glow: 0 0 40px rgb(44 52 128 / 18%);
+  --shadow-card: 0 18px 50px rgb(78 52 46 / 45%);
+  --shadow-glow: 0 0 40px rgb(204 85 0 / 24%);
 }
