@@ -5,8 +5,8 @@ import { createGatewayServer } from "../src/server.ts";
 
 const TRADE = {
   type: "TRADE",
-  request_id: "trade-request-1",
-  timestamp: "2026-10-04T10:00:00.000Z",
+  request_id: "trade-event-1",
+  timestamp: "2026-01-01T00:00:00.000Z",
   payload: JSON.stringify({
     trade_id: "trade-1",
     symbol: "SIM",
@@ -16,7 +16,11 @@ const TRADE = {
     maker_order_id: "maker-1",
     taker_side: "BUY",
     buy_order_id: "taker-1",
-    sell_order_id: "maker-1",\n  }),\n};\n\nconst ANALYTICS_UPDATE = {
+    sell_order_id: "maker-1",
+  }),
+};
+
+const ANALYTICS_UPDATE = {
   version: 1,
   type: "ANALYTICS_UPDATE",
   event_id: "analytics-event-1",
@@ -185,9 +189,19 @@ describe("full gateway integration path", () => {
 
         expect(trade).toMatchObject({
           type: "TRADE",
-          eventId: "trade-request-1",
-          requestId: "trade-request-1",
-          payload: JSON.parse(TRADE.payload),
+          eventId: "trade-event-1",
+          requestId: "trade-event-1",
+          timestamp: "2026-01-01T00:00:00.000Z",
+          payload: {
+            symbol: "SIM",
+            price: 100,
+            quantity: 2,
+            takerOrderId: "taker-1",
+            makerOrderId: "maker-1",
+            takerSide: "BUY",
+            buyOrderId: "taker-1",
+            sellOrderId: "maker-1",
+          },
         });
 
         expect(analytics).toMatchObject({
@@ -205,9 +219,20 @@ describe("full gateway integration path", () => {
         expect(analyticsReceived).toMatchObject({
           version: 1,
           type: "TRADE",
-          event_id: "trade-request-1",
-          request_id: "trade-request-1",
-          payload: TRADE.payload,
+          event_id: "trade-event-1",
+          request_id: "trade-event-1",
+          timestamp: "2026-01-01T00:00:00.000Z",
+          payload: JSON.stringify({
+            trade_id: "trade-event-1",
+            symbol: "SIM",
+            price: 100,
+            quantity: 2,
+            taker_order_id: "taker-1",
+            maker_order_id: "maker-1",
+            taker_side: "BUY",
+            buy_order_id: "taker-1",
+            sell_order_id: "maker-1",
+          }),
         });
 
         expect(engineSocket).toBeDefined();
