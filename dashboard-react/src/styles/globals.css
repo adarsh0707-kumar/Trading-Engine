@@ -323,6 +323,7 @@ button {
   padding: 22px;
   box-shadow: var(--shadow-card);
   backdrop-filter: blur(20px);
+  color: #f8f4e7;
 }
 
 .bento-panel::after {
@@ -359,7 +360,7 @@ button {
 }
 
 .panel-index {
-  color: var(--color-text-subtle);
+  color: rgb(248 244 231 / 68%);
   font-size: 0.68rem;
 }
 
@@ -385,7 +386,7 @@ button {
   z-index: 1;
   max-width: 520px;
   margin: 0;
-  color: var(--color-text-muted);
+  color: rgb(248 244 231 / 78%);
   font-size: 0.86rem;
   line-height: 1.65;
 }
@@ -395,7 +396,7 @@ button {
   right: 22px;
   bottom: 20px;
   left: 22px;
-  color: var(--color-text-subtle);
+  color: rgb(248 244 231 / 58%);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.68rem;
 }
@@ -407,7 +408,7 @@ button {
   align-items: center;
   gap: 8px;
   margin-top: 24px;
-  color: var(--color-text-muted);
+  color: rgb(248 244 231 / 72%);
   font-size: 0.74rem;
 }
 
