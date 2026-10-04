@@ -340,11 +340,33 @@ button {
 
 .bento-panel-primary {
   grid-column: span 2;
-  border-color: rgb(204 85 0 / 40%);
+  border-color: var(--color-accent);
   background:
-    radial-gradient(circle at 90% 10%, rgb(204 85 0 / 18%), transparent 45%),
-    var(--color-surface-glass);
+    radial-gradient(circle at 88% 8%, rgb(248 244 231 / 18%), transparent 42%),
+    var(--color-accent);
   box-shadow: var(--shadow-card), var(--shadow-glow);
+  color: #f8f4e7;
+}
+
+.bento-panel-primary .panel-index {
+  color: rgb(248 244 231 / 78%);
+}
+
+.bento-panel-primary .panel-value {
+  color: #f8f4e7;
+}
+
+.bento-panel-primary .panel-description {
+  color: rgb(248 244 231 / 90%);
+}
+
+.bento-panel-primary .panel-status {
+  color: rgb(248 244 231 / 88%);
+}
+
+.bento-panel-primary .status-dot-warning {
+  background: #f8f4e7;
+  box-shadow: 0 0 10px rgb(248 244 231 / 65%);
 }
 
 .bento-panel-wide {
