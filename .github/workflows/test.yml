@@ -127,7 +127,7 @@ jobs:
 
       - name: Real Engine → Analytics → Gateway smoke test
         working-directory: gateway-node
-        run: bun test tests/runtime-stack.integration.test.ts
+        run: RUN_RUNTIME_INTEGRATION=true bun test tests/runtime-stack.integration.test.ts
 
       - name: Verify PostgreSQL persistence
         run: |
