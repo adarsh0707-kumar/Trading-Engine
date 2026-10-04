@@ -15,11 +15,15 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 # Current Project Status
 
-**Overall Status:** 🚧 In Progress
+**Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest completed milestone: **Phase 4.10.1 — Real Full-Stack Runtime Integration**
+**Latest completed milestone:** Phase 4.11 — Phase Integration & Exit Criteria
 
-**Current milestone: **Phase 5 — React Dashboard**
+**Current milestone:** Phase 5 — React Dashboard
+
+**Phase 4 overall status:** ✅ Complete
+
+Phase 4.10.1 validated the real backend runtime path in CI. Phase 4.11 completed the Phase 4 exit criteria. The validated backend path is production-like for the trading/analytics services, but the user-facing React dashboard and later production-platform work remain planned.
 
 ### Current validated path
 
@@ -394,10 +398,10 @@ Implemented in the current milestone:
 - Graceful gateway shutdown that stops heartbeat processing and closes active clients.
 - Unit coverage for connection setup, subscriptions, event delivery, invalid messages, and queue limits.
 
-Remaining scope:
+Completed runtime integration:
 
 - Connected the hub to the live upstream engine event source through the Gateway engine event client.
-- Added end-to-end WebSocket integration coverage against a fake TCP engine source.
+- Added end-to-end WebSocket integration coverage against a TCP engine source.
 - Expanded live TRADE delivery through the normalized Phase 4.4 event model.
 
 Exit criteria:
@@ -716,7 +720,9 @@ Phase 4 exit criteria are satisfied:
 **Phase 4 overall status:** Complete
 # Phase 5 — React Dashboard
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress — next milestone
+
+Phase 5 starts the user-facing product layer. The existing backend contracts are the source of truth; the dashboard must consume the Gateway REST and WebSocket boundaries rather than bypassing Gateway services.
 
 Planned:
 
@@ -730,6 +736,20 @@ Planned:
 - Risk-event display
 - Connection and engine status
 - Real-time updates
+- Dashboard unit/component tests
+- Browser-level end-to-end coverage for critical live-data flows
+- Responsive desktop/mobile layouts
+- Clear loading, empty, stale-data, and dependency-error states
+
+### Phase 5 recommended implementation order
+
+1. Dashboard foundation and application shell.
+2. Gateway REST client and typed API models.
+3. WebSocket client, subscriptions, reconnect, and stale-connection handling.
+4. Live market data, recent trades, and order book.
+5. Analytics charts and portfolio/risk views.
+6. Engine/analytics status and operational states.
+7. Dashboard E2E validation against the runtime stack.
 
 ---
 
