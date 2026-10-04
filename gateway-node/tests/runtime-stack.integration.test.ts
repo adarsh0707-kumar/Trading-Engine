@@ -3,13 +3,16 @@ import { describe, expect, test } from "bun:test";
 const baseUrl = process.env.GATEWAY_RUNTIME_URL ?? "http://127.0.0.1:8080";
 const wsUrl = baseUrl.replace(/^http/, "ws") + "/ws";
 
-async function waitForHealth(timeoutMs = 30_000): Promise<void> {
+async function waitForReady(timeoutMs = 30_000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(baseUrl + "/api/health");
-      if (response.ok) return;
+      const health = await fetch(baseUrl + "/api/health");
+      if (health.ok) {
+        const ready = await fetch(baseUrl + "/api/ready");
+        if (ready.ok) return;
+      }
     } catch {
       // Runtime services are expected to take a short time to start.
     }
@@ -17,7 +20,7 @@ async function waitForHealth(timeoutMs = 30_000): Promise<void> {
     await Bun.sleep(250);
   }
 
-  throw new Error("gateway health check timed out");
+  throw new Error("gateway readiness check timed out");
 }
 
 function waitForMessage(
@@ -51,10 +54,7 @@ describe("runtime full-stack integration", () => {
   test(
     "routes a real C++ Engine trade through Analytics, PostgreSQL, and WebSocket",
     async () => {
-      await waitForHealth();
-
-      const readyResponse = await fetch(baseUrl + "/api/ready");
-      expect(readyResponse.ok).toBe(true);
+      await waitForReady();
 
       const messages: Record<string, unknown>[] = [];
       const ws = new WebSocket(wsUrl);
