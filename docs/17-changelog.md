@@ -32,21 +32,19 @@ The React dashboard visual language is now defined and applied to the existing d
 
 The dashboard uses layered glass panels, a bento-style information layout, restrained depth, and minimal visual noise.
 
-### Palette
+### Exact three-color palette
 
-- Background: `#000000`
-- Surface: `#0A0A0D`
-- Raised surface: `#111116`
-- Border: `#24242B`
-- Primary text: `#FFFFFF`
-- Secondary text: `#A1A1AA`
-- Brand / active: `#2C3480`
-- Brand hover: `#20265F`
-- Brand highlight: `#3B45A0`
+The dashboard visual system is intentionally restricted to exactly three colors:
 
-### Semantic colors
+- Chocolate Brown: `#4E342E` — application background and dark surfaces.
+- Cream: `#F8F4E7` — primary text and light contrast.
+- Burnt Orange: `#CC5500` — brand accent, active states, actions, and highlights.
 
-Green remains reserved for **BUY / PROFIT / healthy** states, red for **SELL / LOSS / error / breached** states, and amber for **RISK / WARNING / degraded** states. These colors are not used as the product's primary branding.
+Only opacity variants of these same three colors are permitted for glass, borders, shadows, gradients, and depth. No blue, green, red, amber, gray, or other colors are part of the dashboard visual system.
+
+### Status treatment
+
+Semantic states reuse the three-color palette with explicit labels/icons instead of adding colors. BUY/PROFIT/healthy and RISK/WARNING/degraded use Burnt Orange; SELL/LOSS/error/breached use Chocolate Brown with structural emphasis; neutral/disconnected states use Cream at reduced opacity.
 
 ### Applied
 
