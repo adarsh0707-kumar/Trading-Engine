@@ -128,10 +128,9 @@ describe("full gateway integration path", () => {
 
       const enginePort = await listen(engineServer);
       const analyticsPort = await listen(analyticsServer);
-
-      const gateway = createGatewayServer({
+      const gatewayPort = await listen(createServer());
         GATEWAY_HOST: "127.0.0.1",
-        GATEWAY_PORT: "8080",
+        GATEWAY_PORT: String(gatewayPort),
         ENGINE_HOST: "127.0.0.1",
         ENGINE_PORT: String(enginePort),
         ANALYTICS_HOST: "127.0.0.1",
