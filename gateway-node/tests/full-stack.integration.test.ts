@@ -117,7 +117,7 @@ describe("full gateway integration path", () => {
 
       const analyticsServer = createServer((socket) => {
         socket.on("data", (chunk) => {
-          analyticsBuffer = Buffer.concat([analyticsBuffer, chunk]);
+          analyticsBuffer = Buffer.concat([analyticsBuffer, Buffer.from(chunk)]);
 
           while (analyticsBuffer.length >= 4) {
             const size = analyticsBuffer.readUInt32BE(0);
