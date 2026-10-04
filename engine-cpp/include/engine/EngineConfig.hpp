@@ -13,6 +13,7 @@ namespace engine_runtime
 struct EngineConfig
 {
     std::string symbol{"SIM"};
+    std::string bind_address{"127.0.0.1"};
     std::uint16_t port{9000};
     std::uint64_t tick_interval_ms{100};
     std::uint64_t market_seed{42};
