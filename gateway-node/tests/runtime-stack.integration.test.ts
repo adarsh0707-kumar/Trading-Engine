@@ -50,7 +50,9 @@ function waitForMessage(
   });
 }
 
-describe("runtime full-stack integration", () => {
+const runtimeIntegrationEnabled = process.env.RUN_RUNTIME_INTEGRATION === "true";
+
+describe.skipIf(!runtimeIntegrationEnabled)("runtime full-stack integration", () => {
   test(
     "routes a real C++ Engine trade through Analytics, PostgreSQL, and WebSocket",
     async () => {
