@@ -92,6 +92,10 @@ jobs:
         working-directory: gateway-node
         run: bun test
 
+      - name: Full-stack Gateway integration
+        working-directory: gateway-node
+        run: bun run test:integration
+
   observability:
     runs-on: ubuntu-latest
 
