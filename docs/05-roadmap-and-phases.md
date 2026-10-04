@@ -627,35 +627,47 @@ Harden external inputs, CORS, request/message sizes, error exposure, rate-limit 
 
 ## Phase 4.9 — Operational Logging & Metrics
 
-**Status:** 🚧 In Progress
-
-Extend structured operational logging and metrics across gateway HTTP, engine, analytics, and WebSocket boundaries. The basic Prometheus exposition endpoint is already implemented; this milestone focuses on consistent operational instrumentation rather than changing business behavior.
-
-### Phase 4.9 — Operational Logging & Metrics
-
-**Status:** In Progress
+**Status:** Complete
 
 - **4.9.1 Structured Operational Logging** — Complete
 - **4.9.2 Metrics Completion** — Complete
 - **4.9.3 Request & Event Correlation** — Complete
-- **4.9.4 Health & Readiness Observability** — Next
-- **4.9.5 Observability Regression Validation** — Planned
-- **4.9.6 Operational Observability Integration** — Planned
+- **4.9.4 Health & Readiness Observability** — Complete
+- **4.9.5 Operational Failure & Alerting Integration** — Complete
+- **4.9.6 Observability Regression & Validation** — Complete
 
+**Phase 4.9 exit status:** Complete
 
 ## Phase 4.10 — Testing & Integration Validation
 
-**Status:** ⏳ Planned
+**Status:** In Progress
 
-Complete gateway unit, integration, contract, failure-recovery, and end-to-end validation using the Bun toolchain.
+Phase 4.10 closes the gap between isolated service regression suites and the complete Gateway event path.
+
+Implemented in this milestone:
+
+- Dedicated Gateway full-stack integration test.
+- Real TCP Engine-side fixture → Gateway Engine Event Client → WebSocket TRADE delivery.
+- Gateway → Analytics framed TCP contract delivery.
+- Analytics-side fixture response → Gateway analytics normalization → WebSocket ANALYTICS_UPDATE delivery.
+- Correlation identity assertions across the Engine → Analytics → WebSocket path.
+- Dedicated `bun run test:integration` CI gate.
+- Existing C++ Debug/Release, Python/PostgreSQL, Gateway security/full-suite, and Prometheus validation gates remain unchanged.
+
+Remaining validation focus:
+
+- Run the complete multi-service stack with the actual C++ Engine and Python Analytics processes in an integrated environment.
+- Validate PostgreSQL-backed persistence in the same end-to-end environment.
+- Exercise deterministic cross-service disconnect/recovery scenarios.
+- Document final Phase 4 integration evidence before declaring 4.10 complete.
 
 ## Phase 4.11 — Phase Integration & Exit Criteria
 
-**Status:** ⏳ Planned
+**Status:** Planned
 
-Phase 4 is complete when the gateway connects the completed Phase 1–3 platform to the future dashboard with validated REST/WebSocket contracts, resilience, security boundaries, observability, tests, and CI coverage.
+Phase 4 becomes complete when the Phase 1–3 platform and Gateway have passed full-stack integration validation, resilience/security/observability checks, and documented exit criteria before the React Dashboard begins.
 
-**Phase 4 overall status:** 🚧 In Progress — 4.1 through 4.8 complete; 4.9 is the active milestone.
+**Phase 4 overall status:** In Progress — 4.1 through 4.9 complete; 4.10 is active and 4.11 follows.
 
 # Phase 5 — React Dashboard
 
