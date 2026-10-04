@@ -6,6 +6,19 @@ This project is an educational trading-infrastructure simulation. It does not co
 
 ## [Unreleased]
 
+### Phase 4 — Complete
+
+- Completed Phase 4.10 real full-stack runtime integration.
+- Added containerized C++ Engine, Python Analytics, Gateway, and PostgreSQL services.
+- Added PostgreSQL runtime schema initialization for trades, analytics, positions, risk state, and risk events.
+- Added configurable C++ Engine bind address for container-to-container networking.
+- Added real runtime WebSocket smoke coverage for Engine TRADE and ANALYTICS_UPDATE events.
+- Added CI validation that confirms a real Engine-generated trade is persisted in PostgreSQL.
+- Completed Phase 4.11 integration exit criteria.
+
+Status: Complete
+
+
 ### Phase 4.10 — Testing & Integration Validation
 
 - Started the Phase 4.10 integration-validation milestone.
