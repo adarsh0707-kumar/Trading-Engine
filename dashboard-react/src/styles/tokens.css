@@ -1,14 +1,14 @@
 :root {
-  --color-bg: #4e342e;
+  --color-bg: #f8f4e7;
   --color-surface: #4e342e;
   --color-surface-raised: #4e342e;
-  --color-surface-glass: rgb(78 52 46 / 78%);
-  --color-border: rgb(248 244 231 / 18%);
-  --color-border-strong: rgb(248 244 231 / 30%);
+  --color-surface-glass: rgb(78 52 46 / 92%);
+  --color-border: rgb(78 52 46 / 18%);
+  --color-border-strong: rgb(78 52 46 / 30%);
 
-  --color-text: #f8f4e7;
-  --color-text-muted: rgb(248 244 231 / 72%);
-  --color-text-subtle: rgb(248 244 231 / 52%);
+  --color-text: #4e342e;
+  --color-text-muted: rgb(78 52 46 / 72%);
+  --color-text-subtle: rgb(78 52 46 / 52%);
 
   --color-accent: #cc5500;
   --color-accent-hover: #cc5500;
@@ -26,6 +26,6 @@
   --radius-lg: 20px;
   --radius-pill: 999px;
 
-  --shadow-card: 0 18px 50px rgb(78 52 46 / 45%);
+  --shadow-card: 0 18px 50px rgb(78 52 46 / 24%);
   --shadow-glow: 0 0 40px rgb(204 85 0 / 24%);
 }
