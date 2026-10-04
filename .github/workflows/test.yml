@@ -96,6 +96,53 @@ jobs:
         working-directory: gateway-node
         run: bun run test:integration
 
+  runtime-integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+
+      - name: Install Gateway dependencies
+        working-directory: gateway-node
+        run: bun install --frozen-lockfile
+
+      - name: Start real Phase 4 runtime stack
+        run: docker compose up -d --build
+
+      - name: Wait for runtime readiness
+        run: |
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8080/api/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose ps
+          docker compose logs --no-color
+          exit 1
+
+      - name: Real Engine → Analytics → Gateway smoke test
+        working-directory: gateway-node
+        run: RUN_RUNTIME_INTEGRATION=true bun test tests/runtime-stack.integration.test.ts
+
+      - name: Verify PostgreSQL persistence
+        run: |
+          count="$(docker compose exec -T postgres psql -U trading_engine -d trading_engine -tAc 'SELECT COUNT(*) FROM trades;')"
+          echo "Persisted trades: $count"
+          test "$count" -gt 0
+
+      - name: Runtime stack logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Stop real Phase 4 runtime stack
+        if: always()
+        run: docker compose down -v
+
   observability:
     runs-on: ubuntu-latest
 

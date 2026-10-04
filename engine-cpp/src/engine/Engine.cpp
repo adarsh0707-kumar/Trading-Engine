@@ -19,7 +19,11 @@ namespace engine_runtime
 Engine::Engine(const EngineConfig &config)
     : config_(config),
       state_(std::make_unique<EngineState>(config.symbol)),
-      server_(std::make_unique<network::SocketServer>(config.port)),
+      server_(std::make_unique<network::SocketServer>(
+          config.port,
+          10000,
+          30,
+          config.bind_address)),
       logger_(std::make_unique<logging::Logger>("Engine"))
 {
     ::engine::MarketGeneratorConfig gen_config;

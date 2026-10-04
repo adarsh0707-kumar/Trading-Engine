@@ -24,7 +24,8 @@ public:
     explicit SocketServer(
         std::uint16_t port = 9000,
         std::uint64_t heartbeat_interval_ms = 10000,
-        std::uint64_t heartbeat_timeout_sec = 30);
+        std::uint64_t heartbeat_timeout_sec = 30,
+        std::string bind_address = "127.0.0.1");
 
     ~SocketServer();
 
@@ -60,6 +61,7 @@ private:
     int createListeningSocket();
 
     std::uint16_t requestedPort_;
+    std::string bindAddress_;
 
     std::uint16_t boundPort_{0};
 

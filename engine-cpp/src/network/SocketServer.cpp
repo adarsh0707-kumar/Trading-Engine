@@ -8,6 +8,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <thread>
+#include <utility>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -22,8 +23,10 @@ namespace network
 SocketServer::SocketServer(
     std::uint16_t port,
     std::uint64_t heartbeat_interval_ms,
-    std::uint64_t heartbeat_timeout_sec)
+    std::uint64_t heartbeat_timeout_sec,
+    std::string bind_address)
     : requestedPort_(port),
+      bindAddress_(std::move(bind_address)),
       heartbeatIntervalMs_(heartbeat_interval_ms),
       heartbeatTimeoutSec_(heartbeat_timeout_sec)
 {
@@ -412,8 +415,15 @@ int SocketServer::createListeningSocket()
     address.sin_family =
         AF_INET;
 
-    address.sin_addr.s_addr =
-        htonl(INADDR_LOOPBACK);
+    if (::inet_pton(
+            AF_INET,
+            bindAddress_.c_str(),
+            &address.sin_addr) != 1)
+    {
+        ::close(fd);
+        throw std::runtime_error(
+            "Invalid bind address: " + bindAddress_);
+    }
 
     address.sin_port =
         htons(requestedPort_);
