@@ -18,6 +18,92 @@ The project follows a phased implementation roadmap covering:
 
 ---
 
+## 2026-10-04 — Phase 4.10 / 4.10.1 / 4.11 — Phase 4 Runtime & Integration Closeout
+
+### Status
+
+**Status:** ✅ Complete
+
+Phase 4 is now closed. The completed Gateway platform was validated as a real multi-service backend runtime, and the Phase 4 integration exit criteria were recorded.
+
+### Implemented and validated
+
+* Real C++ Engine runtime container.
+* Real Python Analytics runtime container.
+* PostgreSQL runtime with initialized persistence schema.
+* Gateway runtime container exposing REST and WebSocket boundaries.
+* Real Engine TCP → Gateway → Analytics TCP → PostgreSQL → Gateway analytics-output path.
+* Real WebSocket TRADE delivery from the running engine.
+* Real WebSocket ANALYTICS_UPDATE delivery.
+* PostgreSQL verification that a real Engine-generated trade is persisted.
+* Runtime-stack readiness/startup validation.
+* Docker Compose CI validation of the backend runtime.
+* Gateway/Engine/Analytics disconnect and recovery behavior remains covered by service-level resilience suites.
+* Phase 4 security regression and full Gateway validation.
+* C++ Debug/Release and Python/PostgreSQL validation.
+* Phase 4 documentation and exit evidence.
+
+### Runtime path
+
+    C++ Engine :9000
+          ↓
+    Gateway :8080
+          ├── TCP → Python Analytics :8000
+          │             ↓
+          │        PostgreSQL :5432
+          │
+          └── analytics output
+                 ↓
+            WebSocket /ws
+
+### Phase 4 exit criteria
+
+* [X] Engine transport reachable from Gateway.
+* [X] Real TRADE events forwarded to Python Analytics.
+* [X] Real TRADE events processed by Python Analytics.
+* [X] Analytics results persisted to PostgreSQL.
+* [X] Analytics results returned to Gateway.
+* [X] Live analytics published to WebSocket consumers.
+* [X] Health/readiness and observability boundaries present.
+* [X] Security regression and full Gateway suites pass.
+* [X] C++ Debug/Release and Python/PostgreSQL suites pass.
+* [X] Runtime stack validated in CI.
+* [X] Phase 4 documentation and exit evidence recorded.
+
+### Important scope boundary
+
+This closes the **backend trading-platform integration**, not the complete end-user product. The React dashboard, historical analytics UI/API work, concrete authentication provider integration, production deployment, and performance/production hardening remain future milestones.
+
+### Repository status after Phase 4 closeout
+
+The current main branch is based on merged PR #95 / Phase 4.10.1 runtime integration.
+
+The repository also contains legacy/empty CI workflow files — build.yml, docker.yml, lint.yml, and security.yml — whose workflow runs fail because they contain no jobs. These are repository-hygiene work items, not failures of the Phase 4 application/runtime implementation.
+
+### Next target
+
+**Phase 5 — React Dashboard**
+
+---
+
+All notable changes to the **Cloud-Based Algorithmic Trading Engine** are documented in this file.
+
+The project follows a phased implementation roadmap covering:
+
+* C++ matching engine
+* C++ TCP transport
+* Python streaming analytics
+* Risk management
+* Node.js gateway
+* React dashboard
+* Persistence
+* Observability
+* Infrastructure
+* CI/CD and security
+* Performance and production hardening
+
+---
+
 ## 2026-09-29 — Phase 4 Planning — TypeScript Gateway on Bun
 
 ### Status
