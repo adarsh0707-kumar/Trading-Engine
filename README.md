@@ -3,7 +3,7 @@
 A production-style, polyglot trading simulation platform designed to demonstrate how modern algorithmic trading infrastructure can be structured across high-performance systems, analytics, APIs, real-time communication, and visualization.
 
 > **Project status:** Active development
-> **Current milestone: **Phase 4.10 — Testing & Integration Validation**
+> **Current milestone: **Phase 5 — React Dashboard**
 
 
 ## Table of Contents
@@ -1566,3 +1566,29 @@ The architecture intentionally starts with technologies and protocols that are e
 
 ---
 If this project was useful to you, consider [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee\&logoColor=white)](https://buymeacoffee.com/adarsh12kumar)
+
+## Phase 4 Runtime
+
+Phase 4 is complete. The real local multi-service runtime is available through Docker Compose:
+
+- C++ Engine on TCP port 9000
+- Node Gateway on HTTP/WebSocket port 8080
+- Python Analytics receiver on TCP port 8000
+- PostgreSQL on port 5432
+- Analytics Prometheus metrics on port 9101
+
+Start the full stack:
+
+    docker compose up -d --build
+
+Run the real runtime smoke test:
+
+    cd gateway-node
+    bun test tests/runtime-stack.integration.test.ts
+
+Stop the stack:
+
+    docker compose down -v
+
+The runtime smoke test waits for Gateway readiness, subscribes to TRADE and ANALYTICS_UPDATE WebSocket events, and validates that a real Engine-generated trade reaches Analytics and is persisted in PostgreSQL.
+
