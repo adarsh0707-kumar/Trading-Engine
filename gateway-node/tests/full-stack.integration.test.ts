@@ -7,7 +7,7 @@ const TRADE = {
   type: "TRADE",
   request_id: "trade-request-1",
   timestamp: "2026-10-04T10:00:00.000Z",
-  payload: {
+  payload: JSON.stringify({
     trade_id: "trade-1",
     symbol: "SIM",
     price: 100,
@@ -16,11 +16,7 @@ const TRADE = {
     maker_order_id: "maker-1",
     taker_side: "BUY",
     buy_order_id: "taker-1",
-    sell_order_id: "maker-1",
-  },
-};
-
-const ANALYTICS_UPDATE = {
+    sell_order_id: "maker-1",\n  }),\n};\n\nconst ANALYTICS_UPDATE = {
   version: 1,
   type: "ANALYTICS_UPDATE",
   event_id: "analytics-event-1",
