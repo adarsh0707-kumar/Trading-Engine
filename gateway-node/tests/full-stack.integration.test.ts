@@ -112,7 +112,7 @@ describe("full gateway integration path", () => {
 
       const engineServer = createServer((socket) => {
         engineSocket = socket;
-        setTimeout(() => socket.write(frame(TRADE)), 50);
+        setTimeout(() => socket.write(frame(TRADE)), 250);
       });
 
       const analyticsServer = createServer((socket) => {
