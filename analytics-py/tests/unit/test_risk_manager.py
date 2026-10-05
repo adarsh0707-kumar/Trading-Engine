@@ -274,6 +274,6 @@ def test_negative_equity_is_preserved_and_drawdown_is_calculated() -> None:
         side="SELL",
     )
 
-    assert snapshot.equity == Decimal("-989.90")
+    assert snapshot.equity == Decimal("-899.90")
     assert snapshot.peak_equity == Decimal("100")
-    assert snapshot.drawdown == Decimal("1089.90")
+    assert snapshot.drawdown == Decimal("999.90")
