@@ -315,10 +315,10 @@ button {
   position: relative;
   min-height: 230px;
   overflow: hidden;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgb(204 85 0 / 22%);
   border-radius: var(--radius-lg);
   background:
-    linear-gradient(145deg, rgb(248 244 231 / 3%), transparent 45%),
+    linear-gradient(145deg, rgb(204 85 0 / 8%), transparent 48%),
     var(--color-surface-glass);
   padding: 22px;
   box-shadow: var(--shadow-card);
@@ -389,9 +389,22 @@ button {
 .bento-panel h2 {
   position: relative;
   z-index: 1;
-  margin: 38px 0 8px;
-  font-size: 1.25rem;
-  letter-spacing: -0.02em;
+  margin: 34px 0 10px;
+  color: #f8f4e7;
+  font-size: clamp(1.35rem, 2vw, 1.65rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+}
+
+.bento-panel:not(.bento-panel-primary) h2::after {
+  display: block;
+  width: 28px;
+  height: 3px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  content: "";
 }
 
 .panel-value {
@@ -400,7 +413,7 @@ button {
   margin: 0 0 8px;
   color: var(--color-accent);
   font-size: 1.35rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .panel-description {
