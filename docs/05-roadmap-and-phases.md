@@ -824,10 +824,10 @@ Gateway contract review    PASS
 
 ### Exit criteria
 
-- [ ] Dashboard baseline builds.
-- [ ] Existing source structure is understood.
-- [ ] Gateway endpoint contracts are documented for dashboard use.
-- [ ] No unnecessary backend changes are introduced.
+- [X] Dashboard baseline builds.
+- [X] Existing source structure is understood.
+- [X] Gateway endpoint contracts are documented for dashboard use.
+- [X] No unnecessary backend changes are introduced.
 
 ---
 
@@ -914,12 +914,12 @@ Create reusable components for:
 
 ### Exit criteria
 
-- [ ] Dashboard route renders.
-- [ ] Navigation works.
-- [ ] Shared UI primitives exist.
-- [ ] Design tokens are centralized.
-- [ ] Desktop and mobile shell layouts render.
-- [ ] Production build passes.
+- [X] Dashboard route renders.
+- [X] Navigation works.
+- [X] Shared UI primitives exist.
+- [X] Design tokens are centralized.
+- [X] Desktop and mobile shell layouts render.
+- [X] Production build passes.
 
 ---
 
@@ -1045,11 +1045,11 @@ invalid   → contract/data error
 
 ### Exit criteria
 
-- [ ] All required REST clients implemented.
-- [ ] Models match Gateway contracts.
-- [ ] Gateway URL is environment-driven.
-- [ ] HTTP errors are normalized.
-- [ ] REST client tests cover success and failure paths.
+- [X] All required REST clients implemented.
+- [X] Models match Gateway contracts.
+- [X] Gateway URL is environment-driven.
+- [X] HTTP errors are normalized.
+- [X] REST client tests cover success and failure paths.
 
 ---
 
@@ -1118,15 +1118,15 @@ RECEIVE EVENTS
 
 ### Exit criteria
 
-- [ ] WebSocket connects to Gateway.
-- [ ] Subscribe/unsubscribe works.
-- [ ] TRADE events are parsed.
-- [ ] ANALYTICS_UPDATE events are parsed.
-- [ ] RISK_EVENT events are parsed.
-- [ ] Reconnect works.
-- [ ] Subscriptions are restored after reconnect.
-- [ ] Invalid messages do not crash the application.
-- [ ] WebSocket tests pass.
+- [X] WebSocket connects to Gateway.
+- [X] Subscribe/unsubscribe works.
+- [X] TRADE events are parsed.
+- [X] ANALYTICS_UPDATE events are parsed.
+- [X] RISK_EVENT events are parsed.
+- [X] Reconnect works.
+- [X] Subscriptions are restored after reconnect.
+- [X] Invalid messages do not crash the application.
+- [X] WebSocket tests pass.
 
 ---
 
@@ -1166,11 +1166,11 @@ System
 
 ### Exit criteria
 
-- [ ] All primary pages/routes exist.
-- [ ] Dashboard has a coherent information hierarchy.
-- [ ] Navigation works without page reloads.
-- [ ] Shared header shows connection state.
-- [ ] Layout adapts to smaller screens.
+- [X] All primary pages/routes exist.
+- [X] Dashboard has a coherent information hierarchy.
+- [X] Navigation works without page reloads.
+- [X] Shared header shows connection state.
+- [X] Layout adapts to smaller screens.
 
 ---
 
@@ -1230,12 +1230,12 @@ Render
 
 ### Exit criteria
 
-- [ ] Initial market state loads from REST.
-- [ ] Initial trades load from REST.
-- [ ] Live TRADE events update the UI.
-- [ ] Market summary updates from live events.
-- [ ] Duplicate handling is deterministic.
-- [ ] Loading/empty/error states work.
+- [X] Initial market state loads from REST.
+- [X] Initial trades load from REST.
+- [X] Live TRADE events update the UI.
+- [X] Market summary updates from live events.
+- [X] Duplicate handling is deterministic.
+- [X] Loading/empty/error states work.
 
 ---
 
