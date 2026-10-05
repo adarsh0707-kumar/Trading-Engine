@@ -116,6 +116,20 @@ button {
   font-size: 0.72rem;
 }
 
+.sidebar-close {
+  display: none;
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
 .sidebar-logo {
   display: grid;
   width: 40px;
@@ -224,9 +238,23 @@ button {
   padding: 0 34px;
 }
 
+.header-menu {
+  display: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 1rem;
+}
+
 .header-context {
   display: grid;
   gap: 1px;
+}
+
+.header-eyebrow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .header-context strong {
@@ -477,14 +505,40 @@ a:focus-visible {
 
 @media (max-width: 768px) {
   .sidebar {
-    position: static;
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(84vw, 320px);
+    border-right: 2px solid var(--chocolate);
+    border-bottom: 0;
+    padding: 20px 14px;
+    transform: translateX(-105%);
+    transition: transform 180ms ease;
+  }
+
+  .sidebar-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-close {
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    display: block;
     width: 100%;
-    border-right: 0;
-    border-bottom: 2px solid var(--chocolate);
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    background: var(--chocolate);
+    opacity: 0.55;
   }
 
   .sidebar-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .app-main {
@@ -497,7 +551,33 @@ a:focus-visible {
 
   .header {
     min-height: 60px;
+    gap: 12px;
     padding: 0 16px;
+  }
+
+  .header-menu {
+    display: inline-grid;
+    flex: 0 0 auto;
+    place-items: center;
+  }
+
+  .header-context {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .header-context strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .header-live-label {
+    display: none;
+  }
+
+  .connection-badge {
+    padding: 6px 9px;
   }
 
   .dashboard-hero {
