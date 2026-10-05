@@ -1,22 +1,27 @@
 :root {
-  --color-bg: #f8f4e7;
-  --color-surface: #4e342e;
-  --color-surface-raised: #4e342e;
-  --color-surface-glass: rgb(78 52 46 / 92%);
-  --color-border: rgb(78 52 46 / 18%);
-  --color-border-strong: rgb(78 52 46 / 30%);
+  /* 60 / 30 / 10 palette — these are the only UI colors. */
+  --cream: #f8f4e7;
+  --chocolate: #4e342e;
+  --orange: #cc5500;
 
-  --color-text: #4e342e;
-  --color-text-muted: rgb(78 52 46 / 72%);
-  --color-text-subtle: rgb(78 52 46 / 52%);
+  --color-bg: var(--cream);
+  --color-surface: var(--chocolate);
+  --color-surface-raised: var(--chocolate);
+  --color-surface-glass: var(--cream);
+  --color-border: var(--chocolate);
+  --color-border-strong: var(--chocolate);
 
-  --color-accent: #cc5500;
-  --color-accent-hover: #cc5500;
-  --color-accent-highlight: #cc5500;
+  --color-text: var(--chocolate);
+  --color-text-muted: var(--chocolate);
+  --color-text-subtle: var(--chocolate);
 
-  --color-success: #cc5500;
-  --color-warning: #cc5500;
-  --color-danger: #4e342e;
+  --color-accent: var(--orange);
+  --color-accent-hover: var(--orange);
+  --color-accent-highlight: var(--orange);
+
+  --color-success: var(--orange);
+  --color-warning: var(--orange);
+  --color-danger: var(--chocolate);
 
   --sidebar-width: 248px;
   --header-height: 72px;
@@ -26,6 +31,6 @@
   --radius-lg: 20px;
   --radius-pill: 999px;
 
-  --shadow-card: 0 18px 50px rgb(78 52 46 / 24%);
-  --shadow-glow: 0 0 40px rgb(204 85 0 / 24%);
+  --shadow-card: 0 14px 34px var(--chocolate);
+  --shadow-glow: 0 0 28px var(--orange);
 }
