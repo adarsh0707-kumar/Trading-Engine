@@ -26,7 +26,7 @@ export default function MarketSummary({ market, state, error }: MarketSummaryPro
   if (state === "error" && market === null) {
     return (
       <div className="state-message state-error">
-        Market unavailable{error ? \` — \${error}\` : ""}
+        Market unavailable{error ? " — " + error : ""}
       </div>
     );
   }
