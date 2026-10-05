@@ -131,9 +131,16 @@ jobs:
 
       - name: Verify PostgreSQL persistence
         run: |
-          count="$(docker compose exec -T postgres psql -U trading_engine -d trading_engine -tAc 'SELECT COUNT(*) FROM trades;')"
-          echo "Persisted trades: $count"
-          test "$count" -gt 0
+          for attempt in $(seq 1 30); do
+            count="$(docker compose exec -T postgres psql -U trading_engine -d trading_engine -tAc 'SELECT COUNT(*) FROM trades;')"
+            echo "Persisted trades (attempt $attempt): $count"
+            if [ "$count" -gt 0 ]; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker compose logs --no-color analytics
+          exit 1
 
       - name: Runtime stack logs on failure
         if: failure()
