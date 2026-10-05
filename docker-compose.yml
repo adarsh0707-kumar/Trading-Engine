@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: trading_engine
       POSTGRES_DB: trading_engine
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - trading-engine-postgres:/var/lib/postgresql/data
       - ./analytics-py/docker/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
@@ -15,6 +15,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+      start_period: 5s
     restart: unless-stopped
 
   engine:
@@ -24,7 +25,13 @@ services:
     environment:
       ENGINE_BIND_ADDRESS: 0.0.0.0
     ports:
-      - "9000:9000"
+      - "${ENGINE_PORT:-9000}:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 9000"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
     restart: unless-stopped
 
   analytics:
@@ -39,10 +46,16 @@ services:
       TRADING_ENGINE_METRICS_PORT: 9101
       TRADING_ENGINE_LOG_LEVEL: INFO
     ports:
-      - "9101:9101"
+      - "${ANALYTICS_METRICS_PORT:-9101}:9101"
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8000), 2).close()"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
     restart: unless-stopped
 
   gateway:
@@ -56,17 +69,43 @@ services:
       ENGINE_PORT: 9000
       ANALYTICS_HOST: analytics
       ANALYTICS_PORT: 8000
-      CORS_ORIGINS: http://localhost:5173
+      CORS_ORIGINS: ${GATEWAY_CORS_ORIGINS:-http://localhost:5173}
       RATE_LIMIT_ENABLED: "true"
       AUTH_ENABLED: "false"
       AUTH_ENFORCEMENT_ENABLED: "false"
     ports:
-      - "8080:8080"
+      - "${GATEWAY_PORT:-8080}:8080"
     depends_on:
       engine:
-        condition: service_started
+        condition: service_healthy
       analytics:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://127.0.0.1:8080/api/ready').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./dashboard-react
+      dockerfile: Dockerfile
+      args:
+        VITE_GATEWAY_BASE_URL: ${DASHBOARD_GATEWAY_URL:-http://localhost:8080}
+        VITE_GATEWAY_WS_URL: ${DASHBOARD_GATEWAY_WS_URL:-ws://localhost:8080}
+    ports:
+      - "${DASHBOARD_PORT:-5173}:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
     restart: unless-stopped
 
 volumes:

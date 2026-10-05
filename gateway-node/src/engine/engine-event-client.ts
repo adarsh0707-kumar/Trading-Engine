@@ -274,6 +274,12 @@ export function createEngineEventClient(
           continue;
         }
 
+        if (message.type === "HELLO") {
+          // The C++ engine sends HELLO immediately after accepting a client.
+          // It is a transport-level control message, not a trade event.
+          continue;
+        }
+
         if (message.type !== "TRADE") {
           continue;
         }
