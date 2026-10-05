@@ -13,10 +13,7 @@ body,
 
 body {
   min-width: 320px;
-  background:
-    radial-gradient(circle at 78% -10%, rgb(204 85 0 / 16%), transparent 32rem),
-    radial-gradient(circle at 20% 35%, rgb(78 52 46 / 8%), transparent 28rem),
-    var(--color-bg);
+  background: var(--color-bg);
   color: var(--color-text);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
@@ -24,17 +21,18 @@ body {
   line-height: 1.5;
 }
 
+/* 60% — cream: page canvas, navigation, header, whitespace. */
 body::before {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image:
-    linear-gradient(rgb(78 52 46 / 5%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(78 52 46 / 5%) 1px, transparent 1px);
+  background:
+    linear-gradient(90deg, rgb(78 52 46 / 3%) 1px, transparent 1px),
+    linear-gradient(rgb(78 52 46 / 3%) 1px, transparent 1px);
   background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
   content: "";
-  mask-image: linear-gradient(to bottom, black, transparent 80%);
 }
 
 button,
@@ -55,6 +53,7 @@ button {
 
 .app-shell {
   min-height: 100vh;
+  background: var(--color-bg);
 }
 
 .app-main {
@@ -63,23 +62,25 @@ button {
 }
 
 .page-content {
-  padding: 32px;
+  padding: 34px;
 }
 
 .page-header {
-  margin-bottom: 28px;
+  margin-bottom: 30px;
 }
 
 .page-header h1 {
   margin: 0;
+  color: var(--color-text);
   font-size: clamp(2rem, 4vw, 3.2rem);
-  letter-spacing: -0.04em;
-  line-height: 1.05;
+  font-weight: 850;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
 }
 
 .page-header p {
   max-width: 680px;
-  margin: 10px 0 0;
+  margin: 11px 0 0;
   color: var(--color-text-muted);
 }
 
@@ -94,6 +95,7 @@ button {
   text-transform: uppercase;
 }
 
+/* 60% cream surface. */
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
@@ -102,16 +104,15 @@ button {
   width: var(--sidebar-width);
   flex-direction: column;
   border-right: 1px solid var(--color-border);
-  background: rgb(248 244 231 / 82%);
-  padding: 22px 14px;
-  backdrop-filter: blur(24px);
+  background: var(--color-bg);
+  padding: 24px 14px;
 }
 
 .sidebar-brand {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 4px 10px 28px;
+  padding: 4px 10px 30px;
 }
 
 .sidebar-brand strong,
@@ -120,6 +121,7 @@ button {
 }
 
 .sidebar-brand strong {
+  color: var(--color-text);
   font-size: 0.95rem;
 }
 
@@ -134,11 +136,11 @@ button {
   width: 38px;
   height: 38px;
   place-items: center;
-  border: 1px solid rgb(204 85 0 / 65%);
-  border-radius: 12px;
-  background: linear-gradient(145deg, var(--color-accent), var(--color-accent));
-  box-shadow: var(--shadow-glow);
-  color: var(--color-text);
+  border: 2px solid var(--color-accent);
+  border-radius: 11px;
+  background: var(--color-accent);
+  box-shadow: 0 8px 20px rgb(204 85 0 / 20%);
+  color: var(--color-bg);
   font-size: 0.8rem;
   font-weight: 900;
 }
@@ -157,11 +159,15 @@ button {
   align-items: center;
   gap: 11px;
   border: 1px solid transparent;
-  border-radius: 11px;
+  border-radius: 10px;
   color: var(--color-text-muted);
   padding: 11px 12px;
   font-size: 0.88rem;
-  transition: 160ms ease;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
 }
 
 .sidebar-link-index {
@@ -173,14 +179,14 @@ button {
 
 .sidebar-link:hover {
   border-color: var(--color-border);
-  background: rgb(248 244 231 / 3%);
+  background: rgb(78 52 46 / 6%);
   color: var(--color-text);
   transform: translateX(2px);
 }
 
 .sidebar-link-active {
-  border-color: rgb(204 85 0 / 45%);
-  background: linear-gradient(90deg, rgb(204 85 0 / 28%), rgb(204 85 0 / 8%));
+  border-color: rgb(204 85 0 / 28%);
+  background: rgb(204 85 0 / 9%);
   color: var(--color-text);
   box-shadow: inset 3px 0 0 var(--color-accent);
 }
@@ -211,9 +217,10 @@ button {
 
 .sidebar-footer-dot {
   background: var(--color-accent);
-  box-shadow: 0 0 12px rgb(204 85 0 / 70%);
+  box-shadow: 0 0 10px rgb(204 85 0 / 50%);
 }
 
+/* 60% cream header. */
 .header {
   position: sticky;
   top: 0;
@@ -222,10 +229,10 @@ button {
   min-height: var(--header-height);
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgb(248 244 231 / 18%);
-  background: rgb(248 244 231 / 82%);
-  padding: 0 32px;
-  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--color-border);
+  background: rgb(248 244 231 / 94%);
+  padding: 0 34px;
+  backdrop-filter: blur(18px);
 }
 
 .header-context {
@@ -234,6 +241,7 @@ button {
 }
 
 .header-context strong {
+  color: var(--color-text);
   font-size: 0.88rem;
 }
 
@@ -254,7 +262,7 @@ button {
   gap: 7px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-pill);
-  background: rgb(248 244 231 / 82%);
+  background: var(--color-bg);
   padding: 6px 11px;
   color: var(--color-text-muted);
   font-size: 0.76rem;
@@ -267,16 +275,10 @@ button {
   background: var(--color-text-subtle);
 }
 
-.connection-connected .connection-dot {
-  background: var(--color-success);
-}
-
-.connection-connecting .connection-dot {
-  background: var(--color-warning);
-}
-
+.connection-connected .connection-dot,
+.connection-connecting .connection-dot,
 .connection-disconnected .connection-dot {
-  background: var(--color-danger);
+  background: var(--color-accent);
 }
 
 .dashboard-hero {
@@ -290,9 +292,9 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgb(204 85 0 / 35%);
+  border: 1px solid rgb(204 85 0 / 32%);
   border-radius: var(--radius-pill);
-  background: rgb(204 85 0 / 10%);
+  background: rgb(204 85 0 / 8%);
   padding: 8px 12px;
   color: var(--color-text);
   font-size: 0.72rem;
@@ -301,72 +303,64 @@ button {
 
 .hero-badge-dot {
   background: var(--color-accent);
-  box-shadow: 0 0 12px rgb(204 85 0 / 80%);
+  box-shadow: 0 0 10px rgb(204 85 0 / 55%);
 }
 
+/* 30% — chocolate: dense information surfaces/cards. */
 .bento-grid {
   display: grid;
   grid-auto-flow: dense;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .bento-panel {
   position: relative;
   min-height: 230px;
   overflow: hidden;
-  border: 1px solid rgb(204 85 0 / 22%);
+  border: 1px solid rgb(78 52 46 / 8%);
   border-radius: var(--radius-lg);
-  background:
-    linear-gradient(145deg, rgb(204 85 0 / 8%), transparent 48%),
-    var(--color-surface-glass);
-  padding: 22px;
+  background: var(--color-surface);
+  padding: 24px;
   box-shadow: var(--shadow-card);
-  backdrop-filter: blur(20px);
-  color: #f8f4e7;
+  color: var(--color-bg);
+}
+
+.bento-panel::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: rgb(204 85 0 / 32%);
+  content: "";
 }
 
 .bento-panel::after {
   position: absolute;
-  top: -60px;
-  right: -50px;
-  width: 160px;
-  height: 160px;
+  right: -70px;
+  bottom: -90px;
+  width: 190px;
+  height: 190px;
   border-radius: 50%;
-  background: rgb(204 85 0 / 10%);
-  filter: blur(8px);
+  background: rgb(204 85 0 / 7%);
   content: "";
 }
 
 .bento-panel-primary {
   grid-column: span 2;
-  border-color: var(--color-accent);
-  background:
-    radial-gradient(circle at 88% 8%, rgb(248 244 231 / 18%), transparent 42%),
-    var(--color-accent);
-  box-shadow: var(--shadow-card), var(--shadow-glow);
-  color: #f8f4e7;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  box-shadow: var(--shadow-card), 0 12px 32px rgb(204 85 0 / 18%);
 }
 
-.bento-panel-primary .panel-index {
-  color: rgb(248 244 231 / 78%);
+.bento-panel-primary::before {
+  background: var(--color-bg);
+  opacity: 0.7;
 }
 
-.bento-panel-primary .panel-value {
-  color: #f8f4e7;
-}
-
-.bento-panel-primary .panel-description {
-  color: rgb(248 244 231 / 90%);
-}
-
-.bento-panel-primary .panel-status {
-  color: rgb(248 244 231 / 88%);
-}
-
-.bento-panel-primary .status-dot-warning {
-  background: #f8f4e7;
-  box-shadow: 0 0 10px rgb(248 244 231 / 65%);
+.bento-panel-primary::after {
+  background: rgb(248 244 231 / 12%);
 }
 
 .bento-panel-wide {
@@ -382,29 +376,36 @@ button {
 }
 
 .panel-index {
-  color: rgb(248 244 231 / 68%);
+  color: rgb(248 244 231 / 58%);
   font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 .bento-panel h2 {
   position: relative;
   z-index: 1;
-  margin: 34px 0 10px;
-  color: #f8f4e7;
-  font-size: clamp(1.35rem, 2vw, 1.65rem);
+  max-width: 85%;
+  margin: 34px 0 16px;
+  color: var(--color-bg);
+  font-size: clamp(1.25rem, 1.8vw, 1.55rem);
   font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 1.12;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
 }
 
-.bento-panel:not(.bento-panel-primary) h2::after {
+.bento-panel h2::after {
   display: block;
-  width: 28px;
+  width: 24px;
   height: 3px;
-  margin-top: 10px;
-  border-radius: 999px;
+  margin-top: 12px;
+  border-radius: 99px;
   background: var(--color-accent);
   content: "";
+}
+
+.bento-panel-primary h2::after {
+  background: var(--color-bg);
 }
 
 .panel-value {
@@ -413,7 +414,12 @@ button {
   margin: 0 0 8px;
   color: var(--color-accent);
   font-size: 1.35rem;
-  font-weight: 800;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.bento-panel-primary .panel-value {
+  color: var(--color-bg);
 }
 
 .panel-description {
@@ -421,17 +427,24 @@ button {
   z-index: 1;
   max-width: 520px;
   margin: 0;
-  color: rgb(248 244 231 / 78%);
+  color: rgb(248 244 231 / 72%);
   font-size: 0.86rem;
   line-height: 1.65;
 }
 
+.bento-panel-primary .panel-index,
+.bento-panel-primary .panel-description,
+.bento-panel-primary .panel-status {
+  color: rgb(248 244 231 / 88%);
+}
+
 .panel-meta {
   position: absolute;
-  right: 22px;
+  right: 24px;
   bottom: 20px;
-  left: 22px;
-  color: rgb(248 244 231 / 58%);
+  left: 24px;
+  z-index: 1;
+  color: rgb(248 244 231 / 48%);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.68rem;
 }
@@ -443,13 +456,18 @@ button {
   align-items: center;
   gap: 8px;
   margin-top: 24px;
-  color: rgb(248 244 231 / 72%);
+  color: rgb(248 244 231 / 68%);
   font-size: 0.74rem;
 }
 
 .status-dot-warning {
-  background: var(--color-warning);
-  box-shadow: 0 0 10px rgb(204 85 0 / 45%);
+  background: var(--color-accent);
+  box-shadow: 0 0 9px rgb(204 85 0 / 55%);
+}
+
+.bento-panel-primary .status-dot-warning {
+  background: var(--color-bg);
+  box-shadow: 0 0 9px rgb(248 244 231 / 55%);
 }
 
 .state-message {
@@ -466,6 +484,11 @@ button {
 .state-error {
   border-color: var(--color-danger);
   color: var(--color-danger);
+}
+
+/* 10% — burnt orange: focus, active state, indicators and primary action. */
+.accent {
+  color: var(--color-accent);
 }
 
 @media (max-width: 1024px) {
