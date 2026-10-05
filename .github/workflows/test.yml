@@ -131,7 +131,7 @@ jobs:
 
       - name: Verify PostgreSQL persistence
         run: |
-          count="$(docker compose exec -T postgres psql -U trading_engine -d trading_engine -tAc 'SELECT COUNT(*) FROM trades;')"
+          count="$(docker compose exec -T postgres psql -U trading_engine -d trading_engine_test -tAc 'SELECT COUNT(*) FROM trades;')"
           echo "Persisted trades: $count"
           test "$count" -gt 0
 
