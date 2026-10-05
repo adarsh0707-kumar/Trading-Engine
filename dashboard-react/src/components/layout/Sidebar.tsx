@@ -1,15 +1,28 @@
 import { NavLink } from "react-router-dom";
 import { dashboardRoutes } from "../../app/router";
 
-export default function Sidebar() {
+type SidebarProps = {
+  open: boolean;
+  onClose: () => void;
+};
+
+export default function Sidebar({ open, onClose }: SidebarProps) {
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${open ? " sidebar-open" : ""}`}>
       <div className="sidebar-brand">
-        <div className="sidebar-logo">TE</div>
+        <div className="sidebar-logo" aria-hidden="true">TE</div>
         <div>
           <strong>Trading Engine</strong>
           <span>Command Center</span>
         </div>
+        <button
+          className="sidebar-close"
+          type="button"
+          aria-label="Close navigation"
+          onClick={onClose}
+        >
+          ×
+        </button>
       </div>
 
       <div className="sidebar-section-label">Workspace</div>
@@ -19,11 +32,12 @@ export default function Sidebar() {
           <NavLink
             key={route.path}
             to={route.path}
+            onClick={onClose}
             className={({ isActive }) =>
               `sidebar-link${isActive ? " sidebar-link-active" : ""}`
             }
           >
-            <span className="sidebar-link-index">
+            <span className="sidebar-link-index" aria-hidden="true">
               {String(index + 1).padStart(2, "0")}
             </span>
             <span>{route.label}</span>
