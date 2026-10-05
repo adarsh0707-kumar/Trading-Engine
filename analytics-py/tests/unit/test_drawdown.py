@@ -48,12 +48,13 @@ def test_drawdown_rejects_peak_below_equity() -> None:
         )
 
 
-def test_drawdown_rejects_negative_equity() -> None:
-    with pytest.raises(ValueError, match="equity must not be negative"):
-        calculate_drawdown(
-            equity=Decimal("-100"),
-            peak_equity=Decimal("1000"),
-        )
+def test_drawdown_supports_negative_equity() -> None:
+    result = calculate_drawdown(
+        equity=Decimal("-100"),
+        peak_equity=Decimal("1000"),
+    )
+
+    assert result == Decimal("1100")
 
 
 def test_drawdown_rejects_negative_peak() -> None:
@@ -91,12 +92,13 @@ def test_peak_equity_is_preserved_at_same_value() -> None:
     assert result == Decimal("1000")
 
 
-def test_peak_equity_rejects_negative_equity() -> None:
-    with pytest.raises(ValueError, match="equity must not be negative"):
-        update_peak_equity(
-            equity=Decimal("-1"),
-            peak_equity=Decimal("1000"),
-        )
+def test_peak_equity_preserves_positive_peak_when_equity_is_negative() -> None:
+    result = update_peak_equity(
+        equity=Decimal("-1"),
+        peak_equity=Decimal("1000"),
+    )
+
+    assert result == Decimal("1000")
 
 
 def test_peak_equity_rejects_negative_previous_peak() -> None:

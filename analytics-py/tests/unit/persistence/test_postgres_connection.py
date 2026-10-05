@@ -28,7 +28,7 @@ def test_create_postgres_connection_calls_psycopg() -> None:
         result = create_postgres_connection(database_url)
 
     assert result is connection
-    connect.assert_called_once_with(database_url)
+    connect.assert_called_once_with(database_url, autocommit=True)
 
 
 @pytest.mark.parametrize(

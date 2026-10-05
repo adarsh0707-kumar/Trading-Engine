@@ -257,3 +257,23 @@ def test_invalid_price_is_rejected() -> None:
             price=Decimal("0"),
             side="BUY",
         )
+
+
+def test_negative_equity_is_preserved_and_drawdown_is_calculated() -> None:
+    manager = RiskManager(initial_equity=Decimal("100"))
+
+    manager.process_trade(
+        quantity=10,
+        price=Decimal("100"),
+        side="BUY",
+    )
+
+    snapshot = manager.process_trade(
+        quantity=1,
+        price=Decimal("0.01"),
+        side="SELL",
+    )
+
+    assert snapshot.equity == Decimal("-899.90")
+    assert snapshot.peak_equity == Decimal("100")
+    assert snapshot.drawdown == Decimal("999.90")

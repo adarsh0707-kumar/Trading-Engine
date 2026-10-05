@@ -16,7 +16,10 @@ def create_postgres_connection(
     if not database_url.strip():
         raise ValueError("database_url must not be empty")
 
-    return psycopg.connect(database_url)
+    return psycopg.connect(
+        database_url,
+        autocommit=True,
+    )
 
 
 __all__ = ["create_postgres_connection"]

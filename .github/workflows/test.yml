@@ -187,6 +187,7 @@ jobs:
             -c 'SELECT current_database(), current_user, current_schema(), inet_server_addr(), inet_server_port();'
 
           echo "=== Analytics logs ==="
+
           docker compose logs --no-color analytics
 
           exit 1

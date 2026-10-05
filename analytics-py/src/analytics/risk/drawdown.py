@@ -23,13 +23,10 @@ def calculate_drawdown(
         Absolute drawdown as a Decimal.
 
     Raises:
-        ValueError: If peak equity is negative or below current equity.
+        ValueError: If peak equity is below current equity.
     """
     if peak_equity < 0:
         raise ValueError("peak_equity must not be negative")
-
-    if equity < 0:
-        raise ValueError("equity must not be negative")
 
     if peak_equity < equity:
         raise ValueError(
@@ -57,11 +54,8 @@ def update_peak_equity(
         Updated peak equity.
 
     Raises:
-        ValueError: If either value is negative.
+        ValueError: If the previous peak equity is negative.
     """
-    if equity < 0:
-        raise ValueError("equity must not be negative")
-
     if peak_equity < 0:
         raise ValueError("peak_equity must not be negative")
 
