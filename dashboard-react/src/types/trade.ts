@@ -7,6 +7,8 @@ export interface Trade {
   quantity: number;
   takerSide: TakerSide;
   timestamp: string;
+  buyOrderId?: string;
+  sellOrderId?: string;
 }
 
 export interface TradesResponse {
