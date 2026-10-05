@@ -1239,29 +1239,51 @@ Shared memory may be introduced later if profiling shows socket-based IPC to be 
 
 ## Current implementation status
 
-**Completed through:** Phase 4.9.6 — Observability Regression & Validation
+**Completed through:** Phase 5.5 — Live Market Data & Recent Trades
 
-**Gateway milestone status:** Phase 4.1–4.9 complete, including security, resilience, observability, alerting, and regression validation.
+**Current milestone:** Phase 5.6 — Order Book Visualization
 
-**Remaining before the React Dashboard (Phase 5):**
-- Phase 4.10 — Testing & Integration Validation
-- Phase 4.11 — Phase Integration & Exit Criteria
+**Phase 4:** ✅ Complete — backend runtime, Gateway REST/WebSocket, analytics integration, persistence, security, resilience, observability, and full-stack Docker validation are complete.
 
-The project is **not yet feature-complete**: the core C++ engine, Python analytics platform, Gateway, persistence, security boundaries, and Gateway observability are implemented, while full-stack integration/exit validation and the React dashboard remain.
+**Phase 5:** 🚧 In Progress — dashboard foundation, REST client, WebSocket client, responsive layout/navigation, live market state, and recent trades are complete. Order-book visualization is next.
 
 | Area | Status |
 | --- | --- |
 | C++ matching engine + TCP transport | Complete |
 | Python analytics + risk + PostgreSQL | Complete |
 | Node/Bun Gateway + REST/WebSocket | Complete |
-| Gateway resilience + security | Complete |
-| Gateway observability + alerting | Complete |
-| Full Phase 4 integration/exit validation | Remaining |
-| React dashboard | Remaining |
-| Historical analytics APIs | Remaining |
-| Production authentication/security integration | Remaining |
-| Cloud deployment/infrastructure | Remaining |
-| Performance/production hardening | Remaining |
+| Gateway resilience + security + observability | Complete |
+| Docker Compose full runtime | Complete |
+| React dashboard foundation/layout | Complete |
+| Dashboard REST client | Complete |
+| Dashboard WebSocket client | Complete |
+| Live market data + recent trades | Complete |
+| Order-book visualization | In progress |
+| Analytics dashboard | Planned |
+| Portfolio / P&L / risk dashboard | Planned |
+| System status / runtime UX | Planned |
+| Browser E2E + final dashboard validation | Planned |
+| Cloud deployment/infrastructure | Planned |
+
+### Phase 5.5 live-data architecture
+
+```text
+C++ Engine
+    ↓ TRADE
+Gateway engine-event client
+    ↓ normalized TRADE event
+Gateway live trading state
+    ├── /api/v1/market
+    └── /api/v1/trades
+          ↓ REST snapshot
+React Dashboard
+          ↑
+      WebSocket /ws
+          ↑ TRADE
+Gateway
+```
+
+The dashboard consumes the Gateway only. It does not connect directly to the C++ engine or Python analytics service.
 
 # Future Improvements
 
