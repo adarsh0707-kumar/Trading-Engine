@@ -56,9 +56,6 @@ def update_peak_equity(
     Raises:
         ValueError: If the previous peak equity is negative.
     """
-    if equity < 0:
-        raise ValueError("equity must not be negative")
-
     if peak_equity < 0:
         raise ValueError("peak_equity must not be negative")
 
