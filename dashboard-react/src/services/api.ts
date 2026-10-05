@@ -26,10 +26,15 @@ export class GatewayApiError extends Error {
   }
 }
 
+type GatewayFetch = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>;
+
 export interface GatewayApiClientOptions {
   readonly baseUrl?: string;
   readonly timeoutMs?: number;
-  readonly fetch?: typeof globalThis.fetch;
+  readonly fetch?: GatewayFetch;
 }
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
