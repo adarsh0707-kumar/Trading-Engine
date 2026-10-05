@@ -13,26 +13,11 @@ body,
 
 body {
   min-width: 320px;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+  background: var(--cream);
+  color: var(--chocolate);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", sans-serif;
   line-height: 1.5;
-}
-
-/* 60% — cream: page canvas, navigation, header, whitespace. */
-body::before {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, rgb(78 52 46 / 3%) 1px, transparent 1px),
-    linear-gradient(rgb(78 52 46 / 3%) 1px, transparent 1px);
-  background-size: 48px 48px;
-  mask-image: linear-gradient(to bottom, black, transparent 82%);
-  content: "";
 }
 
 button,
@@ -53,7 +38,7 @@ button {
 
 .app-shell {
   min-height: 100vh;
-  background: var(--color-bg);
+  background: var(--cream);
 }
 
 .app-main {
@@ -71,7 +56,7 @@ button {
 
 .page-header h1 {
   margin: 0;
-  color: var(--color-text);
+  color: var(--chocolate);
   font-size: clamp(2rem, 4vw, 3.2rem);
   font-weight: 850;
   letter-spacing: -0.045em;
@@ -81,21 +66,21 @@ button {
 .page-header p {
   max-width: 680px;
   margin: 11px 0 0;
-  color: var(--color-text-muted);
+  color: var(--chocolate);
 }
 
 .page-kicker,
 .panel-eyebrow,
 .header-eyebrow,
 .sidebar-section-label {
-  color: var(--color-text-subtle);
+  color: var(--orange);
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 850;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-/* 60% cream surface. */
+/* 60% — cream: page canvas, navigation and header. */
 .sidebar {
   position: fixed;
   inset: 0 auto 0 0;
@@ -103,8 +88,8 @@ button {
   display: flex;
   width: var(--sidebar-width);
   flex-direction: column;
-  border-right: 1px solid var(--color-border);
-  background: var(--color-bg);
+  border-right: 2px solid var(--chocolate);
+  background: var(--cream);
   padding: 24px 14px;
 }
 
@@ -121,26 +106,25 @@ button {
 }
 
 .sidebar-brand strong {
-  color: var(--color-text);
+  color: var(--chocolate);
   font-size: 0.95rem;
 }
 
 .sidebar-brand span {
   margin-top: 2px;
-  color: var(--color-text-muted);
+  color: var(--chocolate);
   font-size: 0.72rem;
 }
 
 .sidebar-logo {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   place-items: center;
-  border: 2px solid var(--color-accent);
+  border: 2px solid var(--orange);
   border-radius: 11px;
-  background: var(--color-accent);
-  box-shadow: 0 8px 20px rgb(204 85 0 / 20%);
-  color: var(--color-bg);
+  background: var(--chocolate);
+  color: var(--cream);
   font-size: 0.8rem;
   font-weight: 900;
 }
@@ -158,11 +142,12 @@ button {
   display: flex;
   align-items: center;
   gap: 11px;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   border-radius: 10px;
-  color: var(--color-text-muted);
-  padding: 11px 12px;
+  color: var(--chocolate);
+  padding: 10px 12px;
   font-size: 0.88rem;
+  font-weight: 650;
   transition:
     background 160ms ease,
     border-color 160ms ease,
@@ -172,27 +157,31 @@ button {
 
 .sidebar-link-index {
   width: 20px;
-  color: var(--color-text-subtle);
+  color: var(--chocolate);
   font-size: 0.65rem;
   font-variant-numeric: tabular-nums;
 }
 
 .sidebar-link:hover {
-  border-color: var(--color-border);
-  background: rgb(78 52 46 / 6%);
-  color: var(--color-text);
+  border-color: var(--chocolate);
+  background: var(--chocolate);
+  color: var(--cream);
   transform: translateX(2px);
 }
 
+.sidebar-link:hover .sidebar-link-index {
+  color: var(--orange);
+}
+
 .sidebar-link-active {
-  border-color: rgb(204 85 0 / 28%);
-  background: rgb(204 85 0 / 9%);
-  color: var(--color-text);
-  box-shadow: inset 3px 0 0 var(--color-accent);
+  border-color: var(--orange);
+  background: var(--chocolate);
+  color: var(--cream);
+  box-shadow: inset 4px 0 0 var(--orange);
 }
 
 .sidebar-link-active .sidebar-link-index {
-  color: var(--color-accent);
+  color: var(--orange);
 }
 
 .sidebar-footer {
@@ -200,9 +189,9 @@ button {
   align-items: center;
   gap: 8px;
   margin-top: auto;
-  border-top: 1px solid var(--color-border);
+  border-top: 2px solid var(--chocolate);
   padding: 16px 10px 4px;
-  color: var(--color-text-subtle);
+  color: var(--chocolate);
   font-size: 0.7rem;
 }
 
@@ -215,12 +204,13 @@ button {
   border-radius: 50%;
 }
 
-.sidebar-footer-dot {
-  background: var(--color-accent);
-  box-shadow: 0 0 10px rgb(204 85 0 / 50%);
+.sidebar-footer-dot,
+.hero-badge-dot,
+.status-dot-warning {
+  background: var(--orange);
 }
 
-/* 60% cream header. */
+/* 60% — cream header. */
 .header {
   position: sticky;
   top: 0;
@@ -229,10 +219,9 @@ button {
   min-height: var(--header-height);
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--color-border);
-  background: rgb(248 244 231 / 94%);
+  border-bottom: 2px solid var(--chocolate);
+  background: var(--cream);
   padding: 0 34px;
-  backdrop-filter: blur(18px);
 }
 
 .header-context {
@@ -241,7 +230,7 @@ button {
 }
 
 .header-context strong {
-  color: var(--color-text);
+  color: var(--chocolate);
   font-size: 0.88rem;
 }
 
@@ -252,33 +241,29 @@ button {
 }
 
 .header-live-label {
-  color: var(--color-text-subtle);
+  color: var(--chocolate);
   font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .connection-badge {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid var(--color-border);
+  border: 2px solid var(--chocolate);
   border-radius: var(--radius-pill);
-  background: var(--color-bg);
+  background: var(--cream);
   padding: 6px 11px;
-  color: var(--color-text-muted);
+  color: var(--chocolate);
   font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .connection-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--color-text-subtle);
-}
-
-.connection-connected .connection-dot,
-.connection-connecting .connection-dot,
-.connection-disconnected .connection-dot {
-  background: var(--color-accent);
+  background: var(--orange);
 }
 
 .dashboard-hero {
@@ -292,38 +277,34 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid rgb(204 85 0 / 32%);
+  border: 2px solid var(--orange);
   border-radius: var(--radius-pill);
-  background: rgb(204 85 0 / 8%);
+  background: var(--cream);
   padding: 8px 12px;
-  color: var(--color-text);
+  color: var(--chocolate);
   font-size: 0.72rem;
+  font-weight: 800;
   white-space: nowrap;
 }
 
-.hero-badge-dot {
-  background: var(--color-accent);
-  box-shadow: 0 0 10px rgb(204 85 0 / 55%);
-}
-
-/* 30% — chocolate: dense information surfaces/cards. */
+/* 30% — chocolate: dense information surfaces. */
 .bento-grid {
   display: grid;
   grid-auto-flow: dense;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 18px;
 }
 
 .bento-panel {
   position: relative;
   min-height: 230px;
   overflow: hidden;
-  border: 1px solid rgb(78 52 46 / 8%);
+  border: 2px solid var(--chocolate);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: var(--chocolate);
   padding: 24px;
   box-shadow: var(--shadow-card);
-  color: var(--color-bg);
+  color: var(--cream);
 }
 
 .bento-panel::before {
@@ -331,8 +312,8 @@ button {
   top: 0;
   right: 0;
   left: 0;
-  height: 4px;
-  background: rgb(204 85 0 / 32%);
+  height: 5px;
+  background: var(--orange);
   content: "";
 }
 
@@ -342,25 +323,13 @@ button {
   bottom: -90px;
   width: 190px;
   height: 190px;
+  border: 3px solid var(--orange);
   border-radius: 50%;
-  background: rgb(204 85 0 / 7%);
   content: "";
 }
 
 .bento-panel-primary {
   grid-column: span 2;
-  background: var(--color-accent);
-  color: var(--color-bg);
-  box-shadow: var(--shadow-card), 0 12px 32px rgb(204 85 0 / 18%);
-}
-
-.bento-panel-primary::before {
-  background: var(--color-bg);
-  opacity: 0.7;
-}
-
-.bento-panel-primary::after {
-  background: rgb(248 244 231 / 12%);
 }
 
 .bento-panel-wide {
@@ -376,50 +345,42 @@ button {
 }
 
 .panel-index {
-  color: rgb(248 244 231 / 58%);
+  color: var(--cream);
   font-size: 0.68rem;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.08em;
 }
 
 .bento-panel h2 {
   position: relative;
   z-index: 1;
-  max-width: 85%;
-  margin: 34px 0 16px;
-  color: var(--color-bg);
+  max-width: 90%;
+  margin: 34px 0 14px;
+  color: var(--cream);
   font-size: clamp(1.25rem, 1.8vw, 1.55rem);
-  font-weight: 800;
+  font-weight: 850;
   letter-spacing: -0.025em;
   line-height: 1.1;
 }
 
 .bento-panel h2::after {
   display: block;
-  width: 24px;
-  height: 3px;
+  width: 34px;
+  height: 4px;
   margin-top: 12px;
   border-radius: 99px;
-  background: var(--color-accent);
+  background: var(--orange);
   content: "";
-}
-
-.bento-panel-primary h2::after {
-  background: var(--color-bg);
 }
 
 .panel-value {
   position: relative;
   z-index: 1;
   margin: 0 0 8px;
-  color: var(--color-accent);
+  color: var(--orange);
   font-size: 1.35rem;
   font-weight: 850;
   letter-spacing: -0.02em;
-}
-
-.bento-panel-primary .panel-value {
-  color: var(--color-bg);
 }
 
 .panel-description {
@@ -427,15 +388,9 @@ button {
   z-index: 1;
   max-width: 520px;
   margin: 0;
-  color: rgb(248 244 231 / 72%);
+  color: var(--cream);
   font-size: 0.86rem;
   line-height: 1.65;
-}
-
-.bento-panel-primary .panel-index,
-.bento-panel-primary .panel-description,
-.bento-panel-primary .panel-status {
-  color: rgb(248 244 231 / 88%);
 }
 
 .panel-meta {
@@ -444,7 +399,7 @@ button {
   bottom: 20px;
   left: 24px;
   z-index: 1;
-  color: rgb(248 244 231 / 48%);
+  color: var(--cream);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.68rem;
 }
@@ -456,18 +411,9 @@ button {
   align-items: center;
   gap: 8px;
   margin-top: 24px;
-  color: rgb(248 244 231 / 68%);
+  color: var(--cream);
   font-size: 0.74rem;
-}
-
-.status-dot-warning {
-  background: var(--color-accent);
-  box-shadow: 0 0 9px rgb(204 85 0 / 55%);
-}
-
-.bento-panel-primary .status-dot-warning {
-  background: var(--color-bg);
-  box-shadow: 0 0 9px rgb(248 244 231 / 55%);
+  font-weight: 700;
 }
 
 .state-message {
@@ -476,19 +422,51 @@ button {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px dashed var(--color-border);
+  border: 2px dashed var(--chocolate);
   border-radius: var(--radius-md);
-  color: var(--color-text-muted);
+  color: var(--chocolate);
 }
 
 .state-error {
-  border-color: var(--color-danger);
-  color: var(--color-danger);
+  border-color: var(--orange);
+  color: var(--orange);
 }
 
-/* 10% — burnt orange: focus, active state, indicators and primary action. */
 .accent {
-  color: var(--color-accent);
+  color: var(--orange);
+}
+
+/* Keep controls inside the same three-color system. */
+button {
+  border: 2px solid var(--chocolate);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  color: var(--chocolate);
+  font-weight: 750;
+}
+
+button:hover {
+  border-color: var(--orange);
+  background: var(--chocolate);
+  color: var(--cream);
+}
+
+input,
+select,
+textarea {
+  border: 2px solid var(--chocolate);
+  border-radius: var(--radius-sm);
+  background: var(--cream);
+  color: var(--chocolate);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--orange);
+  outline-offset: 2px;
 }
 
 @media (max-width: 1024px) {
@@ -502,7 +480,7 @@ button {
     position: static;
     width: 100%;
     border-right: 0;
-    border-bottom: 1px solid var(--color-border);
+    border-bottom: 2px solid var(--chocolate);
   }
 
   .sidebar-nav {
