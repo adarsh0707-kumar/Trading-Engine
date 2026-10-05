@@ -286,17 +286,24 @@ C++ Engine
     ▼
 Engine Client
     │
-    ├───────────────┐
-    ▼               ▼
-Event Normalizer  Engine State
+    ▼
+Event Normalizer
+    │
+    ├──────────────► Live Trading State
+    │                  ├── Market snapshot
+    │                  └── Recent trades
+    │
+    ├──────────────► Analytics Client ──► Python Analytics ──► PostgreSQL
     │
     ▼
 Gateway Event Bus
     ├── REST snapshots
     └── WebSocket subscriptions
-             ▲
              │
-      Python Analytics
+             ▼
+       React Dashboard
+
+Python Analytics results return through the Gateway analytics transport and remain authoritative for analytics/risk values.
 ```
 
 The gateway is a transport and application boundary, not a replacement for the engine or analytics services.
