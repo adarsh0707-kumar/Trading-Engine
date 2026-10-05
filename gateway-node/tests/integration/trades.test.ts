@@ -21,7 +21,11 @@ interface TradesResponse {
 
 describe("GET /api/v1/trades", () => {
   test("returns dependency unavailable when trade history is unavailable", async () => {
-    const gateway = createGatewayServer();
+    const gateway = createGatewayServer(process.env, {
+      tradesProvider: {
+        getTrades: () => null,
+      },
+    });
 
     const response = await gateway.app.inject({
       method: "GET",

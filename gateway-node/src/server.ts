@@ -1,3 +1,4 @@
+import { createLiveTradingState } from "./live-trading/live-trading-state.ts";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import Fastify, { type FastifyInstance } from "fastify";
@@ -259,6 +260,8 @@ export function createGatewayServer(
     },
   });
 
+  const liveTradingState = createLiveTradingState();
+
   const engineEventClient = createEngineEventClient({
     host: config.engine.host,
     port: config.engine.port,
@@ -268,6 +271,7 @@ export function createGatewayServer(
     reconnectMaxDelayMs: config.engine.reconnectMaxDelayMs,
     reconnectMaxAttempts: config.engine.reconnectMaxAttempts,
     onEvent: (event) => {
+      liveTradingState.onTrade(event);
       metrics.recordEngineTrade();
       operationalLog.info("engine_trade_event", {
         eventId: event.eventId,
@@ -368,9 +372,9 @@ export function createGatewayServer(
 
   app.register(registerV1Routes, {
     statusProvider,
-    marketProvider: options.marketProvider,
+    marketProvider: options.marketProvider ?? liveTradingState,
     orderBookProvider: options.orderBookProvider,
-    tradesProvider: options.tradesProvider,
+    tradesProvider: options.tradesProvider ?? liveTradingState,
     analyticsProvider,
     engineProvider: options.engineProvider,
     engineEventClient,
