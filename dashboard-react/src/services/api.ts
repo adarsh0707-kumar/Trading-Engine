@@ -6,7 +6,7 @@ import type {
   MarketSnapshot,
   OrderBook,
   TradesResponse,
-} from "../../types";
+} from "../types";
 
 export interface GatewayApiErrorBody {
   error?: { code?: string; message?: string; request_id?: string };
