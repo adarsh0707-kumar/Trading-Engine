@@ -6,8 +6,8 @@ export interface GatewayStatus {
 
 export interface EngineStatus {
   state: string;
-  connectedAt: string | null;
-  lastMessageAt: string | null;
-  lastHeartbeatAt: string | null;
+  connectedAt: number | null;
+  lastMessageAt: number | null;
+  lastHeartbeatAt: number | null;
   reconnectAttempts: number;
 }
