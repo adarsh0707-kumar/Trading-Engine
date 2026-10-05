@@ -32,6 +32,8 @@ function tradeFromEvent(event: Extract<GatewayWebSocketEvent, { type: "TRADE" }>
     quantity: event.payload.quantity,
     takerSide: event.payload.takerSide.toLowerCase(),
     timestamp: event.timestamp,
+    buyOrderId: event.payload.buyOrderId,
+    sellOrderId: event.payload.sellOrderId,
   };
 }
 
