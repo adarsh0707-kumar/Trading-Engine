@@ -12,8 +12,8 @@ The dashboard uses exactly three core colors:
 
 The dashboard should not make every card orange. Burnt orange is intentionally used as a **structural accent** so the interface stays balanced and readable.
 
-- Standard Bento cards remain chocolate brown with cream text.
-- The primary/featured Bento card uses burnt orange as its full background.
+- Standard Bento cards remain chocolate brown with cream text and subtle burnt-orange borders/highlights.
+- Featured/primary Bento cards use burnt orange as a full background; supporting cards receive smaller orange accents so the palette does not feel isolated.
 - The primary orange card uses cream for headings, values, descriptions, status text, and indicators so text remains clearly visible.
 - Secondary card values and interactive highlights may use burnt orange.
 - Active navigation and important status indicators use burnt orange.
@@ -25,7 +25,7 @@ Use the three colors with a restrained hierarchy:
 
 1. Cream dominates the page.
 2. Chocolate provides most of the structural contrast.
-3. Burnt orange is the visual focal accent, including the primary featured card.
+3. Burnt orange is used repeatedly as a visual rhythm: featured cards, heading markers, values, active states, and important indicators.
 
 Do not introduce additional core palette colors, and do not turn all dashboard cards orange.
 
@@ -34,3 +34,8 @@ Do not introduce additional core palette colors, and do not turn all dashboard c
 Dark chocolate cards use cream text. Burnt-orange cards use cream text. Accent-colored text should not be used where it loses contrast against an accent-colored background.
 
 This document is the Phase 5 source of truth for dashboard color usage and card emphasis.
+
+
+## Heading treatment
+
+Card headings use large, bold cream typography with tight letter spacing for stronger hierarchy. Standard card headings receive a short burnt-orange underline marker. This creates repeated orange rhythm across the grid without making every card orange.
