@@ -234,18 +234,26 @@ Verify:
 
 ## 10. React Tests
 
-Test:
+The dashboard uses Bun's test runner for service, hook, and component-level coverage.
 
-- connection indicator,
-- start/stop controls,
-- chart update,
-- metrics update,
-- stale-data state,
-- WebSocket reconnect state,
-- empty state,
-- error state.
+Current Phase 5.5 coverage includes:
 
----
+- Gateway REST client success/error/timeout handling.
+- WebSocket protocol and reconnect behavior.
+- Live trading state hydration from REST.
+- TRADE subscription and live state updates.
+- Deterministic duplicate-trade handling.
+- Bounded recent-trade history.
+- Market summary and recent-trades rendering.
+- Dashboard loading, empty, and error states.
+
+Run the dashboard checks with:
+
+```bash
+cd dashboard-react
+bun test
+bun run build
+```
 
 ## 11. End-to-End Test
 
