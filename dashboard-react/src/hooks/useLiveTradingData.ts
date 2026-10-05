@@ -3,8 +3,8 @@ import { createGatewayApiClient } from "../services/api";
 import {
   createGatewayWebSocketClient,
   type GatewayWebSocketEvent,
-  type GatewayWebSocketState,
 } from "../services/websocket";
+import type { GatewayWebSocketState } from "../types/websocket";
 import type { MarketSnapshot, Trade } from "../types";
 
 const MAX_RECENT_TRADES = 25;
