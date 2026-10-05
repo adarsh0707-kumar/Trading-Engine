@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest completed milestone:** Phase 4.11 — Phase Integration & Exit Criteria
+**Latest completed milestone:** Phase 5.5 — Live Market Data & Recent Trades
 
-**Current milestone:** Phase 5 — React Dashboard
+**Current milestone:** Phase 5.6 — Order Book Visualization
 
 **Phase 4 overall status:** ✅ Complete
 
@@ -778,7 +778,7 @@ React Dashboard
 
 ## Phase 5.0 — Repository Inspection & Dashboard Baseline
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Before implementation, establish the actual dashboard scaffold and verify the Gateway contracts that Phase 5 will consume.
 
@@ -833,7 +833,7 @@ Gateway contract review    PASS
 
 ## Phase 5.1 — Dashboard Foundation & Application Shell
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Create the reusable frontend foundation before implementing trading views.
 
@@ -983,7 +983,7 @@ This contract is the source of truth for Phase 5 dashboard styling and should be
 
 ## Phase 5.2 — Gateway REST Client & Typed API Models
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Build one typed REST boundary for all initial dashboard snapshots.
 
@@ -1055,7 +1055,7 @@ invalid   → contract/data error
 
 ## Phase 5.3 — WebSocket Client, Protocol & Reconnection
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Create the browser WebSocket layer for live Gateway events.
 
@@ -1132,7 +1132,7 @@ RECEIVE EVENTS
 
 ## Phase 5.4 — Dashboard Layout & Navigation
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Turn the application shell into the main trading dashboard experience.
 
@@ -1176,7 +1176,7 @@ System
 
 ## Phase 5.5 — Live Market Data & Recent Trades
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Connect the first live trading views to the Gateway.
 
@@ -1241,7 +1241,7 @@ Render
 
 ## Phase 5.6 — Order Book Visualization
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress — next milestone
 
 Render the current bid/ask book from the Gateway order-book snapshot.
 
@@ -1295,6 +1295,21 @@ If a future Gateway WebSocket order-book event is introduced, the component shou
 - [ ] No trading-engine connection is made from React.
 
 ---
+
+
+### Phase 5.5 completion evidence
+
+The live market/trades foundation is implemented on `main` through PRs #108 and #111.
+
+- Typed Gateway REST client with configurable `VITE_GATEWAY_BASE_URL`.
+- Browser WebSocket client for `/ws` with TRADE subscriptions and reconnect/resubscribe behavior.
+- Live trading state in the Gateway backed by normalized engine TRADE events.
+- Dashboard market summary and bounded recent-trade views.
+- Deterministic duplicate trade handling and loading/empty/error states.
+- Dashboard shell, responsive navigation, and the 60/30/10 visual system are in place.
+- Gateway, engine, analytics, and Docker runtime integration are validated separately.
+
+**Phase 5.5 exit status:** ✅ Complete
 
 ## Phase 5.7 — Analytics Charts & Indicator Views
 
