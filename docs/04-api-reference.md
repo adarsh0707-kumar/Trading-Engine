@@ -12,7 +12,7 @@ http://localhost:<GATEWAY_PORT>
 
 The gateway exposes a versioned application API under `/api/v1`.
 
-WebSocket support is planned for a later phase and is not currently implemented.
+WebSocket support is implemented at `/ws` for live dashboard events. Clients explicitly subscribe to supported event types and receive normalized Gateway event envelopes.
 
 ---
 
@@ -415,6 +415,66 @@ CORS_ORIGIN
 ```
 
 The gateway configuration determines which browser origins are permitted.
+
+---
+
+## 13. WebSocket API
+
+### Endpoint
+
+```text
+ws://localhost:<GATEWAY_PORT>/ws
+```
+
+The Gateway WebSocket is the browser-facing live-event boundary. The dashboard must use this endpoint rather than connecting directly to the Engine or Analytics services.
+
+### Supported event types
+
+```text
+TRADE
+ANALYTICS_UPDATE
+RISK_EVENT
+```
+
+### Subscription message
+
+```json
+{
+  "action": "subscribe",
+  "events": ["TRADE"]
+}
+```
+
+Unsubscribe uses the same shape with `action: "unsubscribe"`.
+
+### Control messages
+
+The connection lifecycle may emit `CONNECTION_READY`, `SUBSCRIPTION_UPDATED`, and `ERROR` control messages.
+
+### TRADE event
+
+TRADE events use the normalized event envelope:
+
+```json
+{
+  "type": "TRADE",
+  "eventId": "evt-123",
+  "requestId": "req-123",
+  "timestamp": "2026-10-05T12:00:00.000Z",
+  "payload": {
+    "symbol": "SIM",
+    "price": 101.25,
+    "quantity": 25,
+    "takerOrderId": "order-taker",
+    "makerOrderId": "order-maker",
+    "takerSide": "BUY",
+    "buyOrderId": "order-buy",
+    "sellOrderId": "order-sell"
+  }
+}
+```
+
+The dashboard WebSocket client reconnects with bounded backoff and restores subscriptions after reconnect. Malformed messages are rejected safely and must not crash the dashboard.
 
 ---
 
