@@ -119,8 +119,10 @@ jobs:
             if curl --fail --silent http://127.0.0.1:8080/api/health >/dev/null; then
               exit 0
             fi
+
             sleep 2
           done
+
           docker compose ps
           docker compose logs --no-color
           exit 1
@@ -131,9 +133,63 @@ jobs:
 
       - name: Verify PostgreSQL persistence
         run: |
-          count="$(docker compose exec -T postgres psql -U trading_engine -d trading_engine -tAc 'SELECT COUNT(*) FROM trades;')"
-          echo "Persisted trades: $count"
-          test "$count" -gt 0
+          for attempt in $(seq 1 30); do
+            analytics_count="$(docker compose exec -T analytics python -c '
+          import os
+          import psycopg
+
+          with psycopg.connect(os.environ["TRADING_ENGINE_DATABASE_URL"]) as conn:
+              print(conn.execute(
+                  "SELECT COUNT(*) FROM public.trades"
+              ).fetchone()[0])
+          ')"
+
+            postgres_count="$(docker compose exec -T postgres psql \
+              -U trading_engine \
+              -d trading_engine \
+              -tAc 'SELECT COUNT(*) FROM public.trades;')"
+
+            echo "Persisted trades from analytics connection (attempt $attempt): $analytics_count"
+            echo "Persisted trades from postgres container (attempt $attempt): $postgres_count"
+
+            if [ "$analytics_count" -gt 0 ] && [ "$postgres_count" -gt 0 ]; then
+              exit 0
+            fi
+
+            sleep 1
+          done
+
+          echo "=== Analytics PostgreSQL identity ==="
+
+          docker compose exec -T analytics python -c '
+          import os
+          import psycopg
+
+          with psycopg.connect(os.environ["TRADING_ENGINE_DATABASE_URL"]) as conn:
+              print(conn.execute(
+                  "SELECT current_database(), current_user, current_schema(), "
+                  "inet_server_addr(), inet_server_port()"
+              ).fetchone())
+
+              print(
+                  "trades:",
+                  conn.execute(
+                      "SELECT COUNT(*) FROM public.trades"
+                  ).fetchone()[0]
+              )
+          '
+
+          echo "=== PostgreSQL container identity ==="
+
+          docker compose exec -T postgres psql \
+            -U trading_engine \
+            -d trading_engine \
+            -c 'SELECT current_database(), current_user, current_schema(), inet_server_addr(), inet_server_port();'
+
+          echo "=== Analytics logs ==="
+          docker compose logs --no-color analytics
+
+          exit 1
 
       - name: Runtime stack logs on failure
         if: failure()
