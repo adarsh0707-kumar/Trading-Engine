@@ -123,6 +123,51 @@ describe("engine event client", () => {
     });
   });
 
+  test("ignores the engine HELLO control frame", async () => {
+    const server = createServer((socket) => {
+      socket.write(
+        frame(
+          JSON.stringify({
+            type: "HELLO",
+            request_id: "hello-1",
+            timestamp: "2026-10-02T12:00:00.000Z",
+            payload: "Trading Engine transport connected",
+          }),
+        ),
+      );
+    });
+
+    servers.push(server);
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, "127.0.0.1", () => resolve());
+    });
+
+    const address = server.address();
+
+    if (address === null || typeof address === "string") {
+      throw new Error("Test server did not expose an address");
+    }
+
+    const errors: Error[] = [];
+    const client = createEngineEventClient({
+      host: "127.0.0.1",
+      port: address.port,
+      connectTimeoutMs: 1000,
+      reconnectInitialDelayMs: 10,
+      reconnectMaxDelayMs: 20,
+      reconnectMaxAttempts: 1,
+      onEvent: () => {},
+      onError: (error) => errors.push(error),
+    });
+
+    client.start();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    client.stop();
+
+    expect(errors).toHaveLength(0);
+  });
+
   test("responds to engine HEARTBEAT messages", async () => {
     const server = createServer((socket) => {
       socket.write(
