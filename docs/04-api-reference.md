@@ -502,7 +502,7 @@ Historical analytics and metrics query APIs are deferred to Phase 6 unless a min
 
 ### WebSocket API
 
-Future real-time streaming will use the planned gateway WebSocket boundary:
+Live real-time streaming uses the Gateway WebSocket boundary:
 
 ```text
 ws://localhost:<GATEWAY_PORT>/ws
