@@ -1,80 +1,53 @@
-const panels = [
-  {
-    eyebrow: "MARKET",
-    title: "Live Market",
-    description: "Gateway market snapshots will appear here once the live feed is connected.",
-    meta: "Awaiting /api/v1/market",
-    className: "bento-panel-wide",
-  },
-  {
-    eyebrow: "TRADES",
-    title: "Recent Activity",
-    description: "Executed trades will stream into this panel through the Gateway WebSocket.",
-    meta: "Awaiting TRADE events",
-    className: "",
-  },
-  {
-    eyebrow: "ANALYTICS",
-    title: "Performance",
-    description: "Equity, P&L, drawdown, and indicator views will use Gateway analytics state.",
-    meta: "Awaiting analytics snapshot",
-    className: "",
-  },
-  {
-    eyebrow: "RISK",
-    title: "Risk Monitor",
-    description: "Risk state and bounded risk events will be surfaced here without client-side recalculation.",
-    meta: "Awaiting RISK_EVENT",
-    className: "bento-panel-wide",
-  },
-];
+import MarketSummary from "../components/market/MarketSummary";
+import RecentTrades from "../components/market/RecentTrades";
+import { useLiveTrading } from "../hooks/LiveTradingContext";
 
 export default function Dashboard() {
+  const {
+    market,
+    trades,
+    marketState,
+    tradesState,
+    marketError,
+    tradesError,
+    websocketState,
+  } = useLiveTrading();
+
   return (
     <div className="dashboard-page">
       <header className="page-header dashboard-hero">
         <div>
           <span className="page-kicker">OVERVIEW / 01</span>
           <h1>Dashboard</h1>
-          <p>One control surface for market state, execution activity, analytics, and risk.</p>
+          <p>Live market state and execution activity through the Gateway.</p>
         </div>
         <div className="hero-badge">
           <span className="hero-badge-dot" aria-hidden="true" />
-          Live architecture
+          WS {websocketState.toUpperCase()}
         </div>
       </header>
 
-      <section className="bento-grid" aria-label="Dashboard overview">
-        <article className="bento-panel bento-panel-primary">
-          <div className="panel-topline">
-            <span className="panel-eyebrow">SYSTEM</span>
-            <span className="panel-index">00</span>
+      <section className="dashboard-live-grid" aria-label="Live trading overview">
+        <article className="live-card live-card-market">
+          <div className="section-heading">
+            <div>
+              <span className="panel-eyebrow">MARKET</span>
+              <h2>Live Market</h2>
+            </div>
           </div>
-          <h2>Gateway connection</h2>
-          <p className="panel-value">Not connected</p>
-          <p className="panel-description">
-            The dashboard talks only to the Gateway REST and WebSocket boundaries.
-          </p>
-          <div className="panel-status">
-            <span className="status-dot status-dot-warning" />
-            Waiting for live transport
-          </div>
+          <MarketSummary market={market} state={marketState} error={marketError} />
         </article>
 
-        {panels.map((panel) => (
-          <article
-            key={panel.title}
-            className={`bento-panel ${panel.className}`.trim()}
-          >
-            <div className="panel-topline">
-              <span className="panel-eyebrow">{panel.eyebrow}</span>
-              <span className="panel-index">—</span>
+        <article className="live-card">
+          <div className="section-heading">
+            <div>
+              <span className="panel-eyebrow">TRADES</span>
+              <h2>Recent Activity</h2>
             </div>
-            <h2>{panel.title}</h2>
-            <p className="panel-description">{panel.description}</p>
-            <span className="panel-meta">{panel.meta}</span>
-          </article>
-        ))}
+            <span className="stream-state">{trades.length} shown</span>
+          </div>
+          <RecentTrades trades={trades.slice(0, 8)} state={tradesState} error={tradesError} />
+        </article>
       </section>
     </div>
   );
