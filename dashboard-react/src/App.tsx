@@ -1,5 +1,10 @@
 import AppRouter from "./app/router";
+import { LiveTradingProvider } from "./hooks/LiveTradingContext";
 
 export default function App() {
-  return <AppRouter />;
+  return (
+    <LiveTradingProvider>
+      <AppRouter />
+    </LiveTradingProvider>
+  );
 }
