@@ -46,6 +46,8 @@ export default function RecentTrades({ trades, state, error }: RecentTradesProps
             <th>Price</th>
             <th>Quantity</th>
             <th>Trade ID</th>
+            <th>Buy Order</th>
+            <th>Sell Order</th>
           </tr>
         </thead>
         <tbody>
@@ -61,6 +63,8 @@ export default function RecentTrades({ trades, state, error }: RecentTradesProps
               <td>{formatPrice(trade.price)}</td>
               <td>{formatPrice(trade.quantity)}</td>
               <td className="trade-id">{trade.tradeId}</td>
+              <td className="trade-id">{trade.buyOrderId ?? "—"}</td>
+              <td className="trade-id">{trade.sellOrderId ?? "—"}</td>
             </tr>
           ))}
         </tbody>
