@@ -7,6 +7,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -21,6 +22,10 @@ namespace network
 class SocketServer
 {
 public:
+    using MessageHandler = std::function<void(
+        std::shared_ptr<ClientConnection>,
+        const serialization::Message &)>;
+
     explicit SocketServer(
         std::uint16_t port = 9000,
         std::uint64_t heartbeat_interval_ms = 10000,
@@ -45,6 +50,8 @@ public:
 
     void broadcast(
         const serialization::Message &message);
+
+    void setMessageHandler(MessageHandler handler);
 
 private:
     void acceptLoop();
@@ -87,6 +94,7 @@ private:
 
     std::uint64_t heartbeatIntervalMs_;
     std::uint64_t heartbeatTimeoutSec_;
+    MessageHandler messageHandler_;
 };
 
 } // namespace network
