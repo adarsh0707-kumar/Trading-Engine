@@ -3,7 +3,7 @@
 A production-style, polyglot trading simulation platform designed to demonstrate how modern algorithmic trading infrastructure can be structured across high-performance systems, analytics, APIs, real-time communication, and visualization.
 
 > **Project status:** Active development
-> **Current milestone: **Phase 5 — React Dashboard**
+> **Current milestone:** Phase 5 — React Dashboard (Phase 5.8 complete; Phase 5.9 next)
 
 
 ## Table of Contents
@@ -1239,13 +1239,13 @@ Shared memory may be introduced later if profiling shows socket-based IPC to be 
 
 ## Current implementation status
 
-**Completed through:** Phase 5.6 — Order Book Visualization
+**Completed through:** Phase 5.8 — Portfolio, P&L & Risk Dashboard
 
-**Current milestone:** Phase 5.7 — Analytics Charts & Indicator Views — In Progress
+**Current milestone:** Phase 5.9 — Engine, Analytics & System Status
 
 **Phase 4:** ✅ Complete — backend runtime, Gateway REST/WebSocket, analytics integration, persistence, security, resilience, observability, and full-stack Docker validation are complete.
 
-**Phase 5:** 🚧 In Progress — dashboard foundation, REST client, WebSocket client, responsive layout/navigation, live market state, recent trades, and live order-book visualization are complete. Analytics charts are next.
+**Phase 5:** 🚧 In Progress — dashboard foundation, REST/WebSocket clients, live market state, recent trades, order-book visualization, analytics charts, and portfolio/P&L/risk views are complete. System status is next.
 
 | Area | Status |
 | --- | --- |
@@ -1259,9 +1259,9 @@ Shared memory may be introduced later if profiling shows socket-based IPC to be 
 | Dashboard WebSocket client | Complete |
 | Live market data + recent trades | Complete |
 | Order-book visualization | Complete |
-| Analytics dashboard | In progress |
-| Portfolio / P&L / risk dashboard | Planned |
-| System status / runtime UX | Planned |
+| Analytics dashboard | Complete |
+| Portfolio / P&L / risk dashboard | Complete |
+| System status / runtime UX | In progress |
 | Browser E2E + final dashboard validation | Planned |
 | Cloud deployment/infrastructure | Planned |
 
