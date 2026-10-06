@@ -10,6 +10,22 @@ function formatMoney(value: number | null | undefined): string {
 function formatPercent(value: number | null | undefined): string {
   return value == null || !Number.isFinite(value) ? "—" : (value * 100).toFixed(2) + "%";
 }
+function formatDrawdownPercent(
+  drawdown: number | null | undefined,
+  peakEquity: number | null | undefined,
+): string {
+  if (
+    drawdown == null ||
+    peakEquity == null ||
+    !Number.isFinite(drawdown) ||
+    !Number.isFinite(peakEquity) ||
+    peakEquity <= 0
+  ) {
+    return "—";
+  }
+
+  return `${((drawdown / peakEquity) * 100).toFixed(2)}% from peak`;
+}
 function statusClass(status: string | undefined): string {
   if (status === "breached") return "risk-status risk-status-breached";
   if (status === "warning") return "risk-status risk-status-warning";
@@ -43,7 +59,7 @@ export default function Risk() {
             <article className="risk-panel">
               <div className="section-heading"><div><span className="panel-eyebrow">RISK STATE</span><h2>Current protection status</h2></div><span className={statusClass(latest?.riskStatus)}>{latest?.riskStatus?.toUpperCase() ?? "UNKNOWN"}</span></div>
               <div className="risk-stat-grid">
-                <div><span>Drawdown</span><strong>{formatPercent(latest?.drawdown)}</strong></div><div><span>Peak equity</span><strong>{formatMoney(latest?.peakEquity)}</strong></div>
+                <div><span>Drawdown</span><strong>{formatMoney(latest?.drawdown)}</strong><small>{formatDrawdownPercent(latest?.drawdown, latest?.peakEquity)}</small></div><div><span>Peak equity</span><strong>{formatMoney(latest?.peakEquity)}</strong></div>
                 <div><span>Current equity</span><strong>{formatMoney(latest?.equity)}</strong></div><div><span>Volatility</span><strong>{formatPercent(latest?.volatility)}</strong></div>
               </div>
               <div className="risk-callout"><span className="panel-eyebrow">SOURCE OF TRUTH</span><p>Risk state and analytics values are supplied by Python Analytics through the Gateway. The dashboard does not recalculate risk thresholds.</p></div>
