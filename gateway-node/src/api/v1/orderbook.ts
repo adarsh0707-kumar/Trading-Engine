@@ -25,7 +25,7 @@ export async function registerOrderBookRoute(
       },
     },
   }, async () => {
-    const orderBook = options.orderBookProvider.getOrderBook();
+    const orderBook = await options.orderBookProvider.getOrderBook();
 
     if (orderBook === null) {
       throw dependencyUnavailable("Order book state is unavailable");
