@@ -124,7 +124,7 @@ If no market provider data is available:
 
 ### GET `/api/v1/orderbook`
 
-Returns the latest order-book snapshot when an order-book provider is available.
+Returns the latest live order-book snapshot obtained by the Gateway from the C++ Engine.
 
 Example response:
 
@@ -149,7 +149,7 @@ Example response:
 }
 ```
 
-If no order-book provider data is available:
+If the C++ Engine order-book snapshot is unavailable or the Gateway cannot obtain a valid snapshot:
 
 ```http
 503 Service Unavailable
@@ -475,6 +475,12 @@ TRADE events use the normalized event envelope:
 ```
 
 The dashboard WebSocket client reconnects with bounded backoff and restores subscriptions after reconnect. Malformed messages are rejected safely and must not crash the dashboard.
+
+### Live order-book snapshot path
+
+The `/api/v1/orderbook` endpoint uses the Gateway Engine Event Client to request a `BOOK_SNAPSHOT` from the C++ Engine over the existing 4-byte big-endian framed TCP protocol. The Gateway correlates the response with the request ID, validates the snapshot, and returns the typed order-book response to the dashboard.
+
+The dashboard does not connect directly to the C++ Engine. Best Bid, Best Ask, and Spread shown by the Market Summary are derived from the returned order-book snapshot.
 
 ---
 
