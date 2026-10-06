@@ -1241,7 +1241,7 @@ Shared memory may be introduced later if profiling shows socket-based IPC to be 
 
 **Completed through:** Phase 5.6 — Order Book Visualization
 
-**Current milestone:** Phase 5.7 — Analytics Charts & Indicator Views
+**Current milestone:** Phase 5.7 — Analytics Charts & Indicator Views — In Progress
 
 **Phase 4:** ✅ Complete — backend runtime, Gateway REST/WebSocket, analytics integration, persistence, security, resilience, observability, and full-stack Docker validation are complete.
 
