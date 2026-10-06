@@ -431,6 +431,8 @@ export function createEngineEventClient(
     const requestId = `book-${randomUUID()}`;
     const timestamp = new Date().toISOString();
 
+    const activeSocket = socket;
+
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         pendingSnapshots.delete(requestId);
@@ -446,7 +448,7 @@ export function createEngineEventClient(
       });
 
       try {
-        socket.write(
+        activeSocket.write(
           frame(JSON.stringify({
             type: "BOOK_SNAPSHOT",
             request_id: requestId,
