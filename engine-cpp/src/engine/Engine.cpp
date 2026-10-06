@@ -248,10 +248,10 @@ void Engine::handle_book_snapshot(
             }
 
             const auto &level = levels[index];
-            payload << "{\\\"price\\\":"
+            payload << "{\"price\":"
                     << std::fixed << std::setprecision(8)
                     << level.price
-                    << ",\\\"quantity\\\":"
+                    << ",\"quantity\":"
                     << level.quantity
                     << "}";
         }
@@ -259,11 +259,11 @@ void Engine::handle_book_snapshot(
     };
 
     std::ostringstream payload;
-    payload << "{\\\"symbol\\\":\\\""
+    payload << "{\"symbol\":\""
             << config_.symbol
-            << "\\\",\\\"bids\\\":";
+            << "\",\"bids\":";
     append_levels(payload, snapshot.bids, MAX_LEVELS);
-    payload << ",\\\"asks\\\":";
+    payload << ",\"asks\":";
     append_levels(payload, snapshot.asks, MAX_LEVELS);
     payload << "}";
 
