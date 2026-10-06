@@ -73,10 +73,14 @@ function parseSnapshot(
 }
 
 export function createOrderBookProvider(
-  engineEventClient: EngineEventClient,
+  engineEventClient?: EngineEventClient,
 ): OrderBookProvider {
   return {
     async getOrderBook(): Promise<OrderBookState | null> {
+      if (engineEventClient === undefined) {
+        return null;
+      }
+
       try {
         const response = await engineEventClient.requestOrderBook();
         return parseSnapshot(response.payload, response.timestamp);
