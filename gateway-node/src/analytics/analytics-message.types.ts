@@ -36,6 +36,7 @@ export interface AnalyticsUpdatePayload {
   readonly vwap: number | null;
   readonly sma: number | null;
   readonly ema: number | null;
+  readonly volatility: number | null;
   readonly position: number;
   readonly realizedPnl: number;
   readonly unrealizedPnl: number;
