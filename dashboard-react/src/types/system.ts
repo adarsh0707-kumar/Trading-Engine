@@ -11,3 +11,5 @@ export interface EngineStatus {
   lastHeartbeatAt: number | null;
   reconnectAttempts: number;
 }
+
+export type SystemConnectionState = "healthy" | "degraded" | "offline";
