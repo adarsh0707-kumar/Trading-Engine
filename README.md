@@ -1239,13 +1239,13 @@ Shared memory may be introduced later if profiling shows socket-based IPC to be 
 
 ## Current implementation status
 
-**Completed through:** Phase 5.5 — Live Market Data & Recent Trades
+**Completed through:** Phase 5.6 — Order Book Visualization
 
-**Current milestone:** Phase 5.6 — Order Book Visualization
+**Current milestone:** Phase 5.7 — Analytics Charts & Indicator Views
 
 **Phase 4:** ✅ Complete — backend runtime, Gateway REST/WebSocket, analytics integration, persistence, security, resilience, observability, and full-stack Docker validation are complete.
 
-**Phase 5:** 🚧 In Progress — dashboard foundation, REST client, WebSocket client, responsive layout/navigation, live market state, and recent trades are complete. Order-book visualization is next.
+**Phase 5:** 🚧 In Progress — dashboard foundation, REST client, WebSocket client, responsive layout/navigation, live market state, recent trades, and live order-book visualization are complete. Analytics charts are next.
 
 | Area | Status |
 | --- | --- |
@@ -1258,12 +1258,36 @@ Shared memory may be introduced later if profiling shows socket-based IPC to be 
 | Dashboard REST client | Complete |
 | Dashboard WebSocket client | Complete |
 | Live market data + recent trades | Complete |
-| Order-book visualization | In progress |
-| Analytics dashboard | Planned |
+| Order-book visualization | Complete |
+| Analytics dashboard | In progress |
 | Portfolio / P&L / risk dashboard | Planned |
 | System status / runtime UX | Planned |
 | Browser E2E + final dashboard validation | Planned |
 | Cloud deployment/infrastructure | Planned |
+
+### Phase 5.6 live order-book architecture
+
+```text
+C++ Engine
+    │ BOOK_SNAPSHOT request/response
+    ▼
+Gateway Engine Event Client
+    │
+    ▼
+Gateway OrderBook Provider
+    │
+    ▼
+GET /api/v1/orderbook
+    │
+    ▼
+React Dashboard
+    ├── Live Order Book
+    └── Market Summary (Bid / Ask / Spread)
+```
+
+The order-book snapshot is requested from the live C++ engine through the Gateway. React never connects directly to the engine. The Gateway validates the snapshot and exposes it through the versioned REST boundary.
+
+The dashboard Market Summary derives Best Bid, Best Ask, and Spread from the same live order-book snapshot rather than from the last-trade price.
 
 ### Phase 5.5 live-data architecture
 
@@ -1578,7 +1602,7 @@ The architecture intentionally starts with technologies and protocols that are e
               ┌───────────────────────────────┐
               │        React Dashboard         │
               │                               │
-              │ Charts + Order Book + Metrics │
+              │ Charts + Live Order Book + Metrics │
               └───────────────────────────────┘
 ```
 
