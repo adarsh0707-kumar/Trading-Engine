@@ -36,6 +36,10 @@ public:
 private:
     void run_loop();
 
+    void handle_book_snapshot(
+        std::shared_ptr<network::ClientConnection> client,
+        const serialization::Message &request);
+
     EngineConfig config_;
     std::unique_ptr<EngineState> state_;
     std::unique_ptr<network::SocketServer> server_;
