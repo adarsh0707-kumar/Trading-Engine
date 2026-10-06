@@ -164,6 +164,11 @@ std::size_t SocketServer::clientCount() const
     return clients_.size();
 }
 
+void SocketServer::setMessageHandler(MessageHandler handler)
+{
+    messageHandler_ = std::move(handler);
+}
+
 void SocketServer::broadcast(
     const serialization::Message &message)
 {
@@ -343,6 +348,15 @@ void SocketServer::handleMessage(
 {
     switch (message.type)
     {
+    case serialization::MessageType::BOOK_SNAPSHOT:
+    {
+        if (messageHandler_)
+        {
+            messageHandler_(client, message);
+        }
+        break;
+    }
+
     case serialization::MessageType::HEARTBEAT:
     {
         serialization::Message response;
