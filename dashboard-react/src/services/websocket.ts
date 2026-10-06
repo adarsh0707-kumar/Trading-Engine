@@ -10,7 +10,7 @@ import {
 } from "../types/websocket";
 
 const OPEN = 1;
-const DEFAULT_BASE_URL = "http://localhost:8080";
+const DEFAULT_BASE_URL = "";
 const DEFAULT_PATH = "/ws";
 const DEFAULT_RECONNECT_INITIAL_DELAY_MS = 250;
 const DEFAULT_RECONNECT_MAX_DELAY_MS = 5_000;
@@ -19,7 +19,14 @@ const DEFAULT_MAX_RECONNECT_ATTEMPTS = 10;
 type JsonRecord = Record<string, unknown>;
 
 function resolveWebSocketUrl(baseUrl: string | undefined, path: string): string {
-  const configured = baseUrl ?? import.meta.env.VITE_GATEWAY_WS_URL ?? DEFAULT_BASE_URL;
+  const configured = (baseUrl ?? import.meta.env.VITE_GATEWAY_WS_URL ?? DEFAULT_BASE_URL).trim();
+
+  if (configured === "") {
+    const protocol = globalThis.location?.protocol === "https:" ? "wss:" : "ws:";
+    const host = globalThis.location?.host ?? "localhost:5173";
+    return `${protocol}//${host}${path.startsWith("/") ? path : `/${path}`}`;
+  }
+
   const trimmed = configured.replace(/\/+$/, "");
   const protocolUrl = trimmed.startsWith("https://")
     ? `wss://${trimmed.slice("https://".length)}`

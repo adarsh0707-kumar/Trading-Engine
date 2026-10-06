@@ -7,11 +7,6 @@ RUN bun install
 
 COPY . .
 
-ARG VITE_GATEWAY_BASE_URL=http://localhost:8080
-ARG VITE_GATEWAY_WS_URL=ws://localhost:8080
-ENV VITE_GATEWAY_BASE_URL=${VITE_GATEWAY_BASE_URL}
-ENV VITE_GATEWAY_WS_URL=${VITE_GATEWAY_WS_URL}
-
 RUN bun run build
 
 FROM nginx:1.27-alpine AS runtime
