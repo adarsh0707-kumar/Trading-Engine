@@ -1,7 +1,9 @@
 import type { MarketSnapshot } from "../../types";
+import type { OrderBook } from "../../types/orderbook";
 
 interface MarketSummaryProps {
   readonly market: MarketSnapshot | null;
+  readonly orderBook?: OrderBook | null;
   readonly state: "loading" | "ready" | "error";
   readonly error: string | null;
 }
@@ -18,7 +20,17 @@ function formatTimestamp(value: string): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
-export default function MarketSummary({ market, state, error }: MarketSummaryProps) {
+export default function MarketSummary({
+  market,
+  orderBook,
+  state,
+  error,
+}: MarketSummaryProps) {
+  const bestBid = orderBook?.bids[0]?.price ?? null;
+  const bestAsk = orderBook?.asks[0]?.price ?? null;
+  const spread =
+    bestBid !== null && bestAsk !== null ? bestAsk - bestBid : null;
+
   if (state === "loading") {
     return <div className="state-message">Loading market snapshot…</div>;
   }
@@ -51,15 +63,15 @@ export default function MarketSummary({ market, state, error }: MarketSummaryPro
       </div>
       <div className="market-metric">
         <span>Bid</span>
-        <strong>—</strong>
+        <strong>{bestBid !== null ? formatPrice(bestBid) : "—"}</strong>
       </div>
       <div className="market-metric">
         <span>Ask</span>
-        <strong>—</strong>
+        <strong>{bestAsk !== null ? formatPrice(bestAsk) : "—"}</strong>
       </div>
       <div className="market-metric">
         <span>Spread</span>
-        <strong>—</strong>
+        <strong>{spread !== null ? formatPrice(spread) : "—"}</strong>
       </div>
       <div className="market-timestamp">
         Updated {formatTimestamp(market.timestamp)}
