@@ -3,7 +3,7 @@
 A production-style, polyglot trading simulation platform designed to demonstrate how modern algorithmic trading infrastructure can be structured across high-performance systems, analytics, APIs, real-time communication, and visualization.
 
 > **Project status:** Active development
-> **Current milestone:** Phase 5 — React Dashboard (Phase 5.8 complete; Phase 5.9 next)
+> **Current milestone:** Phase 5 — React Dashboard (Phase 5.9 complete; Phase 5.10 in progress)
 
 
 ## Table of Contents
