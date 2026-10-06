@@ -56,6 +56,7 @@ class AnalyticsResult:
             "vwap",
             "sma",
             "ema",
+            "volatility",
             "realized_pnl",
             "unrealized_pnl",
             "equity",
