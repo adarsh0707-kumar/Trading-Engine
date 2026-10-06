@@ -173,6 +173,7 @@ describe("analytics output protocol", () => {
       ema: 100.25,
       volatility: 0.0125,
       position: 10,
+      peakEquity: 10000,
       equity: 10000,
       realizedPnl: 0,
       unrealizedPnl: 0,
