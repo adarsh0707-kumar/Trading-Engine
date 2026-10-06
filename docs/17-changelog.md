@@ -1,3 +1,48 @@
+## 2026-10-06 — Phase 5.8 — Portfolio, P&L & Risk Dashboard
+
+### Status
+
+**Status:** ✅ Complete
+
+Phase 5.8 adds the live portfolio and risk dashboard using the existing Gateway analytics contract. No new backend contract or analytics calculation was introduced.
+
+### Implemented
+
+- Live position and mark-price display.
+- Absolute portfolio exposure.
+- Realized, unrealized, and total P&L.
+- Current and peak equity.
+- Absolute drawdown with percentage-from-peak presentation.
+- Volatility and server-provided risk status.
+- Live RISK_EVENT and analytics state updates through the existing WebSocket path.
+- Loading, error, retry, refresh, and connection-state treatment.
+- Responsive Portfolio & Risk layout.
+- Explicit source-of-truth messaging: risk thresholds remain authoritative in Python Analytics/Gateway.
+
+### Validation
+
+```text
+Docker Compose runtime          PASS — all services healthy
+Gateway analytics endpoint      PASS — HTTP 200
+Dashboard analytics proxy       PASS — HTTP 200
+WebSocket                       PASS — OPEN
+CI                              PASS — all checks
+```
+
+### Important correction
+
+The Gateway analytics contract supplies **absolute monetary drawdown**. The dashboard now renders that value directly and derives a secondary percentage relative to peak equity. It no longer treats absolute drawdown as a fractional percentage.
+
+### Scope boundary
+
+Phase 5.8 is frontend-only. Gateway, Python Analytics, PostgreSQL, and engine contracts were not changed.
+
+### Next Target
+
+**Phase 5.9 — Engine, Analytics & System Status**
+
+---
+
 # Trading Engine — Changelog
 
 All notable changes to the **Cloud-Based Algorithmic Trading Engine** are documented in this file.
