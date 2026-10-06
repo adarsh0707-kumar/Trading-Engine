@@ -8,3 +8,7 @@ export interface AnalyticsSnapshot {
   riskStatus: RiskStatus;
   timestamp: string;
 }
+
+export interface AnalyticsPoint extends AnalyticsSnapshot {
+  readonly eventId?: string;
+}
