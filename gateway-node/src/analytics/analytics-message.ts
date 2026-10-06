@@ -222,6 +222,7 @@ function parseAnalyticsUpdatePayload(
     vwap: requireNullableFiniteNumber(value["vwap"], "vwap"),
     sma: requireNullableFiniteNumber(value["sma"], "sma"),
     ema: requireNullableFiniteNumber(value["ema"], "ema"),
+    volatility: requireNullableFiniteNumber(value["volatility"], "volatility"),
     position: requireOutputNumber(value["position"], "position"),
     realizedPnl: requireOutputNumber(value["realized_pnl"], "realized_pnl"),
     unrealizedPnl: requireOutputNumber(value["unrealized_pnl"], "unrealized_pnl"),
