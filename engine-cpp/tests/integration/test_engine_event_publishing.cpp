@@ -205,9 +205,9 @@ static void test_engine_returns_order_book_snapshot()
 
     CHECK(response.type == serialization::MessageType::BOOK_SNAPSHOT);
     CHECK(response.requestId == "book-test-1");
-    CHECK(response.payload.find("\\\"symbol\\\":\\\"TEST\\\"") != std::string::npos);
-    CHECK(response.payload.find("\\\"bids\\\":") != std::string::npos);
-    CHECK(response.payload.find("\\\"asks\\\":") != std::string::npos);
+    CHECK(response.payload.find("\"symbol\":\"TEST\"") != std::string::npos);
+    CHECK(response.payload.find("\"bids\":") != std::string::npos);
+    CHECK(response.payload.find("\"asks\":") != std::string::npos);
 
     ::close(clientFd);
     engine.stop();
