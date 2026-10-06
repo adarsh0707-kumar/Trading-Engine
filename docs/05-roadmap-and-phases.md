@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest completed milestone:** Phase 5.5 — Live Market Data & Recent Trades
+**Latest completed milestone:** Phase 5.6 — Order Book Visualization
 
-**Current milestone:** Phase 5.6 — Order Book Visualization
+**Current milestone:** Phase 5.7 — Analytics Charts & Indicator Views
 
 **Phase 4 overall status:** ✅ Complete
 
@@ -1241,9 +1241,9 @@ Render
 
 ## Phase 5.6 — Order Book Visualization
 
-**Status:** 🚧 In Progress — next milestone
+**Status:** ✅ Complete
 
-Render the current bid/ask book from the Gateway order-book snapshot.
+Render the current live bid/ask book from the C++ Engine through the Gateway order-book snapshot contract.
 
 ### Display
 
@@ -1284,18 +1284,50 @@ OrderBook component
 Bid/ask visualization
 ```
 
-If a future Gateway WebSocket order-book event is introduced, the component should consume it through the same typed state boundary rather than implementing a second data path.
+The current implementation uses a request/response snapshot path: Gateway → C++ Engine `BOOK_SNAPSHOT` request → validated live snapshot → `GET /api/v1/orderbook` → React. If a future Gateway WebSocket order-book event is introduced, the component should consume it through the same typed state boundary rather than implementing a second data path.
 
 ### Exit criteria
 
-- [ ] Snapshot loads correctly.
-- [ ] Bids/asks render correctly.
-- [ ] Best levels are clear.
-- [ ] Empty/error states work.
-- [ ] No trading-engine connection is made from React.
+- [X] Snapshot loads correctly from `GET /api/v1/orderbook`.
+- [X] Bids/asks render correctly.
+- [X] Best bid/ask levels are clear.
+- [X] Empty/error states work.
+- [X] No trading-engine connection is made from React.
+- [X] Live C++ Engine `BOOK_SNAPSHOT` request/response path is integrated through the Gateway.
+- [X] Gateway validates order-book symbol, prices, and quantities.
+- [X] Market Summary derives Bid, Ask, and Spread from the live order-book snapshot.
 
 ---
 
+
+### Phase 5.6 completion evidence
+
+The completed order-book milestone is integrated on `main` through PR #116, which promotes the stacked Phase 5.6 work from PRs #113–#115.
+
+Implemented:
+
+- C++ Engine synchronized order-book snapshot access protected by engine state locking.
+- `BOOK_SNAPSHOT` request/response handling over the existing framed engine protocol.
+- Gateway `EngineEventClient` request correlation and timeout handling for order-book snapshots.
+- Gateway live order-book provider and `/api/v1/orderbook` integration.
+- Validation of order-book symbol, bid/ask arrays, positive finite prices, and safe positive quantities.
+- Dashboard rendering of live bids and asks with best-level emphasis.
+- Market Summary synchronization using live Best Bid, Best Ask, and Spread.
+- Network-independent dashboard deployment through same-origin `/api` and `/ws` reverse proxying.
+- Docker/Vite configuration no longer bakes environment-specific Gateway URLs into the dashboard image.
+
+Validation evidence:
+
+```text
+C++ CTest suite        PASS — 15/15
+Gateway dashboard build PASS
+Dashboard tests         PASS — 12/12
+Docker runtime          PASS — all 5 services healthy
+Gateway readiness       PASS — /api/ready returns 200
+Live order-book API     PASS — /api/v1/orderbook returns changing snapshots
+```
+
+**Phase 5.6 exit status:** ✅ Complete
 
 ### Phase 5.5 completion evidence
 
@@ -2000,7 +2032,16 @@ Planned:
 | 4.9 | Operational Logging & Metrics | Complete |
 | 4.10 | Testing & Integration Validation | ✅ Complete |
 | 4.11 | Phase Integration & Exit Criteria | ✅ Complete |
-| 5 | React Dashboard | ⏳ Planned |
+| 5.0 | Dashboard Repository Inspection & Baseline | ✅ Complete |
+| 5.1 | Dashboard Foundation & Application Shell | ✅ Complete |
+| 5.2 | Gateway REST Client & Typed API Models | ✅ Complete |
+| 5.3 | WebSocket Client, Protocol & Reconnection | ✅ Complete |
+| 5.4 | Dashboard Layout & Navigation | ✅ Complete |
+| 5.5 | Live Market Data & Recent Trades | ✅ Complete |
+| 5.6 | Order Book Visualization | ✅ Complete |
+| 5.7 | Analytics Charts & Indicator Views | ⏳ Planned |
+| 5.8–5.14 | Remaining Dashboard Hardening & Exit Work | ⏳ Planned |
+| 5 | React Dashboard | 🚧 In Progress |
 | 6 | Historical Analytics | ⏳ Planned |
 | 7 | Authentication & Security | ⏳ Planned |
 | 8 | Platform Observability | ⏳ Planned |
