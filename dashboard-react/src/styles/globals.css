@@ -1134,3 +1134,31 @@ a:focus-visible {
     flex-direction: column;
   }
 }
+
+
+/* Phase 5.8 — portfolio, P&L and risk. */
+.risk-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
+.risk-card{min-width:0;border:2px solid var(--chocolate);border-radius:var(--radius-lg);background:var(--cream);padding:18px}
+.risk-card-dark{background:var(--chocolate);color:var(--cream)}
+.risk-card span,.risk-card small{display:block;color:var(--chocolate);font-size:.67rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;opacity:.72}
+.risk-card-dark span,.risk-card-dark small{color:var(--cream)}
+.risk-card strong{display:block;margin:10px 0 5px;color:var(--orange);font-size:1.5rem;font-variant-numeric:tabular-nums}
+.risk-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px}
+.risk-panel{min-width:0;border:2px solid var(--chocolate);border-radius:var(--radius-lg);background:var(--cream);padding:22px}
+.risk-status{border:2px solid var(--chocolate);border-radius:var(--radius-pill);padding:5px 10px;font-size:.65rem;font-weight:850;letter-spacing:.08em}
+.risk-status-ok{border-color:var(--orange);color:var(--orange)}
+.risk-status-warning{background:var(--orange);color:var(--chocolate)}
+.risk-status-breached{background:var(--chocolate);color:var(--cream)}
+.risk-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.risk-stat-grid>div,.risk-equity>div{display:grid;gap:4px;border:1px solid var(--chocolate);border-radius:var(--radius-sm);padding:12px}
+.risk-stat-grid span,.risk-equity span{color:var(--chocolate);font-size:.65rem;font-weight:750;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
+.risk-stat-grid strong,.risk-equity strong{color:var(--chocolate);font-size:1rem;font-variant-numeric:tabular-nums}
+.risk-callout{margin-top:14px;border-left:4px solid var(--orange);background:var(--chocolate);padding:14px 16px;color:var(--cream)}
+.risk-callout .panel-eyebrow{color:var(--orange)}
+.risk-callout p{margin:7px 0 0;font-size:.78rem;line-height:1.55}
+.pnl-stack{display:grid}.pnl-row{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--chocolate);padding:13px 0;color:var(--chocolate);font-size:.82rem}.pnl-row strong{color:var(--chocolate);font-variant-numeric:tabular-nums}.pnl-row-total{border-bottom:0;padding-top:17px;font-weight:850}.pnl-row-total strong{color:var(--orange);font-size:1.15rem}
+.risk-equity{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:16px}
+.risk-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;color:var(--chocolate);font-size:.7rem}
+.risk-state-error{justify-content:space-between;padding:16px}.risk-inline-error{margin-top:18px;padding:12px 16px}
+@media(max-width:1100px){.risk-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.risk-layout{grid-template-columns:1fr}}
+@media(max-width:600px){.risk-overview,.risk-stat-grid,.risk-equity{grid-template-columns:1fr}.risk-footer{align-items:flex-start;flex-direction:column}}
