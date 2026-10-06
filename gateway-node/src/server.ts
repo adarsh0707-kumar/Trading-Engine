@@ -23,6 +23,7 @@ import type { StatusProvider } from "./status/status.types.ts";
 import type { AnalyticsProvider } from "./analytics/analytics.types.ts";
 import type { MarketProvider } from "./market/market.types.ts";
 import type { OrderBookProvider } from "./orderbook/orderbook.types.ts";
+import { createOrderBookProvider } from "./orderbook/orderbook.provider.ts";
 import type { TradesProvider } from "./trades/trades.types.ts";
 import { createWebSocketHub, type WebSocketHub } from "./websocket/websocket-hub.ts";
 import { ApiError } from "./errors/api-error.ts";
@@ -373,7 +374,8 @@ export function createGatewayServer(
   app.register(registerV1Routes, {
     statusProvider,
     marketProvider: options.marketProvider ?? liveTradingState,
-    orderBookProvider: options.orderBookProvider,
+    orderBookProvider:
+      options.orderBookProvider ?? createOrderBookProvider(engineEventClient),
     tradesProvider: options.tradesProvider ?? liveTradingState,
     analyticsProvider,
     engineProvider: options.engineProvider,

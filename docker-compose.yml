@@ -92,9 +92,6 @@ services:
     build:
       context: ./dashboard-react
       dockerfile: Dockerfile
-      args:
-        VITE_GATEWAY_BASE_URL: ${DASHBOARD_GATEWAY_URL:-http://localhost:8080}
-        VITE_GATEWAY_WS_URL: ${DASHBOARD_GATEWAY_WS_URL:-ws://localhost:8080}
     ports:
       - "${DASHBOARD_PORT:-5173}:80"
     depends_on:

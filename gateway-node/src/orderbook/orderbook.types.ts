@@ -11,5 +11,5 @@ export interface OrderBookState {
 }
 
 export interface OrderBookProvider {
-  getOrderBook(): OrderBookState | null;
+  getOrderBook(): OrderBookState | null | Promise<OrderBookState | null>;
 }

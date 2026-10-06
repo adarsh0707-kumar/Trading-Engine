@@ -160,9 +160,63 @@ static void test_engine_broadcasts_trades()
     engine.stop();
 }
 
+static void test_engine_returns_order_book_snapshot()
+{
+    engine_runtime::EngineConfig config;
+    config.symbol = "TEST";
+    config.port = 0;
+    config.tick_interval_ms = 10;
+    config.market_seed = 999;
+    config.min_price = 100.0;
+    config.max_price = 100.0;
+    config.min_quantity = 5;
+    config.max_quantity = 5;
+
+    engine_runtime::Engine engine(config);
+    CHECK(engine.start());
+
+    const int clientFd = connectToServer(engine.port());
+    const std::string hello = receiveMessage(clientFd);
+    CHECK(!hello.empty());
+
+    serialization::Message request;
+    request.type = serialization::MessageType::BOOK_SNAPSHOT;
+    request.requestId = "book-test-1";
+    request.timestamp = "2026-10-06T00:00:00Z";
+    request.payload = "REQUEST";
+
+    const auto frame = network::Protocol::frame(
+        serialization::JsonSerializer::serialize(request));
+
+    CHECK(::send(clientFd, frame.data(), frame.size(), MSG_NOSIGNAL) ==
+          static_cast<ssize_t>(frame.size()));
+
+    serialization::Message response;
+    for (int i = 0; i < 50; ++i)
+    {
+        const std::string payload = receiveMessage(clientFd);
+        CHECK(!payload.empty());
+        response = serialization::JsonSerializer::deserialize(payload);
+        if (response.type == serialization::MessageType::BOOK_SNAPSHOT)
+        {
+            break;
+        }
+    }
+
+    CHECK(response.type == serialization::MessageType::BOOK_SNAPSHOT);
+    CHECK(response.requestId == "book-test-1");
+    CHECK(response.payload.find("\"symbol\":\"TEST\"") != std::string::npos);
+    CHECK(response.payload.find("\"bids\":") != std::string::npos);
+    CHECK(response.payload.find("\"asks\":") != std::string::npos);
+
+    ::close(clientFd);
+    engine.stop();
+}
+
 int main()
 {
     test_engine_broadcasts_trades();
+    test_engine_returns_order_book_snapshot();
 
     std::cout
         << "Engine event publishing test passed\n";

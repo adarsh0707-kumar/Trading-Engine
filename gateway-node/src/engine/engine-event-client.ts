@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Socket, type Socket as NetSocket } from "node:net";
 
 import { ConnectionFailure, ProtocolFailure, TimeoutFailure } from "../resilience/error-model.ts";
@@ -53,6 +54,11 @@ export interface EngineEventClient {
   readonly isConnected: () => boolean;
   readonly getState: () => EngineClientState;
   readonly getHealth: () => EngineHealth;
+  readonly requestOrderBook: (timeoutMs?: number) => Promise<{
+    readonly requestId: string;
+    readonly timestamp: string;
+    readonly payload: string;
+  }>;
 }
 
 function toError(value: unknown): Error {
@@ -94,6 +100,18 @@ export function createEngineEventClient(
   let connectedAt: number | null = null;
   let lastMessageAt: number | null = null;
   let lastHeartbeatAt: number | null = null;
+  const pendingSnapshots = new Map<
+    string,
+    {
+      readonly resolve: (value: {
+        readonly requestId: string;
+        readonly timestamp: string;
+        readonly payload: string;
+      }) => void;
+      readonly reject: (error: Error) => void;
+      readonly timer: ReturnType<typeof setTimeout>;
+    }
+  >();
 
   const clearLivenessTimer = (): void => {
     if (livenessTimer !== undefined) {
@@ -179,7 +197,16 @@ export function createEngineEventClient(
     }, timeoutMs);
   };
 
+  const rejectPendingSnapshots = (error: Error): void => {
+    for (const [requestId, pending] of pendingSnapshots) {
+      clearTimeout(pending.timer);
+      pending.reject(error);
+      pendingSnapshots.delete(requestId);
+    }
+  };
+
   const disconnect = (): void => {
+    rejectPendingSnapshots(new Error("Engine connection is unavailable"));
     clearLivenessTimer();
 
     if (state !== "disconnected") {
@@ -277,6 +304,20 @@ export function createEngineEventClient(
         if (message.type === "HELLO") {
           // The C++ engine sends HELLO immediately after accepting a client.
           // It is a transport-level control message, not a trade event.
+          continue;
+        }
+
+        if (message.type === "BOOK_SNAPSHOT") {
+          const pending = pendingSnapshots.get(message.requestId);
+          if (pending !== undefined) {
+            clearTimeout(pending.timer);
+            pendingSnapshots.delete(message.requestId);
+            pending.resolve({
+              requestId: message.requestId,
+              timestamp: message.timestamp,
+              payload: message.payload,
+            });
+          }
           continue;
         }
 
@@ -378,6 +419,51 @@ export function createEngineEventClient(
     connect();
   };
 
+  const requestOrderBook = (timeoutMs = 2000): Promise<{
+    readonly requestId: string;
+    readonly timestamp: string;
+    readonly payload: string;
+  }> => {
+    if (!connected || socket === undefined) {
+      return Promise.reject(new Error("Engine is not connected"));
+    }
+
+    const requestId = `book-${randomUUID()}`;
+    const timestamp = new Date().toISOString();
+
+    const activeSocket = socket;
+
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        pendingSnapshots.delete(requestId);
+        reject(new TimeoutFailure(
+          `Engine order book request timed out after ${timeoutMs}ms`,
+        ));
+      }, timeoutMs);
+
+      pendingSnapshots.set(requestId, {
+        resolve,
+        reject,
+        timer,
+      });
+
+      try {
+        activeSocket.write(
+          frame(JSON.stringify({
+            type: "BOOK_SNAPSHOT",
+            request_id: requestId,
+            timestamp,
+            payload: "REQUEST",
+          })),
+        );
+      } catch (error) {
+        clearTimeout(timer);
+        pendingSnapshots.delete(requestId);
+        reject(toError(error));
+      }
+    });
+  };
+
   const stop = (): void => {
     if (!running && socket === undefined) {
       return;
@@ -394,6 +480,7 @@ export function createEngineEventClient(
     stop,
     isConnected: () => connected,
     getState: () => state,
+    requestOrderBook,
     getHealth: () => ({
       state,
       connectedAt,

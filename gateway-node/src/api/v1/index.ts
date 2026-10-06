@@ -38,7 +38,7 @@ export async function registerV1Routes(
   const statusProvider = options.statusProvider ?? createStatusProvider();
   const marketProvider = options.marketProvider ?? createMarketProvider();
   const orderBookProvider =
-    options.orderBookProvider ?? createOrderBookProvider();
+    options.orderBookProvider ?? createOrderBookProvider(options.engineEventClient);
   const tradesProvider = options.tradesProvider ?? createTradesProvider();
   const analyticsProvider =
     options.analyticsProvider ?? createAnalyticsProvider();
