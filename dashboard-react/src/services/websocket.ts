@@ -10,7 +10,7 @@ import {
 } from "../types/websocket";
 
 const OPEN = 1;
-const DEFAULT_BASE_URL = "http://localhost:8080";
+const DEFAULT_BASE_URL = "";
 const DEFAULT_PATH = "/ws";
 const DEFAULT_RECONNECT_INITIAL_DELAY_MS = 250;
 const DEFAULT_RECONNECT_MAX_DELAY_MS = 5_000;
