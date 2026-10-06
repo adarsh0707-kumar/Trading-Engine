@@ -26,6 +26,7 @@ class AnalyticsResult:
     peak_equity: Decimal
     drawdown: Decimal
     timestamp: datetime
+    volatility: Decimal | None = None
 
     def __post_init__(self) -> None:
         if not self.event_id:
