@@ -37,7 +37,7 @@ export interface GatewayApiClientOptions {
   readonly fetch?: GatewayFetch;
 }
 
-const DEFAULT_BASE_URL = "http://localhost:8080";
+const DEFAULT_BASE_URL = "";
 const DEFAULT_TIMEOUT_MS = 5_000;
 
 function resolveBaseUrl(baseUrl: string | undefined): string {
