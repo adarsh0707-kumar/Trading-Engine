@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest completed milestone:** Phase 5.8 — Portfolio, P&L & Risk Dashboard
+**Latest completed milestone:** Phase 5.9 — Engine, Analytics & System Status
 
-**Current milestone:** Phase 5.9 — Engine, Analytics & System Status
+**Current milestone:** Phase 5.10 — Loading, Empty, Error & Stale-Data UX
 
 **Phase 4 overall status:** ✅ Complete
 
@@ -1473,7 +1473,7 @@ Display recent events with clear severity/state.
 
 ## Phase 5.9 — Engine, Analytics & System Status
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Expose operational health so the dashboard can explain whether missing data is caused by the runtime.
 
@@ -1526,9 +1526,11 @@ ERROR
 
 ## Phase 5.10 — Loading, Empty, Error & Stale-Data UX
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress
 
 Make dependency and data failures explicit instead of silently showing incorrect values.
+
+Phase 5.10 builds on the existing REST and WebSocket contracts without changing Gateway, Python Analytics, PostgreSQL, or C++ Engine interfaces. The implementation focuses on preserving last-known-good data during transient failures and exposing its freshness clearly.
 
 ### Required states
 
@@ -1565,8 +1567,11 @@ ERROR
 - [ ] Every data panel has an empty state.
 - [ ] Every data panel has an error state.
 - [ ] Stale data is identifiable.
-- [ ] WebSocket disconnect is visible.
-- [ ] Recovery returns the UI to READY state.
+- [ ] WebSocket disconnect/reconnect is visible without clearing valid data.
+- [ ] Last-known-good data is preserved during transient failures.
+- [ ] Recovery returns the UI to READY/LIVE state.
+- [ ] Shared freshness semantics are used across live dashboard pages.
+- [ ] Build and existing frontend tests remain green.
 
 ---
 
