@@ -1,3 +1,17 @@
+## [Unreleased]
+
+### Phase 5.7 — Analytics Charts & Indicator Views — In Progress
+
+- Added server-calculated rolling volatility to the analytics result model and Gateway output contract.
+- Persisted volatility alongside VWAP, SMA, and EMA analytics results.
+- Expanded `GET /api/v1/analytics` to expose the current symbol, price, indicators, position, equity, peak equity, P&L, drawdown, and risk state.
+- Added a lightweight SVG analytics chart layer without a charting-library dependency.
+- Added live analytics history from `ANALYTICS_UPDATE` WebSocket events with a bounded 120-point browser buffer.
+- Added live risk-state updates from `RISK_EVENT` events.
+- Added Analytics page summary metrics and Price/VWAP/SMA/EMA, Volatility, Equity, and P&L views.
+
+Status: In Progress
+
 # Changelog
 
 ## [Unreleased]
