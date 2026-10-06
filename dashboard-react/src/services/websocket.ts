@@ -19,7 +19,14 @@ const DEFAULT_MAX_RECONNECT_ATTEMPTS = 10;
 type JsonRecord = Record<string, unknown>;
 
 function resolveWebSocketUrl(baseUrl: string | undefined, path: string): string {
-  const configured = baseUrl ?? import.meta.env.VITE_GATEWAY_WS_URL ?? DEFAULT_BASE_URL;
+  const configured = (baseUrl ?? import.meta.env.VITE_GATEWAY_WS_URL ?? DEFAULT_BASE_URL).trim();
+
+  if (configured === "") {
+    const protocol = globalThis.location?.protocol === "https:" ? "wss:" : "ws:";
+    const host = globalThis.location?.host ?? "localhost:5173";
+    return `${protocol}//${host}${path.startsWith("/") ? path : `/${path}`}`;
+  }
+
   const trimmed = configured.replace(/\/+$/, "");
   const protocolUrl = trimmed.startsWith("https://")
     ? `wss://${trimmed.slice("https://".length)}`
