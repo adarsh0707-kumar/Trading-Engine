@@ -38,6 +38,16 @@ Engine::Engine(const EngineConfig &config)
     generator_ =
         std::make_unique<::engine::MockMarketGenerator>(
             gen_config);
+
+    server_->setMessageHandler(
+        [this](
+            std::shared_ptr<network::ClientConnection> client,
+            const serialization::Message &message)
+        {
+            handle_book_snapshot(
+                std::move(client),
+                message);
+        });
 }
 
 Engine::~Engine()
@@ -131,10 +141,7 @@ void Engine::run_loop()
 
         try
         {
-            result =
-                state_->matching_engine().match(
-                    state_->order_book(),
-                    incoming_order);
+            result = state_->match(incoming_order);
         }
         catch (const std::exception &error)
         {
@@ -206,6 +213,61 @@ void Engine::run_loop()
     }
 
     logger_->info("Engine loop stopped");
+}
+
+void Engine::handle_book_snapshot(
+    std::shared_ptr<network::ClientConnection> client,
+    const serialization::Message &request)
+{
+    if (!client || request.type != serialization::MessageType::BOOK_SNAPSHOT)
+    {
+        return;
+    }
+
+    const ::engine::BookSnapshot snapshot = state_->snapshot();
+
+    serialization::Message response;
+    response.type = serialization::MessageType::BOOK_SNAPSHOT;
+    response.requestId = request.requestId;
+    response.timestamp = utils::Time::iso8601();
+
+    constexpr std::size_t MAX_LEVELS = 20;
+    const auto append_levels = [](
+        std::ostringstream &payload,
+        const auto &levels,
+        std::size_t limit)
+    {
+        payload << "[";
+        const std::size_t count = std::min(levels.size(), limit);
+        for (std::size_t index = 0; index < count; ++index)
+        {
+            if (index > 0)
+            {
+                payload << ",";
+            }
+
+            const auto &level = levels[index];
+            payload << "{\\\"price\\\":"
+                    << std::fixed << std::setprecision(8)
+                    << level.price
+                    << ",\\\"quantity\\\":"
+                    << level.quantity
+                    << "}";
+        }
+        payload << "]";
+    };
+
+    std::ostringstream payload;
+    payload << "{\\\"symbol\\\":\\\""
+            << config_.symbol
+            << "\\\",\\\"bids\\\":";
+    append_levels(payload, snapshot.bids, MAX_LEVELS);
+    payload << ",\\\"asks\\\":";
+    append_levels(payload, snapshot.asks, MAX_LEVELS);
+    payload << "}";
+
+    response.payload = payload.str();
+    client->sendMessage(response);
 }
 
 } // namespace engine_runtime
