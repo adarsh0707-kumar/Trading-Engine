@@ -118,14 +118,7 @@ export function useAnalytics(): AnalyticsData {
         }
 
         seenEventIds.current.add(event.eventId);
-        setLatest({
-          equity: point.equity,
-          realizedPnl: point.realizedPnl,
-          unrealizedPnl: point.unrealizedPnl,
-          drawdown: point.drawdown,
-          riskStatus: point.riskStatus,
-          timestamp: point.timestamp,
-        });
+        setLatest(point);
         setHistory((current) => [...current, point].slice(-MAX_ANALYTICS_POINTS));
         setState("ready");
         setError(null);
