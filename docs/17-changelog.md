@@ -45,6 +45,61 @@ Phase 5.8 is frontend-only. Gateway, Python Analytics, PostgreSQL, and engine co
 
 # Trading Engine — Changelog
 
+## 2026-10-06 — Phase 5.9 Completion & Phase 5.10 Start
+
+### Status
+
+**Status:** Phase 5.9 complete; Phase 5.10 active
+
+### Phase 5.9 — Engine, Analytics & System Status
+
+Phase 5.9 added the dashboard's operational status view using the existing Gateway contracts.
+
+### Implemented
+
+* Live Gateway, Engine, and Analytics dependency status.
+* Engine connection state.
+* Engine connected-at timestamp.
+* Last engine message timestamp.
+* Last engine heartbeat timestamp.
+* Engine reconnect-attempt count.
+* Gateway /api/v1/status and /api/v1/status/engine consumption.
+* Five-second status polling.
+* Retry and inline error handling.
+* System readiness/degraded presentation.
+* Responsive system-status layout.
+* Explicit source-of-truth messaging for engine telemetry.
+* No Gateway, Python Analytics, PostgreSQL, or C++ Engine contract changes.
+
+### Validation
+
+Frontend production build: PASS
+Frontend test suite: PASS — 12/12
+CI: PASS
+PR #119: MERGED
+
+### Phase 5.10 — Loading, Empty, Error & Stale-Data UX
+
+Phase 5.10 is now active. The milestone hardens the dashboard's live-data failure and freshness behavior across Market, Trades, Order Book, Analytics, Portfolio/Risk, System, and WebSocket flows.
+
+### Planned focus
+
+* Consistent loading, empty, error, stale, and disconnected states.
+* Preserve last-known-good data during transient failures.
+* Make data age/freshness visible instead of silently presenting old values as live.
+* Expose WebSocket reconnecting/disconnected state without blanking valid data.
+* Establish shared freshness semantics across dashboard hooks and pages.
+* Keep user-facing errors concise and safe.
+* Re-test build, frontend behavior, and performance after the UX changes.
+
+### Next target
+
+**Phase 5.10 — Loading, Empty, Error & Stale-Data UX**
+
+---
+
+
+
 All notable changes to the **Cloud-Based Algorithmic Trading Engine** are documented in this file.
 
 The project follows a phased implementation roadmap covering:
