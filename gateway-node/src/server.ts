@@ -373,7 +373,8 @@ export function createGatewayServer(
   app.register(registerV1Routes, {
     statusProvider,
     marketProvider: options.marketProvider ?? liveTradingState,
-    orderBookProvider: options.orderBookProvider,
+    orderBookProvider:
+      options.orderBookProvider ?? createOrderBookProvider(engineEventClient),
     tradesProvider: options.tradesProvider ?? liveTradingState,
     analyticsProvider,
     engineProvider: options.engineProvider,
