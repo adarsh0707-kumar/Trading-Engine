@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest completed milestone:** Phase 5.6 — Order Book Visualization
+**Latest completed milestone:** Phase 5.8 — Portfolio, P&L & Risk Dashboard
 
-**Current milestone:** Phase 5.7 — Analytics Charts & Indicator Views
+**Current milestone:** Phase 5.9 — Engine, Analytics & System Status
 
 **Phase 4 overall status:** ✅ Complete
 
@@ -1345,7 +1345,7 @@ The live market/trades foundation is implemented on `main` through PRs #108 and 
 
 ## Phase 5.7 — Analytics Charts & Indicator Views
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Complete
 
 Render the analytics already calculated by Python. React remains presentation-only and does not recalculate indicators.
 
@@ -1398,20 +1398,20 @@ Charts
 
 ### Exit criteria
 
-- [ ] VWAP visible.
-- [ ] SMA visible.
-- [ ] EMA visible.
-- [ ] Volatility visible.
-- [ ] Initial analytics load works.
-- [ ] Live ANALYTICS_UPDATE works.
-- [ ] Missing-data states work.
-- [ ] React performs no duplicate analytics calculation.
+- [X] VWAP visible.
+- [X] SMA visible.
+- [X] EMA visible.
+- [X] Volatility visible.
+- [X] Initial analytics load works.
+- [X] Live ANALYTICS_UPDATE works.
+- [X] Missing-data states work.
+- [X] React performs no duplicate analytics calculation.
 
 ---
 
 ## Phase 5.8 — Portfolio, P&L & Risk Dashboard
 
-**Status:** ⏳ Planned
+**Status:** ✅ Complete
 
 Expose the portfolio/risk state already produced by Python analytics.
 
@@ -1461,13 +1461,13 @@ Display recent events with clear severity/state.
 
 ### Exit criteria
 
-- [ ] Portfolio metrics render.
-- [ ] P&L values render correctly.
-- [ ] Equity/drawdown state renders.
-- [ ] Risk status renders.
-- [ ] RISK_EVENT updates appear live.
-- [ ] Warning/breach states are visually distinguishable.
-- [ ] Missing risk data is handled safely.
+- [X] Portfolio metrics render.
+- [X] P&L values render correctly.
+- [X] Equity/drawdown state renders.
+- [X] Risk status renders.
+- [X] RISK_EVENT updates appear live.
+- [X] Warning/breach states are visually distinguishable.
+- [X] Missing risk data is handled safely.
 
 ---
 
@@ -1859,7 +1859,7 @@ Document:
 - [ ] Cleanup complete.
 - [ ] CI passes.
 
-**Phase 5 overall status:** ⏳ Planned until the implementation and exit checklist are completed.
+**Phase 5 overall status:** 🚧 In Progress — Phases 5.1–5.8 are complete; Phase 5.9 is next.
 
 ### Recommended Phase 5 commit sequence
 
@@ -2044,8 +2044,9 @@ Planned:
 | 5.4 | Dashboard Layout & Navigation | ✅ Complete |
 | 5.5 | Live Market Data & Recent Trades | ✅ Complete |
 | 5.6 | Order Book Visualization | ✅ Complete |
-| 5.7 | Analytics Charts & Indicator Views | ⏳ Planned |
-| 5.8–5.14 | Remaining Dashboard Hardening & Exit Work | ⏳ Planned |
+| 5.7 | Analytics Charts & Indicator Views | ✅ Complete |
+| 5.8 | Portfolio, P&L & Risk Dashboard | ✅ Complete |
+| 5.9–5.14 | Remaining Dashboard Hardening & Exit Work | ⏳ Planned |
 | 5 | React Dashboard | 🚧 In Progress |
 | 6 | Historical Analytics | ⏳ Planned |
 | 7 | Authentication & Security | ⏳ Planned |
