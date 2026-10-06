@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased]
+
+### Phase 5.6 — Order Book Dashboard — Complete
+
+- Completed the live order-book dashboard milestone on main through PR #116.
+- Added C++ Engine BOOK_SNAPSHOT request/response handling using the existing framed TCP protocol.
+- Added synchronized C++ order-book snapshot access with engine-state locking.
+- Added Gateway order-book request correlation, timeout handling, and live provider integration.
+- Added live GET /api/v1/orderbook delivery from the C++ Engine through the Gateway.
+- Added order-book validation for symbol, bid/ask arrays, finite positive prices, and safe positive quantities.
+- Added dashboard bid/ask visualization with best-level emphasis.
+- Synced Market Summary Best Bid, Best Ask, and Spread with the live order-book snapshot.
+- Made dashboard API and WebSocket access network-independent through same-origin routing and Docker/Nginx proxying.
+- Removed environment-specific Gateway URL build-time coupling from the dashboard container.
+- Validated the C++ suite at 15/15 tests, dashboard tests at 12/12, production build, and the five-service Docker runtime.
+
+Status: Complete
+
 All notable changes to the Cloud-Based Algorithmic Trading Engine are documented here.
 
 This project is an educational trading-infrastructure simulation. It does not connect to a real exchange or execute real financial transactions.
@@ -226,9 +244,9 @@ Status: Complete
 | Phase 4.7 — Error Handling, Resilience & Backpressure | ✅ Complete |
 | Phase 4.8 — Security Boundaries & Input Hardening | ✅ Complete |
 | Phase 4.9 — Operational Logging & Metrics | Complete |
-| Phase 4.10 — Testing & Integration Validation | 🚧 In Progress |
-| Phase 4.11 — Phase Integration & Exit Criteria | ⏳ Planned |
-| Phase 5 — React Dashboard | ⏳ Planned |
+| Phase 4.10 — Testing & Integration Validation | Complete |
+| Phase 4.11 — Phase Integration & Exit Criteria | Complete |
+| Phase 5 — React Dashboard | 🚧 In Progress |
 
 ## Versioning
 
