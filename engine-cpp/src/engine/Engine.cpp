@@ -3,6 +3,7 @@
 #include "serialization/JsonSerializer.hpp"
 #include "utils/Time.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstring>
 #include <iomanip>
