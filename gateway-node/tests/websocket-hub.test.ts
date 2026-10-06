@@ -53,6 +53,7 @@ const analyticsUpdate = {
     vwap: null,
     sma: null,
     ema: null,
+    volatility: null,
     position: 2,
     realizedPnl: 0,
     unrealizedPnl: 0.5,

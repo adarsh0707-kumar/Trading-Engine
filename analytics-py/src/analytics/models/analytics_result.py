@@ -26,6 +26,7 @@ class AnalyticsResult:
     peak_equity: Decimal
     drawdown: Decimal
     timestamp: datetime
+    volatility: Decimal | None = None
 
     def __post_init__(self) -> None:
         if not self.event_id:
@@ -56,6 +57,7 @@ class AnalyticsResult:
             "vwap",
             "sma",
             "ema",
+            "volatility",
             "realized_pnl",
             "unrealized_pnl",
             "equity",

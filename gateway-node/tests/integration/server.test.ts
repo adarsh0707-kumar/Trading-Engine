@@ -1,16 +1,53 @@
 import { describe, expect, test } from "bun:test";
+import { createServer } from "node:net";
+
 import { createGatewayServer } from "../../src/server.ts";
+
+async function getFreePort(): Promise<number> {
+  const server = createServer();
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    server.close();
+    throw new Error("server did not expose a TCP address");
+  }
+
+  const port = address.port;
+
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  });
+
+  return port;
+}
+
+function testEnvironment(port: number): Record<string, string | undefined> {
+  return {
+    ...process.env,
+    GATEWAY_HOST: "127.0.0.1",
+    GATEWAY_PORT: String(port),
+  };
+}
 
 describe("gateway server lifecycle", () => {
   test("starts and stops cleanly", async () => {
-    const gateway = createGatewayServer();
+    const gateway = createGatewayServer(
+      testEnvironment(await getFreePort()),
+    );
 
     await expect(gateway.start()).resolves.toBeUndefined();
     await expect(gateway.stop()).resolves.toBeUndefined();
   });
 
   test("start and stop are idempotent", async () => {
-    const gateway = createGatewayServer();
+    const gateway = createGatewayServer(
+      testEnvironment(await getFreePort()),
+    );
 
     await gateway.start();
     await gateway.start();
@@ -23,7 +60,7 @@ describe("gateway server lifecycle", () => {
 describe("gateway server CORS", () => {
   test("returns the configured CORS origin", async () => {
     const gateway = createGatewayServer({
-      ...process.env,
+      ...testEnvironment(await getFreePort()),
       CORS_ORIGIN: "http://localhost:3000",
     });
 
@@ -48,7 +85,7 @@ describe("gateway server CORS", () => {
 describe("gateway server metrics", () => {
   test("serves Prometheus metrics on the configured path", async () => {
     const gateway = createGatewayServer({
-      ...process.env,
+      ...testEnvironment(await getFreePort()),
       METRICS_ENABLED: "true",
       METRICS_PATH: "/custom-metrics",
     });
@@ -74,7 +111,7 @@ describe("gateway server metrics", () => {
 
   test("does not expose metrics when disabled", async () => {
     const gateway = createGatewayServer({
-      ...process.env,
+      ...testEnvironment(await getFreePort()),
       METRICS_ENABLED: "false",
       METRICS_PATH: "/metrics",
     });

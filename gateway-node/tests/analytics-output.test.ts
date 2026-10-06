@@ -54,6 +54,7 @@ function outputMessage(type: "ANALYTICS_UPDATE" | "RISK_EVENT") {
         vwap: "100.25",
         sma: "100.25",
         ema: "100.25",
+        volatility: "0.0125",
         position: 10,
         realized_pnl: "0",
         unrealized_pnl: "0",
@@ -95,6 +96,8 @@ describe("analytics output protocol", () => {
     if (message.type !== "ANALYTICS_UPDATE") throw new Error("Expected ANALYTICS_UPDATE");
     expect(message.payload.equity).toBe(10000);
     expect(message.payload.drawdown).toBe(0);
+    expect(message.payload.vwap).toBe(100.25);
+    expect(message.payload.volatility).toBe(0.0125);
   });
 
   test("normalizes risk events", () => {
@@ -163,6 +166,14 @@ describe("analytics output protocol", () => {
     );
 
     expect(provider.getAnalytics()).toEqual({
+      symbol: "SIM",
+      price: 100.25,
+      vwap: 100.25,
+      sma: 100.25,
+      ema: 100.25,
+      volatility: 0.0125,
+      position: 10,
+      peakEquity: 10000,
       equity: 10000,
       realizedPnl: 0,
       unrealizedPnl: 0,

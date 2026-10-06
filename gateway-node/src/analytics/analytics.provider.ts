@@ -31,7 +31,15 @@ export function createAnalyticsProvider(): MutableAnalyticsProvider {
 
     updateAnalytics(message): void {
       snapshot = {
+        symbol: message.payload.symbol,
+        price: message.payload.price,
+        vwap: message.payload.vwap,
+        sma: message.payload.sma,
+        ema: message.payload.ema,
+        volatility: message.payload.volatility,
+        position: message.payload.position,
         equity: message.payload.equity,
+        peakEquity: message.payload.peakEquity,
         realizedPnl: message.payload.realizedPnl,
         unrealizedPnl: message.payload.unrealizedPnl,
         drawdown: message.payload.drawdown,

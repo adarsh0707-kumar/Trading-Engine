@@ -1345,9 +1345,9 @@ The live market/trades foundation is implemented on `main` through PRs #108 and 
 
 ## Phase 5.7 — Analytics Charts & Indicator Views
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress
 
-Render the analytics already calculated by Python.
+Render the analytics already calculated by Python. React remains presentation-only and does not recalculate indicators.
 
 ### Required analytics
 
@@ -1358,10 +1358,15 @@ EMA
 Volatility
 ```
 
+Python remains the source of truth for all four indicators. Phase 5.7 adds server-calculated rolling volatility to the existing analytics output contract.
+
 ### Requirements
 
-- Consume /api/v1/analytics for initial state.
-- Consume ANALYTICS_UPDATE for live updates.
+- Consume `/api/v1/analytics` for the latest initial snapshot.
+- Consume `ANALYTICS_UPDATE` for live indicator updates.
+- Subscribe to `RISK_EVENT` so the view reflects the latest risk state.
+- Keep a bounded 120-point browser history for live chart rendering.
+- Preserve nullable indicator values until Python has enough observations.
 - Preserve server-provided numeric precision.
 - Display the source timestamp.
 - Do not recalculate analytics in React.

@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Dict, List
 
 from analytics.config.risk_limits import RiskLimitConfig
-from analytics.indicators import calculate_ema, calculate_sma, calculate_vwap
+from analytics.indicators import calculate_ema, calculate_sma, calculate_vwap, calculate_volatility
 from analytics.models import AnalyticsResult, ProcessedTrade, Trade
 from analytics.risk import (
     RiskEventGenerator,
@@ -38,6 +38,7 @@ class StreamingProcessor:
         *,
         sma_period: int = 5,
         ema_period: int = 5,
+        volatility_period: int = 5,
         initial_equity: Decimal = Decimal("10000"),
         risk_limits: RiskLimitConfig | None = None,
     ) -> None:
@@ -46,6 +47,9 @@ class StreamingProcessor:
 
         if ema_period <= 0:
             raise ValueError("ema_period must be positive")
+
+        if volatility_period <= 0:
+            raise ValueError("volatility_period must be positive")
 
         if initial_equity < 0:
             raise ValueError("initial_equity must not be negative")
@@ -58,6 +62,7 @@ class StreamingProcessor:
 
         self._sma_period = sma_period
         self._ema_period = ema_period
+        self._volatility_period = volatility_period
         self._initial_equity = initial_equity
         self._risk_limits = risk_limits
         self._symbols: Dict[str, _SymbolState] = {}
@@ -118,6 +123,11 @@ class StreamingProcessor:
             self._ema_period,
         )
 
+        volatility = calculate_volatility(
+            state.prices,
+            self._volatility_period,
+        )
+
         risk = state.risk_manager.process_trade(
             quantity=trade.quantity,
             price=trade.price,
@@ -134,6 +144,7 @@ class StreamingProcessor:
             vwap=vwap,
             sma=sma,
             ema=ema,
+            volatility=volatility,
             position=risk.position,
             realized_pnl=risk.realized_pnl,
             unrealized_pnl=risk.unrealized_pnl,

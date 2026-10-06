@@ -9,7 +9,7 @@ CREATE INDEX IF NOT EXISTS idx_trades_symbol_timestamp ON trades(symbol, timesta
 CREATE TABLE IF NOT EXISTS analytics_results (
     event_id TEXT PRIMARY KEY, event_type TEXT NOT NULL, symbol TEXT NOT NULL,
     price NUMERIC(30,10) NOT NULL, vwap NUMERIC(30,10), sma NUMERIC(30,10),
-    ema NUMERIC(30,10), position BIGINT NOT NULL, realized_pnl NUMERIC(30,10) NOT NULL,
+    ema NUMERIC(30,10), volatility NUMERIC(30,10), position BIGINT NOT NULL, realized_pnl NUMERIC(30,10) NOT NULL,
     unrealized_pnl NUMERIC(30,10) NOT NULL, equity NUMERIC(30,10) NOT NULL,
     peak_equity NUMERIC(30,10) NOT NULL, drawdown NUMERIC(30,10) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL

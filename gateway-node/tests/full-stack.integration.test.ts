@@ -32,6 +32,7 @@ const ANALYTICS_UPDATE = {
     vwap: 100,
     sma: null,
     ema: null,
+    volatility: null,
     position: 2,
     realized_pnl: 0,
     unrealized_pnl: 0,

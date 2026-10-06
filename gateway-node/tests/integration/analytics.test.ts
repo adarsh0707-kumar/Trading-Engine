@@ -41,7 +41,15 @@ describe("GET /api/v1/analytics", () => {
   test("returns the analytics snapshot from the injected provider", async () => {
     const analyticsProvider: AnalyticsProvider = {
       getAnalytics: () => ({
+        symbol: "SIM",
+        price: 100.25,
+        vwap: 100.2,
+        sma: 100.1,
+        ema: 100.15,
+        volatility: 0.0125,
+        position: 5,
         equity: 10500,
+        peakEquity: 10600,
         realizedPnl: 250,
         unrealizedPnl: 125,
         drawdown: 75,
@@ -65,7 +73,15 @@ describe("GET /api/v1/analytics", () => {
 
     expect(body).toEqual({
       data: {
+        symbol: "SIM",
+        price: 100.25,
+        vwap: 100.2,
+        sma: 100.1,
+        ema: 100.15,
+        volatility: 0.0125,
+        position: 5,
         equity: 10500,
+        peakEquity: 10600,
         realizedPnl: 250,
         unrealizedPnl: 125,
         drawdown: 75,
