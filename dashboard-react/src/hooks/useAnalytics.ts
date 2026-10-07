@@ -28,10 +28,7 @@ function isFiniteNumber(value: unknown): value is number {
 }
 
 function normalizeSnapshot(snapshot: AnalyticsSnapshot): AnalyticsHistoryPoint {
-  return {
-    ...snapshot,
-    eventId: `snapshot-${snapshot.timestamp}`,
-  };
+  return { ...snapshot, eventId: "snapshot-" + snapshot.timestamp };
 }
 
 function normalizeAnalyticsEvent(
@@ -77,18 +74,20 @@ export function useAnalytics(): AnalyticsData {
   const [websocketState, setWebsocketState] = useState<GatewayWebSocketState>("idle");
   const seenEventIds = useRef(new Set<string>());
   const riskStatus = useRef<RiskStatus>("ok");
+  const hasData = useRef(false);
 
   const refresh = useCallback(async (): Promise<void> => {
-    setState("loading");
+    if (!hasData.current) setState("loading");
     setError(null);
     try {
       const snapshot = await api.getAnalytics();
       const point = normalizeSnapshot(snapshot);
+      hasData.current = true;
       setLatest(snapshot);
       setHistory((current) => current.length === 0 ? [point] : current);
       setState("ready");
     } catch (reason) {
-      setState("error");
+      setState(hasData.current ? "ready" : "error");
       setError(errorMessage(reason));
     }
   }, [api]);
@@ -117,6 +116,7 @@ export function useAnalytics(): AnalyticsData {
           return;
         }
 
+        hasData.current = true;
         seenEventIds.current.add(event.eventId);
         setLatest(point);
         setHistory((current) => [...current, point].slice(-MAX_ANALYTICS_POINTS));
