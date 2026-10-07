@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createGatewayApiClient } from "../services/api";
-import {
-  createGatewayWebSocketClient,
-  type GatewayWebSocketEvent,
-} from "../services/websocket";
+import { createGatewayWebSocketClient, type GatewayWebSocketEvent } from "../services/websocket";
 import type { GatewayWebSocketState } from "../types/websocket";
 import type { MarketSnapshot, Trade } from "../types";
 
@@ -47,10 +44,12 @@ export function useLiveTradingData(): LiveTradingData {
   const [tradesError, setTradesError] = useState<string | null>(null);
   const [websocketState, setWebsocketState] = useState<GatewayWebSocketState>("idle");
   const seenTradeIds = useRef(new Set<string>());
+  const hasMarketData = useRef(false);
+  const hasTradeData = useRef(false);
 
   const loadSnapshots = async (): Promise<void> => {
-    setMarketState("loading");
-    setTradesState("loading");
+    if (!hasMarketData.current) setMarketState("loading");
+    if (!hasTradeData.current) setTradesState("loading");
     setMarketError(null);
     setTradesError(null);
 
@@ -60,20 +59,22 @@ export function useLiveTradingData(): LiveTradingData {
     ]);
 
     if (marketResult.status === "fulfilled") {
+      hasMarketData.current = true;
       setMarket(marketResult.value);
       setMarketState("ready");
     } else {
-      setMarketState("error");
+      setMarketState(hasMarketData.current ? "ready" : "error");
       setMarketError(errorMessage(marketResult.reason));
     }
 
     if (tradesResult.status === "fulfilled") {
       const nextTrades = tradesResult.value.trades.slice(0, MAX_RECENT_TRADES);
+      hasTradeData.current = nextTrades.length > 0;
       seenTradeIds.current = new Set(nextTrades.map((trade) => trade.tradeId));
       setTrades(nextTrades);
       setTradesState("ready");
     } else {
-      setTradesState("error");
+      setTradesState(hasTradeData.current ? "ready" : "error");
       setTradesError(errorMessage(tradesResult.reason));
     }
   };
@@ -92,6 +93,8 @@ export function useLiveTradingData(): LiveTradingData {
         if (seenTradeIds.current.has(trade.tradeId)) return;
 
         seenTradeIds.current.add(trade.tradeId);
+        hasTradeData.current = true;
+        hasMarketData.current = true;
         setTrades((current) => [trade, ...current].slice(0, MAX_RECENT_TRADES));
         setTradesState("ready");
         setTradesError(null);
