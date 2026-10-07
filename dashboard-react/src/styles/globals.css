@@ -1197,3 +1197,19 @@ a:focus-visible {
 .system-inline-error{margin-bottom:18px}
 @media(max-width:900px){.system-layout{grid-template-columns:1fr}.system-service-grid{grid-template-columns:1fr}}
 @media(max-width:600px){.system-stat-grid{grid-template-columns:1fr}.system-dependency-list>div{align-items:flex-start;flex-direction:column}.system-footer{align-items:flex-start;flex-direction:column}}
+
+
+/* Phase 5.10 — shared freshness and transient-error presentation. */
+.freshness-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;color:var(--chocolate);font-size:.7rem}
+.freshness-indicator{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--chocolate);border-radius:var(--radius-pill);padding:5px 9px;font-size:.64rem;font-weight:850;letter-spacing:.06em}
+.freshness-dot{width:7px;height:7px;border-radius:50%;background:var(--orange);display:inline-block}
+.freshness-indicator-fresh{border-color:var(--orange);color:var(--orange)}
+.freshness-indicator-stale{background:var(--orange);border-color:var(--chocolate);color:var(--chocolate)}
+.freshness-indicator-stale .freshness-dot{background:var(--chocolate)}
+.freshness-indicator-unknown{opacity:.7}
+.trades-freshness{display:flex;align-items:center;gap:12px;padding:0 0 12px;color:var(--chocolate);font-size:.7rem}
+.trades-inline-warning{overflow-wrap:anywhere}
+.market-inline-error{grid-column:1/-1;margin-top:8px;padding:10px 12px}
+.orderbook .state-error{margin:12px 0}
+.orderbook-updated{display:flex;align-items:center;gap:10px}
+@media(max-width:600px){.freshness-bar,.trades-freshness,.orderbook-updated{align-items:flex-start;flex-direction:column}.freshness-bar{gap:8px}}

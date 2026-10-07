@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createGatewayApiClient } from "../services/api";
-import {
-  createGatewayWebSocketClient,
-  type GatewayWebSocketEvent,
-} from "../services/websocket";
+import { createGatewayWebSocketClient, type GatewayWebSocketEvent } from "../services/websocket";
 import type { GatewayWebSocketState } from "../types/websocket";
 import type { MarketSnapshot, Trade } from "../types";
 
@@ -23,18 +20,8 @@ export interface LiveTradingData {
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Gateway request failed";
 }
-
 function tradeFromEvent(event: Extract<GatewayWebSocketEvent, { type: "TRADE" }>): Trade {
-  return {
-    tradeId: event.eventId,
-    symbol: event.payload.symbol,
-    price: event.payload.price,
-    quantity: event.payload.quantity,
-    takerSide: event.payload.takerSide.toLowerCase(),
-    timestamp: event.timestamp,
-    buyOrderId: event.payload.buyOrderId,
-    sellOrderId: event.payload.sellOrderId,
-  };
+  return { tradeId: event.eventId, symbol: event.payload.symbol, price: event.payload.price, quantity: event.payload.quantity, takerSide: event.payload.takerSide.toLowerCase(), timestamp: event.timestamp, buyOrderId: event.payload.buyOrderId, sellOrderId: event.payload.sellOrderId };
 }
 
 export function useLiveTradingData(): LiveTradingData {
@@ -47,83 +34,61 @@ export function useLiveTradingData(): LiveTradingData {
   const [tradesError, setTradesError] = useState<string | null>(null);
   const [websocketState, setWebsocketState] = useState<GatewayWebSocketState>("idle");
   const seenTradeIds = useRef(new Set<string>());
+  const hasMarketData = useRef(false);
+  const hasTradeData = useRef(false);
 
   const loadSnapshots = async (): Promise<void> => {
     setMarketState("loading");
     setTradesState("loading");
     setMarketError(null);
     setTradesError(null);
-
-    const [marketResult, tradesResult] = await Promise.allSettled([
-      api.getMarket(),
-      api.getTrades(),
-    ]);
+    const [marketResult, tradesResult] = await Promise.allSettled([api.getMarket(), api.getTrades()]);
 
     if (marketResult.status === "fulfilled") {
+      hasMarketData.current = true;
       setMarket(marketResult.value);
       setMarketState("ready");
     } else {
-      setMarketState("error");
+      setMarketState(hasMarketData.current ? "ready" : "error");
       setMarketError(errorMessage(marketResult.reason));
     }
 
     if (tradesResult.status === "fulfilled") {
       const nextTrades = tradesResult.value.trades.slice(0, MAX_RECENT_TRADES);
+      hasTradeData.current = nextTrades.length > 0 || hasTradeData.current;
       seenTradeIds.current = new Set(nextTrades.map((trade) => trade.tradeId));
       setTrades(nextTrades);
       setTradesState("ready");
     } else {
-      setTradesState("error");
+      setTradesState(hasTradeData.current ? "ready" : "error");
       setTradesError(errorMessage(tradesResult.reason));
     }
   };
 
   useEffect(() => {
     let active = true;
-
     const client = createGatewayWebSocketClient({
-      onStateChange: (state) => {
-        if (active) setWebsocketState(state);
-      },
+      onStateChange: (state) => { if (active) setWebsocketState(state); },
       onEvent: (event) => {
         if (!active || event.type !== "TRADE") return;
-
         const trade = tradeFromEvent(event);
         if (seenTradeIds.current.has(trade.tradeId)) return;
-
         seenTradeIds.current.add(trade.tradeId);
+        hasTradeData.current = true;
+        hasMarketData.current = true;
         setTrades((current) => [trade, ...current].slice(0, MAX_RECENT_TRADES));
         setTradesState("ready");
         setTradesError(null);
-        setMarket({
-          symbol: trade.symbol,
-          lastPrice: trade.price,
-          lastQuantity: trade.quantity,
-          timestamp: trade.timestamp,
-        });
+        setMarket({ symbol: trade.symbol, lastPrice: trade.price, lastQuantity: trade.quantity, timestamp: trade.timestamp });
         setMarketState("ready");
         setMarketError(null);
       },
     });
-
     void loadSnapshots();
     client.subscribe(["TRADE"]);
     client.connect();
-
-    return () => {
-      active = false;
-      client.disconnect();
-    };
+    return () => { active = false; client.disconnect(); };
   }, [api]);
 
-  return {
-    market,
-    trades,
-    marketState,
-    tradesState,
-    marketError,
-    tradesError,
-    websocketState,
-    refresh: loadSnapshots,
-  };
+  return { market, trades, marketState, tradesState, marketError, tradesError, websocketState, refresh: loadSnapshots };
 }

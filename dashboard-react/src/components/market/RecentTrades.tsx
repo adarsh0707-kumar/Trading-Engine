@@ -1,16 +1,15 @@
 import type { Trade } from "../../types";
+import FreshnessIndicator from "../common/FreshnessIndicator";
 
 interface RecentTradesProps {
   readonly trades: readonly Trade[];
   readonly state: "loading" | "ready" | "error";
   readonly error: string | null;
+  readonly connected?: boolean;
 }
 
 function formatPrice(value: number): string {
-  return new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 8,
-  }).format(value);
+  return new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 8 }).format(value);
 }
 
 function formatTime(value: string): string {
@@ -18,53 +17,28 @@ function formatTime(value: string): string {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleTimeString();
 }
 
-export default function RecentTrades({ trades, state, error }: RecentTradesProps) {
-  if (state === "loading") {
-    return <div className="state-message">Loading recent trades…</div>;
-  }
-
+export default function RecentTrades({ trades, state, error, connected = true }: RecentTradesProps) {
+  if (state === "loading" && trades.length === 0) return <div className="state-message">Loading recent trades…</div>;
   if (state === "error" && trades.length === 0) {
-    return (
-      <div className="state-message state-error">
-        Trades unavailable{error ? " — " + error : ""}
-      </div>
-    );
+    return <div className="state-message state-error">Trades unavailable{error ? " — " + error : ""}</div>;
   }
-
-  if (trades.length === 0) {
-    return <div className="state-message">No trades available yet.</div>;
-  }
+  if (trades.length === 0) return <div className="state-message">No trades available yet.</div>;
 
   return (
     <div className="trades-table-wrap">
+      <div className="trades-freshness">
+        <FreshnessIndicator updatedAt={trades[0]?.timestamp} connected={connected} label="Trade stream" />
+        {state === "error" && error !== null && <span className="trades-inline-warning" role="status">{error}</span>}
+      </div>
       <table className="trades-table">
-        <thead>
-          <tr>
-            <th>Time</th>
-            <th>Symbol</th>
-            <th>Side</th>
-            <th>Price</th>
-            <th>Quantity</th>
-            <th>Trade ID</th>
-            <th>Buy Order</th>
-            <th>Sell Order</th>
-          </tr>
-        </thead>
+        <thead><tr><th>Time</th><th>Symbol</th><th>Side</th><th>Price</th><th>Quantity</th><th>Trade ID</th><th>Buy Order</th><th>Sell Order</th></tr></thead>
         <tbody>
           {trades.map((trade) => (
             <tr key={trade.tradeId}>
-              <td>{formatTime(trade.timestamp)}</td>
-              <td>{trade.symbol}</td>
-              <td>
-                <span className={"trade-side trade-side-" + trade.takerSide.toLowerCase()}>
-                  {trade.takerSide.toUpperCase()}
-                </span>
-              </td>
-              <td>{formatPrice(trade.price)}</td>
-              <td>{formatPrice(trade.quantity)}</td>
-              <td className="trade-id">{trade.tradeId}</td>
-              <td className="trade-id">{trade.buyOrderId ?? "—"}</td>
-              <td className="trade-id">{trade.sellOrderId ?? "—"}</td>
+              <td>{formatTime(trade.timestamp)}</td><td>{trade.symbol}</td>
+              <td><span className={"trade-side trade-side-" + trade.takerSide.toLowerCase()}>{trade.takerSide.toUpperCase()}</span></td>
+              <td>{formatPrice(trade.price)}</td><td>{formatPrice(trade.quantity)}</td>
+              <td className="trade-id">{trade.tradeId}</td><td className="trade-id">{trade.buyOrderId ?? "—"}</td><td className="trade-id">{trade.sellOrderId ?? "—"}</td>
             </tr>
           ))}
         </tbody>
