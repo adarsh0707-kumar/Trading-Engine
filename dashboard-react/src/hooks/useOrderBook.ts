@@ -23,9 +23,8 @@ export function useOrderBook(): UseOrderBookResult {
   const hasData = useRef(false);
 
   const refresh = useCallback(async (): Promise<void> => {
-    if (!hasData.current) setState("loading");
+    setState("loading");
     setError(null);
-
     try {
       const snapshot = await api.getOrderBook();
       hasData.current = true;
@@ -37,9 +36,6 @@ export function useOrderBook(): UseOrderBookResult {
     }
   }, [api]);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
+  useEffect(() => { void refresh(); }, [refresh]);
   return { orderBook, state, error, refresh };
 }
