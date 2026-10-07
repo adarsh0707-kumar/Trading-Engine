@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createGatewayApiClient } from "../services/api";
 import type { OrderBook } from "../types";
 
@@ -20,20 +20,22 @@ export function useOrderBook(): UseOrderBookResult {
   const [orderBook, setOrderBook] = useState<OrderBook | null>(null);
   const [state, setState] = useState<OrderBookState>("loading");
   const [error, setError] = useState<string | null>(null);
+  const hasData = useRef(false);
 
   const refresh = useCallback(async (): Promise<void> => {
-    if (orderBook === null) setState("loading");
+    if (!hasData.current) setState("loading");
     setError(null);
 
     try {
       const snapshot = await api.getOrderBook();
+      hasData.current = true;
       setOrderBook(snapshot);
       setState("ready");
     } catch (reason) {
-      setState((current) => orderBook === null ? "error" : current === "loading" ? "ready" : current);
+      setState(hasData.current ? "ready" : "error");
       setError(errorMessage(reason));
     }
-  }, [api, orderBook]);
+  }, [api]);
 
   useEffect(() => {
     void refresh();
