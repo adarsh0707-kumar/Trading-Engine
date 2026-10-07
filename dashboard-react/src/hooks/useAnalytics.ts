@@ -6,10 +6,7 @@ import type { AnalyticsPoint, AnalyticsSnapshot, RiskStatus } from "../types/ana
 
 const MAX_ANALYTICS_POINTS = 120;
 
-export interface AnalyticsHistoryPoint extends AnalyticsPoint {
-  readonly eventId: string;
-}
-
+export interface AnalyticsHistoryPoint extends AnalyticsPoint { readonly eventId: string; }
 export interface AnalyticsData {
   readonly latest: AnalyticsSnapshot | null;
   readonly history: readonly AnalyticsHistoryPoint[];
@@ -18,51 +15,18 @@ export interface AnalyticsData {
   readonly websocketState: GatewayWebSocketState;
   readonly refresh: () => Promise<void>;
 }
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Gateway request failed";
-}
-
-function isFiniteNumber(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value);
-}
-
-function normalizeSnapshot(snapshot: AnalyticsSnapshot): AnalyticsHistoryPoint {
-  return { ...snapshot, eventId: "snapshot-" + snapshot.timestamp };
-}
-
-function normalizeAnalyticsEvent(
-  event: Extract<GatewayWebSocketEvent, { type: "ANALYTICS_UPDATE" }>,
-  riskStatus: RiskStatus,
-): AnalyticsHistoryPoint | null {
+function errorMessage(error: unknown): string { return error instanceof Error ? error.message : "Gateway request failed"; }
+function isFiniteNumber(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value); }
+function normalizeSnapshot(snapshot: AnalyticsSnapshot): AnalyticsHistoryPoint { return { ...snapshot, eventId: "snapshot-" + snapshot.timestamp }; }
+function normalizeAnalyticsEvent(event: Extract<GatewayWebSocketEvent, { type: "ANALYTICS_UPDATE" }>, riskStatus: RiskStatus): AnalyticsHistoryPoint | null {
   const p = event.payload;
-  const numericValues = [
-    p.price, p.position, p.realizedPnl, p.unrealizedPnl,
-    p.equity, p.peakEquity, p.drawdown,
-  ];
+  const numericValues = [p.price, p.position, p.realizedPnl, p.unrealizedPnl, p.equity, p.peakEquity, p.drawdown];
   if (typeof p.symbol !== "string" || !numericValues.every(isFiniteNumber)) return null;
   if (p.vwap !== null && !isFiniteNumber(p.vwap)) return null;
   if (p.sma !== null && !isFiniteNumber(p.sma)) return null;
   if (p.ema !== null && !isFiniteNumber(p.ema)) return null;
   if (p.volatility !== null && !isFiniteNumber(p.volatility)) return null;
-
-  return {
-    symbol: p.symbol,
-    price: p.price,
-    vwap: p.vwap,
-    sma: p.sma,
-    ema: p.ema,
-    volatility: p.volatility,
-    position: p.position,
-    realizedPnl: p.realizedPnl,
-    unrealizedPnl: p.unrealizedPnl,
-    equity: p.equity,
-    peakEquity: p.peakEquity,
-    drawdown: p.drawdown,
-    riskStatus,
-    timestamp: event.timestamp,
-    eventId: event.eventId,
-  };
+  return { symbol: p.symbol, price: p.price, vwap: p.vwap, sma: p.sma, ema: p.ema, volatility: p.volatility, position: p.position, realizedPnl: p.realizedPnl, unrealizedPnl: p.unrealizedPnl, equity: p.equity, peakEquity: p.peakEquity, drawdown: p.drawdown, riskStatus, timestamp: event.timestamp, eventId: event.eventId };
 }
 
 export function useAnalytics(): AnalyticsData {
@@ -77,7 +41,7 @@ export function useAnalytics(): AnalyticsData {
   const hasData = useRef(false);
 
   const refresh = useCallback(async (): Promise<void> => {
-    if (!hasData.current) setState("loading");
+    setState("loading");
     setError(null);
     try {
       const snapshot = await api.getAnalytics();
@@ -98,24 +62,14 @@ export function useAnalytics(): AnalyticsData {
       onStateChange: (nextState) => { if (active) setWebsocketState(nextState); },
       onEvent: (event) => {
         if (!active) return;
-
         if (event.type === "RISK_EVENT") {
           riskStatus.current = event.payload.status;
-          setLatest((current) => current === null ? null : {
-            ...current,
-            riskStatus: riskStatus.current,
-            timestamp: event.timestamp,
-          });
+          setLatest((current) => current === null ? null : { ...current, riskStatus: riskStatus.current, timestamp: event.timestamp });
           return;
         }
-
         if (event.type !== "ANALYTICS_UPDATE" || seenEventIds.current.has(event.eventId)) return;
         const point = normalizeAnalyticsEvent(event, riskStatus.current);
-        if (point === null) {
-          setError("Gateway sent an invalid analytics update");
-          return;
-        }
-
+        if (point === null) { setError("Gateway sent an invalid analytics update"); return; }
         hasData.current = true;
         seenEventIds.current.add(event.eventId);
         setLatest(point);
@@ -124,15 +78,10 @@ export function useAnalytics(): AnalyticsData {
         setError(null);
       },
     });
-
     void refresh();
     client.subscribe(["ANALYTICS_UPDATE", "RISK_EVENT"]);
     client.connect();
-
-    return () => {
-      active = false;
-      client.disconnect();
-    };
+    return () => { active = false; client.disconnect(); };
   }, [refresh]);
 
   return { latest, history, state, error, websocketState, refresh };
