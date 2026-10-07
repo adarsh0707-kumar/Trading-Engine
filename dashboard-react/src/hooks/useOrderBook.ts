@@ -22,7 +22,7 @@ export function useOrderBook(): UseOrderBookResult {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async (): Promise<void> => {
-    setState("loading");
+    if (orderBook === null) setState("loading");
     setError(null);
 
     try {
@@ -30,10 +30,10 @@ export function useOrderBook(): UseOrderBookResult {
       setOrderBook(snapshot);
       setState("ready");
     } catch (reason) {
-      setState("error");
+      setState((current) => orderBook === null ? "error" : current === "loading" ? "ready" : current);
       setError(errorMessage(reason));
     }
-  }, [api]);
+  }, [api, orderBook]);
 
   useEffect(() => {
     void refresh();
