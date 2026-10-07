@@ -64,7 +64,7 @@ export function useAnalytics(): AnalyticsData {
         if (!active) return;
         if (event.type === "RISK_EVENT") {
           riskStatus.current = event.payload.status;
-          setLatest((current) => current === null ? null : { ...current, riskStatus: riskStatus.current, timestamp: event.timestamp });
+          setLatest((current) => current === null ? null : { ...current, riskStatus: riskStatus.current });
           return;
         }
         if (event.type !== "ANALYTICS_UPDATE" || seenEventIds.current.has(event.eventId)) return;
