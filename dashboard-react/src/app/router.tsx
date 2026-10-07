@@ -1,11 +1,14 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import DashboardLayout from "../components/layout/DashboardLayout";
-import Analytics from "../pages/Analytics";
-import Dashboard from "../pages/Dashboard";
-import Markets from "../pages/Markets";
-import Risk from "../pages/Risk";
-import System from "../pages/System";
-import Trades from "../pages/Trades";
+import Loading from "../components/common/Loading";
+
+const Analytics = lazy(() => import("../pages/Analytics"));
+const Dashboard = lazy(() => import("../pages/Dashboard"));
+const Markets = lazy(() => import("../pages/Markets"));
+const Risk = lazy(() => import("../pages/Risk"));
+const System = lazy(() => import("../pages/System"));
+const Trades = lazy(() => import("../pages/Trades"));
 
 export const dashboardRoutes = [
   { path: "/dashboard", label: "Dashboard" },
@@ -18,18 +21,20 @@ export const dashboardRoutes = [
 
 export default function AppRouter() {
   return (
-    <Routes>
-      <Route element={<DashboardLayout />}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/markets" element={<Markets />} />
-        <Route path="/trades" element={<Trades />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/risk" element={<Risk />} />
-        <Route path="/system" element={<System />} />
-      </Route>
+    <Suspense fallback={<div className="page-content"><Loading /></div>}>
+      <Routes>
+        <Route element={<DashboardLayout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/markets" element={<Markets />} />
+          <Route path="/trades" element={<Trades />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/risk" element={<Risk />} />
+          <Route path="/system" element={<System />} />
+        </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
