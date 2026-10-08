@@ -1,871 +1,406 @@
 # Cloud-Based Algorithmic Trading Engine
 
-A production-style, polyglot trading simulation platform designed to demonstrate how modern algorithmic trading infrastructure can be structured across high-performance systems, analytics, APIs, real-time communication, and visualization.
+A polyglot trading **simulation platform** built from the socket layer up: a C++ matching engine, Python analytics service, Bun/Fastify gateway, PostgreSQL persistence, and a React dashboard.
 
-> **Project status:** Active development
-> **Current milestone:** Phase 5 — React Dashboard (Phase 5.9 complete; Phase 5.10 in progress)
+The project focuses on the engineering problems behind real-time trading infrastructure — order-book correctness, price-time matching, framed TCP protocols, service boundaries, backpressure, resilience, observability, and live browser updates.
 
+> **Status:** Active development  
+> **Current focus:** Phase 5 dashboard production hardening and final validation  
+> **Important:** This is a simulation. It does not connect to an exchange or execute real financial trades.
 
-## Table of Contents
-
-- [Overview](#overview)
-- [Goals](#goals)
-- [Architecture](#architecture)
-- [Data Flow](#data-flow)
-- [Services](#services)
-- [Technology Stack](#technology-stack)
-- [Repository Structure](#repository-structure)
-- [Core Trading Concepts](#core-trading-concepts)
-- [Order Book](#order-book)
-- [Matching Engine](#matching-engine)
-- [Analytics Engine](#analytics-engine)
-- [Communication](#communication)
-- [API Reference](#api-reference)
-- [WebSocket Events](#websocket-events)
-- [Configuration](#configuration)
-- [Getting Started](#getting-started)
-- [Docker](#docker)
-- [Testing](#testing)
-- [Performance](#performance)
-- [Observability](#observability)
-- [Security](#security)
-- [Architecture Decisions](#architecture-decisions)
-- [Roadmap](#roadmap)
-- [Future Improvements](#future-improvements)
-- [Limitations](#limitations)
-- [Project Value](#project-value)
-- [Contributing](#contributing)
-- [License](#license)
-- [Author](#author)
-
----
-
-## Overview
-
-The **Cloud-Based Algorithmic Trading Engine** is a distributed trading simulation platform that models the major components found in modern electronic trading systems.
-
-The system generates simulated market data, maintains an order book, matches buy and sell orders using price-time priority, produces trade events, calculates financial analytics, exposes REST APIs and WebSockets, and presents the results through a real-time React dashboard.
-
-The platform follows a polyglot architecture:
+## Architecture
 
 ```text
-┌───────────────────────┐
-│   Simulated Market    │
-│        Data           │
-└───────────┬───────────┘
-            │
-            ▼
-┌───────────────────────┐
-│     C++ Trading       │
-│        Engine         │
-│                       │
-│ • Market Simulation   │
-│ • Order Book          │
-│ • Matching Engine     │
-│ • Trade Generation    │
-└───────────┬───────────┘
-            │ TCP / Unix Socket
-            ▼
-┌───────────────────────┐
-│   Python Analytics    │
-│                       │
-│ • VWAP                │
-│ • SMA / EMA           │
-│ • PnL                 │
-│ • Exposure            │
-│ • Drawdown            │
-└───────────┬───────────┘
-            │ IPC / API
-            ▼
-┌───────────────────────┐
-│    Node.js Gateway    │
-│                       │
-│ • REST API            │
-│ • WebSocket           │
-│ • Routing             │
-│ • Rate Limiting       │
-│ • Middleware          │
-└───────────┬───────────┘
-            │ HTTP / WebSocket
-            ▼
-┌───────────────────────┐
-│    React Dashboard    │
-│                       │
-│ • Charts              │
-│ • Order Book          │
-│ • Trades              │
-│ • Metrics              │
-│ • Engine Controls     │
-└───────────────────────┘
+                    Simulated Market
+                           │
+                           ▼
+              ┌────────────────────────┐
+              │    C++ Trading Engine   │
+              │                        │
+              │ Order Book             │
+              │ Price-Time Matching    │
+              │ Trade Generation       │
+              │ TCP Transport          │
+              └───────────┬────────────┘
+                          │
+                   framed TCP events
+                          │
+                          ▼
+              ┌────────────────────────┐
+              │    Python Analytics    │
+              │                        │
+              │ Indicators             │
+              │ Portfolio / P&L        │
+              │ Risk / Drawdown        │
+              │ PostgreSQL Persistence │
+              └───────────┬────────────┘
+                          │
+                    analytics state
+                          │
+                          ▼
+              ┌────────────────────────┐
+              │    Bun + Fastify       │
+              │       Gateway          │
+              │                        │
+              │ REST API               │
+              │ WebSocket              │
+              │ Validation             │
+              │ Rate Limiting          │
+              │ Health / Metrics       │
+              └───────────┬────────────┘
+                          │
+                    HTTP / WebSocket
+                          │
+                          ▼
+              ┌────────────────────────┐
+              │     React Dashboard    │
+              │                        │
+              │ Market State           │
+              │ Order Book             │
+              │ Recent Trades          │
+              │ Analytics / Risk       │
+              │ System Status          │
+              └────────────────────────┘
 ```
 
----
-
-## Goals
-
-### Primary Goals
-
-- Build a realistic trading-engine simulation.
-- Demonstrate high-performance C++ systems programming.
-- Demonstrate Python-based quantitative analytics.
-- Demonstrate TypeScript/Node.js API development.
-- Demonstrate React real-time visualization.
-- Implement deterministic order matching.
-- Support real-time market and trade events.
-- Provide a modular service-oriented architecture.
-- Containerize the complete platform.
-- Provide automated testing and CI/CD.
-- Create a portfolio-quality engineering project.
-
-### Non-Goals
-
-This project is not intended to:
-
-- Execute real financial trades.
-- Connect to a real stock exchange.
-- Handle real customer money.
-- Provide financial advice.
-- Replace a production exchange matching engine.
-
----
-
-# Architecture
-
-The platform uses separate services so each component can be developed, tested, benchmarked, and optimized independently.
+### End-to-end event path
 
 ```text
-                         ┌──────────────────────┐
-                         │    Market Simulator   │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                    ┌────────────────────────────┐
-                    │       C++ Engine            │
-                    │                            │
-                    │  Market Data               │
-                    │  Order Book                │
-                    │  Matching Engine           │
-                    │  Trade Events              │
-                    └────────────┬───────────────┘
-                                 │
-                                 │ IPC
-                                 ▼
-                    ┌────────────────────────────┐
-                    │     Python Analytics        │
-                    │                            │
-                    │ Indicators / Risk / PnL    │
-                    └────────────┬───────────────┘
-                                 │
-                                 │
-                                 ▼
-                    ┌────────────────────────────┐
-                    │      Node.js Gateway        │
-                    │                            │
-                    │ REST + WebSocket + Auth    │
-                    └────────────┬───────────────┘
-                                 │
-                                 │ HTTP / WS
-                                 ▼
-                    ┌────────────────────────────┐
-                    │       React Dashboard       │
-                    └────────────────────────────┘
+Market simulation
+      ↓
+C++ order book
+      ↓
+Price-time matching
+      ↓
+TRADE event
+      ↓
+Gateway engine-event client
+      ↓
+Python analytics
+      ↓
+PostgreSQL
+      ↓
+Gateway state / WebSocket
+      ↓
+React dashboard
 ```
 
----
+The browser talks only to the Gateway. It does not connect directly to the C++ engine or Python service.
 
-# Data Flow
+## What is implemented
 
-A typical event flows through the system as follows:
+### C++ trading engine
 
-```text
-Market Tick
-    │
-    ▼
-Market Simulator
-    │
-    ▼
-C++ Engine
-    │
-    ├── Update Order Book
-    │
-    ├── Match Orders
-    │
-    └── Generate Trade Event
-             │
-             ▼
-       Python Analytics
-             │
-             ├── VWAP
-             ├── SMA / EMA
-             ├── PnL
-             ├── Exposure
-             └── Drawdown
-             │
-             ▼
-       Node.js Gateway
-             │
-             ├── REST API
-             └── WebSocket
-                    │
-                    ▼
-             React Dashboard
-```
+- Limit-order matching with price-time priority
+- Order validation and order-book management
+- Partial fills
+- Order cancellation
+- Deterministic trade generation
+- TCP transport
+- 4-byte big-endian length-prefixed framing
+- UTF-8 JSON payload validation
+- HELLO / HEARTBEAT handling
+- Connection lifecycle and recovery behavior
+- Unit, integration, and sanitizer coverage
 
----
+### Python analytics
 
-# Services
+- Streaming trade processing
+- VWAP, SMA, EMA, and volatility calculations
+- Position tracking
+- Realized and unrealized P&L
+- Exposure and drawdown
+- Risk limits and risk events
+- PostgreSQL persistence
+- Prometheus-compatible metrics
+- Backpressure and bounded recovery behavior
+- Gateway-to-analytics contract validation
 
-## 1. C++ Trading Engine
+### Gateway
 
-The C++ service is the performance-critical core of the platform.
+The Gateway is implemented with **Bun + TypeScript + Fastify**.
 
-Responsibilities:
+- Versioned REST API under `/api/v1`
+- WebSocket endpoint at `/ws`
+- Typed engine-event normalization
+- Request validation and deterministic API errors
+- CORS configuration
+- Rate limiting
+- Request-size limits
+- Health and readiness boundaries
+- Prometheus metrics
+- Bounded WebSocket outbound queues
+- Slow-consumer protection
+- Engine and analytics dependency handling
 
-- Market-data simulation.
-- Order creation.
-- Order validation.
-- Order-book management.
-- Price-time-priority matching.
-- Partial fills.
-- Trade generation.
-- Engine lifecycle management.
-- Low-level network communication.
+### React dashboard
 
-### Why C++?
+The dashboard uses **React 19 + TypeScript + Vite + React Router**.
 
-C++ provides:
+Implemented dashboard areas include:
 
-- Low-level memory control.
-- Predictable performance.
-- Efficient data structures.
-- Multithreading capabilities.
-- Strong suitability for latency-sensitive systems.
+- Live market state
+- Recent trades
+- Live order-book snapshot
+- Analytics and indicators
+- Portfolio / P&L / risk views
+- Engine, gateway, and analytics status
+- REST client with typed API errors
+- WebSocket subscriptions and reconnect handling
+- Loading, error, empty, and stale-data states
 
----
+## Technology stack
 
-## 2. Python Analytics Engine
+| Layer | Technology |
+| --- | --- |
+| Matching engine | C++17 |
+| Build | CMake / Make |
+| Engine transport | TCP sockets |
+| Wire format | UTF-8 JSON with 4-byte big-endian framing |
+| Analytics | Python |
+| Database | PostgreSQL 17 |
+| Gateway runtime | Bun |
+| Gateway | TypeScript + Fastify |
+| Browser API | REST + WebSocket |
+| Frontend | React 19 + TypeScript |
+| Frontend build | Vite |
+| Containers | Docker |
+| Local orchestration | Docker Compose |
+| Testing | C++ tests, Pytest, Bun test |
+| CI | GitHub Actions |
+| Metrics | Prometheus-compatible endpoints |
 
-The analytics service consumes market and trade events generated by the C++ engine.
-
-Responsibilities:
-
-- Market indicators.
-- Portfolio analytics.
-- PnL calculation.
-- Exposure calculation.
-- Drawdown calculation.
-- Risk metrics.
-- Aggregated analytics events.
-
-Python is used because of its strong ecosystem for quantitative and numerical workloads.
-
----
-
-## 3. Node.js Gateway
-
-The gateway provides the external interface for the platform.
-
-Responsibilities:
-
-- REST API.
-- WebSocket streaming.
-- Service routing.
-- Request validation.
-- Rate limiting.
-- Middleware.
-- Error handling.
-- Configuration management.
-
-TypeScript is used for strong typing and maintainability.
-
----
-
-## 4. React Dashboard
-
-The dashboard provides real-time visualization.
-
-Responsibilities:
-
-- Market-price charts.
-- Order-book visualization.
-- Recent trades.
-- Analytics.
-- Portfolio metrics.
-- Engine status.
-- Simulation controls.
-
----
-
-# Technology Stack
-
-| Layer                | Technology                                           |
-| -------------------- | ---------------------------------------------------- |
-| Trading Engine       | C++                                                  |
-| Build System         | CMake / Make                                         |
-| Analytics            | Python                                               |
-| Numerical Processing | NumPy / Pandas                                       |
-| API Gateway          | Bun + Fastify                                        |
-| Gateway Language     | TypeScript                                           |
-| Gateway Runtime       | Bun                                                  |
-| Gateway Package/Test  | Bun                                                  |
-| Frontend             | React + TypeScript                                   |
-| Frontend Build       | Vite                                                 |
-| Charts               | Recharts                                             |
-| Real-Time Transport  | WebSocket                                            |
-| IPC                  | TCP / Unix Domain Socket                             |
-| Wire Format          | JSON                                                 |
-| Containerization     | Docker                                               |
-| Orchestration        | Docker Compose                                       |
-| Testing              | C++ tests / Pytest / Node test tooling / React tests |
-| CI/CD                | GitHub Actions                                       |
-
----
-
-# Repository Structure
+## Repository structure
 
 ```text
 Trading-Engine/
-│
-├── .github/
-│   ├── workflows/
-│   │   ├── build.yml
-│   │   ├── test.yml
-│   │   ├── lint.yml
-│   │   ├── docker.yml
-│   │   └── security.yml
-│   │
-│   ├── ISSUE_TEMPLATE/
-│   │   ├── bug_report.md
-│   │   └── feature_request.md
-│   │
-│   └── pull_request_template.md
-│
-├── engine-cpp/
-│   ├── include/
-│   │   ├── engine/
-│   │   ├── orderbook/
-│   │   ├── matching/
-│   │   ├── network/
-│   │   ├── market/
-│   │   └── common/
-│   │
-│   ├── src/
-│   │   ├── engine/
-│   │   ├── orderbook/
-│   │   ├── matching/
-│   │   ├── network/
-│   │   ├── market/
-│   │   └── main.cpp
-│   │
-│   ├── tests/
-│   │   ├── unit/
-│   │   ├── integration/
-│   │   └── fixtures/
-│   │
-│   ├── config/
-│   ├── Makefile
-│   ├── CMakeLists.txt
-│   └── Dockerfile
-│
-├── analytics-py/
-│   ├── src/
-│   │   ├── analytics/
-│   │   ├── indicators/
-│   │   ├── risk/
-│   │   ├── portfolio/
-│   │   ├── transport/
-│   │   └── main.py
-│   │
-│   ├── tests/
-│   │   ├── unit/
-│   │   └── integration/
-│   │
-│   ├── config/
-│   ├── requirements.txt
-│   ├── pyproject.toml
-│   └── Dockerfile
-│
-├── gateway-node/
-│   ├── src/
-│   │   ├── api/
-│   │   ├── websocket/
-│   │   ├── services/
-│   │   ├── middleware/
-│   │   ├── config/
-│   │   └── server.ts
-│   │
-│   ├── tests/
-│   │   ├── unit/
-│   │   └── integration/
-│   │
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── Dockerfile
-│
-├── dashboard-react/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── hooks/
-│   │   ├── services/
-│   │   ├── store/
-│   │   ├── types/
-│   │   ├── utils/
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   │
-│   ├── public/
-│   ├── tests/
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── vite.config.ts
-│   └── Dockerfile
-│
-├── shared/
-│   ├── schemas/
-│   │   ├── order.schema.json
-│   │   ├── trade.schema.json
-│   │   ├── tick.schema.json
-│   │   └── analytics.schema.json
-│   │
-│   └── types/
-│
-├── docs/
-│   ├── 01-product-requirements.md
-│   ├── 02-architecture.md
-│   ├── 03-data-model.md
-│   ├── 04-api-reference.md
-│   ├── 05-roadmap-and-phases.md
-│   ├── 06-development-guide.md
-│   ├── 07-security.md
-│   ├── 08-gap-analysis.md
-│   ├── 09-testing-strategy.md
-│   ├── 10-glossary.md
-│   │
-│   ├── diagrams/
-│   │   ├── system-architecture.png
-│   │   ├── data-flow.png
-│   │   ├── service-interaction.png
-│   │   ├── order-book-flow.png
-│   │   └── deployment-architecture.png
-│   │
-│   └── decisions/
-│       ├── ADR-001-polyglot-architecture.md
-│       ├── ADR-002-socket-ipc.md
-│       ├── ADR-003-json-wire-format.md
-│       ├── ADR-004-websocket-gateway.md
-│       ├── ADR-005-docker-compose.md
-│       └── ADR-006-shared-memory-future.md
-│       └── ADR-007-bun-gateway.md
-│
-├── scripts/
-│   ├── build.sh
-│   ├── test.sh
-│   ├── dev.sh
-│   └── clean.sh
-│
-├── tests/
-│   └── e2e/
-│
-├── .env.example
-├── .gitignore
+├── engine-cpp/          # C++ engine, order book, matching, transport
+├── analytics-py/        # Python analytics, risk, persistence, metrics
+├── gateway-node/        # Bun/Fastify REST + WebSocket gateway
+├── dashboard-react/     # React dashboard
+├── shared/              # Shared schemas and contracts
+├── docs/                # Architecture, API, security, testing, ADRs
+├── scripts/              # Build/test/development helpers
+├── tests/e2e/            # End-to-end coverage
 ├── docker-compose.yml
 ├── Makefile
 └── README.md
 ```
 
----
+## Trading model
 
-# Core Trading Concepts
+The matching engine follows standard price-time priority for the simulation.
 
-The engine models common exchange-style concepts.
+**Buy orders:** higher price has priority; at the same price, earlier orders have priority.
 
-## Order
-
-An order represents an instruction to buy or sell an asset.
-
-Example:
-
-```json
-{
-  "order_id": "ORD-10001",
-  "symbol": "AAPL",
-  "side": "BUY",
-  "price": 185.50,
-  "quantity": 100,
-  "type": "LIMIT"
-}
-```
-
-## Trade
-
-A trade is generated when compatible buy and sell orders are matched.
-
-```json
-{
-  "trade_id": "TRD-50001",
-  "symbol": "AAPL",
-  "price": 185.50,
-  "quantity": 50,
-  "buy_order_id": "ORD-10001",
-  "sell_order_id": "ORD-10002"
-}
-```
-
----
-
-# Order Book
-
-The order book contains outstanding buy and sell orders.
-
-```text
-ASKS
-Price        Quantity
----------------------
-186.20          100
-186.00          250
-185.80          150
----------------------
-185.60          200
-185.50          300
-185.40          150
----------------------
-BIDS
-```
-
-The best bid is the highest buy price.
-
-The best ask is the lowest sell price.
-
-The spread is:
-
-```text
-Spread = Best Ask - Best Bid
-```
-
----
-
-# Matching Engine
-
-Orders are matched using **price-time priority**.
-
-### Buy Priority
-
-Higher price first.
-
-If two buy orders have the same price:
-
-Earlier order first.
-
-### Sell Priority
-
-Lower price first.
-
-If two sell orders have the same price:
-
-Earlier order first.
+**Sell orders:** lower price has priority; at the same price, earlier orders have priority.
 
 Example:
 
 ```text
-BUY ORDERS
-
-Price     Time        Quantity
-100.50    10:01:01       100
-100.50    10:01:02        50
-100.40    10:01:03       200
+BUY
+100.50  → first
+100.50  → second
+100.40  → third
 ```
 
-The first order has priority because it arrived earlier at the same price.
-
----
-
-# Partial Fills
-
-Suppose:
+If a 100-share buy order matches a 40-share sell order:
 
 ```text
-BUY  = 100 shares @ 100
-SELL = 40 shares @ 99
+Trade:     40 shares
+Remaining: 60 shares on the buy order
 ```
 
-The engine produces:
+This gives the engine deterministic partial-fill behavior rather than treating matching as a simple one-shot transaction.
+
+## Internal protocol
+
+The engine-to-service transport uses:
 
 ```text
-TRADE = 40 shares @ 99
+┌──────────────┬─────────────────────────────┐
+│ 4-byte BE    │ UTF-8 JSON payload          │
+│ length       │ max 1 MiB                   │
+└──────────────┴─────────────────────────────┘
 ```
 
-Remaining:
+The protocol supports explicit message types including:
 
 ```text
-BUY = 60 shares @ 100
+HELLO
+HEARTBEAT
+ORDER
+TRADE
+MARKET_DATA
+BOOK_SNAPSHOT
+ERROR
+SHUTDOWN
 ```
 
-This allows the simulation to model realistic order-book behavior.
+The Gateway validates and normalizes supported engine messages before exposing them to browser clients or forwarding trade data to analytics.
 
----
+## REST API
 
-# Analytics Engine
-
-The Python service calculates several metrics.
-
-## VWAP
-
-Volume Weighted Average Price:
+Base URL:
 
 ```text
-VWAP = Σ(Price × Volume) / Σ(Volume)
+http://localhost:8080
 ```
 
----
+### Implemented application endpoints
 
-## SMA
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/health` | Gateway process health |
+| GET | `/api/v1/status` | Gateway / engine / analytics status |
+| GET | `/api/v1/market` | Current market state |
+| GET | `/api/v1/orderbook` | Current engine order-book snapshot |
+| GET | `/api/v1/trades` | Recent trades |
+| GET | `/api/v1/analytics` | Latest analytics state |
+| POST | `/api/v1/engine/start` | Engine-control contract |
+| POST | `/api/v1/engine/stop` | Engine-control contract |
+| POST | `/api/v1/engine/reset` | Engine-control contract |
+| GET | `/metrics` | Prometheus metrics when enabled |
 
-Simple Moving Average:
+Dependency failures are represented explicitly rather than replaced with fabricated data. Application errors use a structured response containing an error code, message, and request ID.
+
+Full contracts live in [`docs/04-api-reference.md`](docs/04-api-reference.md).
+
+## WebSocket API
+
+Endpoint:
 
 ```text
-SMA = Σ Closing Prices / Number of Periods
+ws://localhost:8080/ws
 ```
 
----
-
-## EMA
-
-Exponential Moving Average gives greater weight to recent prices.
-
-```text
-EMA_today =
-Price_today × α
-+
-EMA_yesterday × (1 - α)
-```
-
-where:
-
-```text
-α = 2 / (N + 1)
-```
-
----
-
-## PnL
-
-Profit and Loss:
-
-```text
-PnL = Current Portfolio Value - Initial Portfolio Value
-```
-
----
-
-## Exposure
-
-Exposure measures the value currently committed to a position.
-
-A simplified calculation:
-
-```text
-Exposure = Position Quantity × Current Market Price
-```
-
----
-
-## Drawdown
-
-Drawdown measures the decline from a previous portfolio peak.
-
-```text
-Drawdown =
-(Peak Value - Current Value) / Peak Value
-```
-
----
-
-# Communication
-
-The initial system uses lightweight socket-based communication.
-
-```text
-C++ Engine
-     │
-     │ TCP / Unix Domain Socket
-     ▼
-Python Analytics
-```
-
-The gateway then exposes processed data to clients.
-
-```text
-Python / Engine
-       │
-       ▼
-Node.js Gateway
-       │
-       ├── REST
-       │
-       └── WebSocket
-              │
-              ▼
-        React Dashboard
-```
-
----
-
-# Wire Format
-
-JSON is used initially because it is:
-
-- Easy to debug.
-- Human-readable.
-- Easy to inspect.
-- Supported by all project languages.
-- Simple to integrate.
-
-Example market tick:
+Clients subscribe to supported event types:
 
 ```json
 {
-  "type": "market_tick",
-  "symbol": "AAPL",
-  "timestamp": 1788867000000,
-  "price": 185.50,
-  "volume": 100
+  "action": "subscribe",
+  "events": ["TRADE", "ANALYTICS_UPDATE", "RISK_EVENT"]
 }
 ```
 
-Example analytics event:
+The Gateway provides:
 
-```json
-{
-  "type": "analytics_update",
-  "symbol": "AAPL",
-  "vwap": 185.42,
-  "sma": 185.31,
-  "ema": 185.38,
-  "pnl": 1250.50,
-  "exposure": 18550.00,
-  "drawdown": 0.021
-}
-```
+- Explicit subscribe / unsubscribe handling
+- Normalized event envelopes
+- Heartbeat and dead-client cleanup
+- Bounded per-client queues
+- Slow-consumer protection
+- Clean shutdown behavior
 
----
+The React client reconnects with bounded backoff and restores subscriptions after reconnect.
 
-# API Reference
+## Docker runtime
 
-The Node.js gateway provides the external API.
+The complete local runtime is orchestrated with Docker Compose.
 
-| Method | Endpoint              | Description          |
-| ------ | --------------------- | -------------------- |
-| GET    | `/api/health`       | Service health       |
-| GET    | `/api/status`       | Engine status        |
-| GET    | `/api/market`       | Current market data  |
-| GET    | `/api/orderbook`    | Current order book   |
-| GET    | `/api/trades`       | Recent trades        |
-| GET    | `/api/analytics`    | Current analytics    |
-| POST   | `/api/engine/start` | Start simulation     |
-| POST   | `/api/engine/stop`  | Stop simulation      |
-| POST   | `/api/engine/reset` | Reset engine         |
-| GET    | `/api/config`       | Read configuration   |
-| PUT    | `/api/config`       | Update configuration |
+### Services
 
----
+| Service | Container port | Host default |
+| --- | ---: | ---: |
+| C++ engine | 9000 | 9000 |
+| Analytics receiver | 8000 | internal |
+| Analytics metrics | 9101 | 9101 |
+| Gateway | 8080 | 8080 |
+| Dashboard | 80 | 5173 |
+| PostgreSQL | 5432 | 5432 |
 
-# WebSocket Events
-
-WebSocket endpoint:
-
-```text
-/ws
-```
-
-Supported event types:
-
-```text
-market_tick
-trade
-order_book
-analytics_update
-engine_status
-error
-```
-
-Example:
-
-```json
-{
-  "event": "trade",
-  "data": {
-    "trade_id": "TRD-50001",
-    "symbol": "AAPL",
-    "price": 185.50,
-    "quantity": 50
-  }
-}
-```
-
----
-
-# Configuration
-
-Example environment configuration:
-
-```env
-ENGINE_HOST=engine-cpp
-ENGINE_PORT=9000
-
-ANALYTICS_HOST=analytics-py
-ANALYTICS_PORT=9100
-
-GATEWAY_PORT=8080
-
-WS_PATH=/ws
-
-LOG_LEVEL=info
-
-SIMULATION_TICK_RATE=100
-
-DEFAULT_SYMBOL=AAPL
-```
-
-Create a local environment file from the example:
+### Start everything
 
 ```bash
-cp .env.example .env
+docker compose up -d --build
 ```
 
-Do not commit `.env` files containing secrets.
+Check service state:
 
----
+```bash
+docker compose ps
+```
 
-# Getting Started
+Follow logs:
 
-## Prerequisites
+```bash
+docker compose logs -f
+```
 
-Install:
+Check Gateway health:
+
+```bash
+curl http://localhost:8080/api/health
+```
+
+Check dependency readiness:
+
+```bash
+curl http://localhost:8080/api/v1/status
+```
+
+Open the dashboard:
+
+```text
+http://localhost:5173
+```
+
+Stop the runtime:
+
+```bash
+docker compose down
+```
+
+Remove the database volume too:
+
+```bash
+docker compose down -v
+```
+
+## Local development
+
+### Prerequisites
 
 - Git
 - GCC / G++
 - CMake
 - Make
 - Python 3
-- Bun
+- Bun 1.3+
 - Docker
 - Docker Compose
 
-For the gateway, Bun is used for dependency installation, development, testing, building, and execution.
-
----
-
-## Clone
+### Gateway
 
 ```bash
-git clone https://github.com/adarsh0707-kumar/Trading-Engine.git
-cd Trading-Engine
+cd gateway-node
+bun install
+bun run dev
 ```
 
----
+Build and test:
 
-## Build C++ Engine
+```bash
+bun run build
+bun test
+```
+
+### Dashboard
+
+```bash
+cd dashboard-react
+bun install
+bun run dev
+```
+
+Build and test:
+
+```bash
+bun run build
+bun test
+```
+
+### C++ engine
 
 ```bash
 cd engine-cpp
@@ -875,766 +410,260 @@ cmake ..
 make -j$(nproc)
 ```
 
-Or:
-
-```bash
-cd engine-cpp
-make
-```
-
----
-
-## Run Python Analytics
+### Python analytics
 
 ```bash
 cd analytics-py
-
 python -m venv .venv
 source .venv/bin/activate
-
 pip install -r requirements.txt
-
 python src/main.py
 ```
 
----
+For the most reproducible setup, use the Docker Compose runtime.
 
-## Run Node.js Gateway
+## Testing
 
-```bash
-cd gateway-node
-
-bun install
-bun run dev
-```
-
----
-
-## Run React Dashboard
-
-```bash
-cd dashboard-react
-
-npm install
-npm run dev
-```
-
-The Vite development server normally starts on:
+Testing is layered across the system:
 
 ```text
-http://localhost:5173
-```
-
----
-
-# Docker
-
-The complete platform can be started using Docker Compose.
-
-```bash
-docker compose up --build
-```
-
-Run in detached mode:
-
-```bash
-docker compose up --build -d
-```
-
-View logs:
-
-```bash
-docker compose logs -f
-```
-
-Stop services:
-
-```bash
-docker compose down
-```
-
-Remove containers and associated volumes:
-
-```bash
-docker compose down -v
-```
-
----
-
-# Testing
-
-Testing is divided into multiple levels.
-
-## Unit Tests
-
-Test individual components:
-
-```text
-Order
-OrderBook
-MatchingEngine
-Indicators
-Risk Calculations
-API Services
-React Components
-```
-
-## Integration Tests
-
-Validate communication between services:
-
-```text
-C++ Engine
-     ↓
-Python Analytics
-     ↓
-Node Gateway
-```
-
-## End-to-End Tests
-
-Validate the complete pipeline:
-
-```text
-Market Tick
-    ↓
-Matching
-    ↓
-Trade
-    ↓
-Analytics
-    ↓
-API
-    ↓
-WebSocket
-    ↓
-Dashboard
-```
-
-Run the project's test script:
-
-```bash
-./scripts/test.sh
-```
-
----
-
-# Performance
-
-Performance is an important part of this project.
-
-Important metrics include:
-
-- Orders processed per second.
-- Trades generated per second.
-- Matching latency.
-- Average event latency.
-- P99 latency.
-- Socket throughput.
-- Analytics processing rate.
-- WebSocket message rate.
-- CPU utilization.
-- Memory usage.
-
-Example benchmark table:
-
-| Metric           |   Target | Measured |
-| ---------------- | -------: | -------: |
-| Orders/sec       |    100K+ |      TBD |
-| Trades/sec       |     50K+ |      TBD |
-| Matching latency |   < 1 ms |      TBD |
-| P99 latency      |   < 5 ms |      TBD |
-| Memory usage     | < 512 MB |      TBD |
-
-> Benchmark results should always be measured on the actual target machine and documented with test conditions.
-
----
-
-# Performance Optimization Strategy
-
-The project follows an optimization hierarchy:
-
-```text
-1. Correctness
-      ↓
-2. Profiling
-      ↓
-3. Identify Bottleneck
-      ↓
-4. Optimize
-      ↓
-5. Benchmark
-      ↓
-6. Regression Test
-```
-
-Potential future optimizations include:
-
-- Lock-free structures.
-- Memory pools.
-- Object reuse.
-- Binary protocols.
-- Zero-copy messaging.
-- Shared memory.
-- CPU affinity.
-- Cache-aware data structures.
-- Batch processing.
-
-The goal is not to optimize prematurely.
-
-> **Build the simple correct system first, measure it, then optimize the actual bottlenecks.**
-
----
-
-# Observability
-
-The platform should provide structured logs and operational metrics.
-
-Recommended log categories:
-
-```text
-ENGINE
-ORDERBOOK
-MATCHING
-TRADE
-ANALYTICS
-GATEWAY
-WEBSOCKET
-SYSTEM
-ERROR
-```
-
-Example:
-
-```text
-2026-09-08T10:30:00Z INFO ENGINE simulation_started
-2026-09-08T10:30:01Z INFO ORDERBOOK order_added
-2026-09-08T10:30:01Z INFO MATCHING order_matched
-2026-09-08T10:30:01Z INFO TRADE trade_created
-2026-09-08T10:30:01Z INFO ANALYTICS metrics_updated
-```
-
----
-
-# Backpressure
-
-Real-time systems must handle situations where producers generate events faster than consumers can process them.
-
-Potential strategies:
-
-- Bounded queues.
-- Message batching.
-- Consumer throttling.
-- Dropping non-critical market updates.
-- Separate critical and non-critical event channels.
-- Monitoring queue depth.
-- Backpressure propagation.
-
-Trade events should generally receive higher reliability guarantees than high-frequency visualization updates.
-
----
-
-# Security
-
-Although this is a simulation, security is treated as an engineering requirement.
-
-Security considerations include:
-
-- Input validation.
-- Request-size limits.
-- Rate limiting.
-- Authentication hooks.
-- Authorization middleware.
-- Secure configuration.
-- Secret management.
-- Container isolation.
-- Dependency scanning.
-- Avoiding sensitive data in logs.
-- WebSocket connection validation.
-
-The `.env` file should never be committed.
-
----
-
-# Docker Architecture
-
-A typical deployment contains:
-
-```text
-┌───────────────────────────────────────────┐
-│              Docker Network               │
-│                                           │
-│  ┌─────────────┐                          │
-│  │ C++ Engine  │                          │
-│  └──────┬──────┘                          │
-│         │                                  │
-│  ┌──────▼──────┐                          │
-│  │   Python    │                          │
-│  │  Analytics  │                          │
-│  └──────┬──────┘                          │
-│         │                                  │
-│  ┌──────▼──────┐                          │
-│  │ Node Gateway│                          │
-│  └──────┬──────┘                          │
-│         │                                  │
-│  ┌──────▼──────┐                          │
-│  │    React    │                          │
-│  │  Dashboard  │                          │
-│  └─────────────┘                          │
-│                                           │
-└───────────────────────────────────────────┘
-```
-
-Docker Compose provides reproducible local environments and simplifies service orchestration.
-
----
-
-# Architecture Decisions
-
-Important decisions are documented as ADRs.
-
-## ADR-001 — Polyglot Architecture
-
-Use different languages for different workload characteristics:
-
-```text
-C++       → Performance-critical engine
-Python    → Quantitative analytics
-TypeScript → API / Gateway
-React     → Visualization
-```
-
-## ADR-002 — Socket IPC
-
-Use TCP or Unix Domain Sockets for initial inter-service communication.
-
-Advantages:
-
-- Simple.
-- Easy to debug.
-- Language independent.
-- Suitable for local and containerized development.
-
-## ADR-003 — JSON Wire Format
-
-Use JSON initially for interoperability and debugging.
-
-A binary protocol such as Protocol Buffers can be introduced after profiling.
-
-## ADR-004 — WebSocket Gateway
-
-Use WebSockets for low-latency dashboard updates while keeping the internal services isolated from browser clients.
-
-## ADR-005 — Docker Compose
-
-Use Docker Compose for local multi-service orchestration.
-
-## ADR-006 — Shared Memory as Future Optimization
-
-Shared memory may be introduced later if profiling shows socket-based IPC to be a meaningful bottleneck.
-
----
-
-# Roadmap
-
-## Current implementation status
-
-**Completed through:** Phase 5.8 — Portfolio, P&L & Risk Dashboard
-
-**Current milestone:** Phase 5.9 — Engine, Analytics & System Status
-
-**Phase 4:** ✅ Complete — backend runtime, Gateway REST/WebSocket, analytics integration, persistence, security, resilience, observability, and full-stack Docker validation are complete.
-
-**Phase 5:** 🚧 In Progress — dashboard foundation, REST/WebSocket clients, live market state, recent trades, order-book visualization, analytics charts, and portfolio/P&L/risk views are complete. System status is next.
-
-| Area | Status |
-| --- | --- |
-| C++ matching engine + TCP transport | Complete |
-| Python analytics + risk + PostgreSQL | Complete |
-| Node/Bun Gateway + REST/WebSocket | Complete |
-| Gateway resilience + security + observability | Complete |
-| Docker Compose full runtime | Complete |
-| React dashboard foundation/layout | Complete |
-| Dashboard REST client | Complete |
-| Dashboard WebSocket client | Complete |
-| Live market data + recent trades | Complete |
-| Order-book visualization | Complete |
-| Analytics dashboard | Complete |
-| Portfolio / P&L / risk dashboard | Complete |
-| System status / runtime UX | In progress |
-| Browser E2E + final dashboard validation | Planned |
-| Cloud deployment/infrastructure | Planned |
-
-### Phase 5.6 live order-book architecture
-
-```text
-C++ Engine
-    │ BOOK_SNAPSHOT request/response
-    ▼
-Gateway Engine Event Client
-    │
-    ▼
-Gateway OrderBook Provider
-    │
-    ▼
-GET /api/v1/orderbook
-    │
-    ▼
-React Dashboard
-    ├── Live Order Book
-    └── Market Summary (Bid / Ask / Spread)
-```
-
-The order-book snapshot is requested from the live C++ engine through the Gateway. React never connects directly to the engine. The Gateway validates the snapshot and exposes it through the versioned REST boundary.
-
-The dashboard Market Summary derives Best Bid, Best Ask, and Spread from the same live order-book snapshot rather than from the last-trade price.
-
-### Phase 5.5 live-data architecture
-
-```text
-C++ Engine
-    ↓ TRADE
-Gateway engine-event client
-    ↓ normalized TRADE event
-Gateway live trading state
-    ├── /api/v1/market
-    └── /api/v1/trades
-          ↓ REST snapshot
-React Dashboard
-          ↑
-      WebSocket /ws
-          ↑ TRADE
-Gateway
-```
-
-The dashboard consumes the Gateway only. It does not connect directly to the C++ engine or Python analytics service.
-
-# Future Improvements
-
-Potential future capabilities:
-
-### Trading
-
-- Market orders.
-- Limit orders.
-- Stop orders.
-- Stop-limit orders.
-- Multiple symbols.
-- Multiple accounts.
-- Strategy simulation.
-- Order cancellation.
-- Order modification.
-
-### Matching
-
-- Multi-threaded matching.
-- Sharded order books.
-- Advanced priority queues.
-- Deterministic replay.
-
-### Analytics
-
-- Sharpe ratio.
-- Sortino ratio.
-- Volatility.
-- Beta.
-- Alpha.
-- Value at Risk.
-- Position concentration.
-- Realized/unrealized PnL.
-
-### Infrastructure
-
-- Kafka.
-- Redis Streams.
-- NATS.
-- gRPC.
-- Protocol Buffers.
-- Shared memory.
-- Memory-mapped event logs.
-
-### Dashboard
-
-- Strategy controls.
-- Historical replay.
-- Performance heatmaps.
-- Risk dashboards.
-- Latency dashboards.
-- System health dashboard.
-
----
-
-# Limitations
-
-This project is a simulation and intentionally does not attempt to reproduce the complete behavior of a real exchange.
-
-Important limitations:
-
-- Market data is simulated.
-- No real exchange connectivity.
-- No real order execution.
-- Simplified transaction costs.
-- Simplified risk model.
-- Simplified market microstructure.
-- No regulatory compliance layer.
-- No production-grade financial persistence.
-
-The project should not be used for real-money trading.
-
----
-
-# Example End-to-End Scenario
-
-Suppose the simulator produces:
-
-```text
-AAPL = $185.50
-```
-
-A strategy submits:
-
-```text
-BUY 100 AAPL @ $185.50
-```
-
-Another simulated participant submits:
-
-```text
-SELL 40 AAPL @ $185.50
-```
-
-The matching engine produces:
-
-```text
-TRADE
-Quantity = 40
-Price    = $185.50
-```
-
-The remaining order becomes:
-
-```text
-BUY 60 AAPL @ $185.50
-```
-
-Python receives the trade event and updates:
-
-```text
-VWAP
-SMA
-EMA
-PnL
-Exposure
-Drawdown
-```
-
-The Node.js gateway broadcasts the updated state through WebSocket.
-
-The React dashboard then updates:
-
-```text
-Market Price
-Order Book
-Recent Trades
-VWAP
-PnL
-Exposure
-Risk Metrics
-```
-
-This creates a complete end-to-end real-time trading simulation.
-
----
-
-# Git Workflow
-
-Recommended branch structure:
-
-```text
-main
-│
-├── feature/order-book
-├── feature/matching-engine
-├── feature/analytics
-├── feature/gateway
-└── feature/dashboard
-```
-
-Recommended commit prefixes:
-
-```text
-feat:
-fix:
-docs:
-test:
-refactor:
-perf:
-build:
-ci:
-chore:
+Unit
+  ↓
+Component integration
+  ↓
+Cross-service contract tests
+  ↓
+Runtime integration
+  ↓
+End-to-end validation
 ```
 
 Examples:
 
 ```bash
-git commit -m "feat(engine): implement price-time priority matching"
+# Gateway
+cd gateway-node
+bun test
 
-git commit -m "feat(analytics): add VWAP and EMA indicators"
+# Dashboard
+cd dashboard-react
+bun test
 
-git commit -m "feat(gateway): add WebSocket market stream"
+# Python
+cd analytics-py
+pytest
 
-git commit -m "docs(adr): document socket IPC decision"
-
-git commit -m "test(engine): add order book integration tests"
+# Full runtime smoke test
+cd gateway-node
+bun test tests/runtime-stack.integration.test.ts
 ```
 
----
+The runtime integration test validates the real service path rather than a mocked dashboard-only flow.
 
-# Documentation
+## Observability and reliability
 
-Detailed documentation is maintained under `docs/`.
+The project treats failure handling as part of the architecture.
+
+Current areas include:
+
+- Health and readiness checks
+- Structured service logging
+- Prometheus metrics
+- Request IDs
+- Dependency failure mapping
+- Bounded queues
+- Backpressure handling
+- Engine reconnect behavior
+- WebSocket slow-consumer protection
+- Graceful shutdown
+- Input and payload-size validation
+- Security-focused gateway tests
+
+The design principle is simple:
+
+> **A slow or failed consumer should not silently become a system-wide failure.**
+
+## Security boundary
+
+This is a simulation, but the service boundaries are intentionally hardened.
+
+Implemented protections include:
+
+- Input validation
+- Request-size limits
+- Rate limiting
+- CORS allowlisting
+- WebSocket validation
+- Deterministic error handling
+- Dependency isolation
+- Containerized local runtime
+- Security-focused automated tests
+- Secret/configuration separation
+
+The default Docker Compose configuration intentionally keeps authentication disabled for local development. Authentication and authorization remain a later platform concern.
+
+Never commit real credentials or secrets to `.env` files.
+
+## Performance
+
+Performance is measured only when there is a reproducible benchmark behind the number. The README therefore does **not** claim arbitrary orders/sec or latency figures.
+
+The performance work is centered on:
+
+- Matching latency
+- Trade throughput
+- Socket throughput
+- Analytics processing latency
+- Gateway latency
+- WebSocket delivery
+- CPU and memory usage
+- P95/P99 behavior
+
+Optimization follows:
 
 ```text
-docs/
-├── 01-product-requirements.md
-├── 02-architecture.md
-├── 03-data-model.md
-├── 04-api-reference.md
-├── 05-roadmap-and-phases.md
-├── 06-development-guide.md
-├── 07-security.md
-├── 08-gap-analysis.md
-├── 09-testing-strategy.md
-├── 10-glossary.md
-│
-├── diagrams/
-│   ├── system-architecture.png
-│   ├── data-flow.png
-│   ├── service-interaction.png
-│   ├── order-book-flow.png
-│   └── deployment-architecture.png
-│
-└── decisions/
-    ├── ADR-001-polyglot-architecture.md
-    ├── ADR-002-socket-ipc.md
-    ├── ADR-003-json-wire-format.md
-    ├── ADR-004-websocket-gateway.md
-    ├── ADR-005-docker-compose.md
-    └── ADR-006-shared-memory-future.md
+Correctness
+    ↓
+Profile
+    ↓
+Find bottleneck
+    ↓
+Optimize
+    ↓
+Benchmark
+    ↓
+Regression test
 ```
 
----
+Potential future optimizations include binary protocols, shared memory, zero-copy paths, memory pools, cache-aware structures, batching, and lock-free structures — but only where measurement justifies the added complexity.
 
-# Contributing
+## Current implementation status
 
-Contributions should follow the project's engineering standards.
+| Area | Status |
+| --- | --- |
+| C++ order book + matching | ✅ Complete |
+| C++ TCP transport | ✅ Complete |
+| Python streaming analytics | ✅ Complete |
+| Risk analytics | ✅ Complete |
+| PostgreSQL persistence | ✅ Complete |
+| Gateway REST API | ✅ Complete |
+| Gateway WebSocket | ✅ Complete |
+| Gateway resilience / backpressure | ✅ Complete |
+| Gateway security boundaries | ✅ Complete |
+| Docker full-stack runtime | ✅ Complete |
+| React dashboard foundation | ✅ Complete |
+| Live market + trades | ✅ Complete |
+| Order-book dashboard | ✅ Complete |
+| Analytics / portfolio / risk views | ✅ Complete |
+| Loading / error / stale-data UX | ✅ Complete |
+| Dashboard production polish | 🚧 In progress |
+| Final browser/E2E validation | ⏳ Planned |
+| Historical analytics | ⏳ Planned |
+| Cloud deployment | ⏳ Planned |
 
-Before submitting a pull request:
+Detailed milestone history is maintained in [`docs/05-roadmap-and-phases.md`](docs/05-roadmap-and-phases.md).
 
-1. Create a feature branch.
-2. Implement the change.
-3. Add or update tests.
-4. Run the test suite.
-5. Run formatting and lint checks.
-6. Update documentation when required.
-7. Create a focused commit.
-8. Open a pull request.
+## Architecture decisions
 
-Keep changes modular and avoid mixing unrelated features.
+The important design decisions are documented as ADRs:
 
----
+- [ADR-001 — Polyglot architecture](docs/decisions/ADR-001-polyglot-architecture.md)
+- [ADR-002 — Socket IPC](docs/decisions/ADR-002-socket-ipc.md)
+- [ADR-003 — JSON wire format](docs/decisions/ADR-003-json-wire-format.md)
+- [ADR-004 — WebSocket gateway](docs/decisions/ADR-004-websocket-gateway.md)
+- [ADR-005 — Docker Compose](docs/decisions/ADR-005-docker-compose.md)
+- [ADR-006 — Shared memory as a future optimization](docs/decisions/ADR-006-shared-memory-future.md)
 
-# License
+The repository also contains documentation for architecture, API contracts, security, testing, development, data models, and known gaps under `docs/`.
 
-This project is intended as an educational and portfolio project.
+## Roadmap
 
-A formal open-source license can be added when the project's distribution terms are finalized.
+### Next
 
----
+- Complete dashboard production hardening
+- Finish browser-level validation
+- Improve measured frontend performance
+- Expand runtime and failure-path validation
 
-# Author
+### Later
+
+- Historical analytics
+- More realistic strategy simulation
+- Multiple symbols/accounts
+- Advanced order types
+- Replayable market sessions
+- Additional risk metrics
+- Cloud deployment
+- Distributed event infrastructure where justified by scale
+
+## Limitations
+
+This project deliberately does **not** model a real exchange.
+
+- Market data is simulated.
+- No real exchange connectivity exists.
+- No real-money execution exists.
+- Market microstructure is simplified.
+- Risk and transaction-cost models are simplified.
+- Authentication is disabled in the default local Compose configuration.
+- Cloud deployment is not part of the current validated runtime.
+- Performance numbers are not claimed without reproducible benchmarks.
+
+Do not use this project for real-money trading.
+
+## Why this project
+
+This project is primarily a systems-engineering exercise.
+
+It brings together:
+
+```text
+C++ systems programming
+        +
+Networking / TCP protocols
+        +
+Order-book algorithms
+        +
+Python quantitative analytics
+        +
+PostgreSQL persistence
+        +
+TypeScript service boundaries
+        +
+WebSocket real-time delivery
+        +
+React visualization
+        +
+Docker / CI
+        +
+Testing / observability / resilience
+```
+
+The goal is not to build the biggest stack possible. It is to understand the boundaries between components, make those boundaries explicit, test failure modes, and optimize only after correctness is established.
+
+## Contributing
+
+For changes:
+
+1. Create a focused branch.
+2. Add or update tests.
+3. Run the relevant service tests.
+4. Run the full validation path when applicable.
+5. Update documentation when behavior or contracts change.
+6. Open a focused pull request.
+
+Use conventional commit prefixes such as `feat:`, `fix:`, `test:`, `docs:`, `refactor:`, `perf:`, and `ci:`.
+
+## License
+
+No formal open-source license has been declared yet. Until a license is added to the repository, the project should be treated as an educational/portfolio project rather than as software released under a standard open-source license.
+
+## Author
 
 **Adarsh Kumar**
 
-Cloud-Based Algorithmic Trading Engine
+Systems-oriented software engineer building from the socket layer up.
 
 ---
 
-# Project Philosophy
-
-The project is built around a simple engineering philosophy:
-
-> **Correctness first. Measure second. Optimize third.**
-
-The architecture intentionally starts with technologies and protocols that are easy to understand, test, debug, and deploy. Performance-critical optimizations such as shared memory, zero-copy communication, lock-free data structures, and binary protocols should be introduced only when benchmarks demonstrate that they provide meaningful benefits.
-
----
-
-## Final Architecture
-
-```text
-                    ┌──────────────────────┐
-                    │   Market Simulator   │
-                    └──────────┬───────────┘
-                               │
-                               ▼
-              ┌───────────────────────────────┐
-              │       C++ Trading Engine      │
-              │                               │
-              │ Order Book + Matching Engine  │
-              └───────────────┬───────────────┘
-                              │
-                              ▼
-              ┌───────────────────────────────┐
-              │      Python Analytics          │
-              │                               │
-              │ Indicators + Risk + Portfolio  │
-              └───────────────┬───────────────┘
-                              │
-                              ▼
-              ┌───────────────────────────────┐
-              │       Node.js Gateway          │
-              │                               │
-              │ REST API + WebSocket + Auth   │
-              └───────────────┬───────────────┘
-                              │
-                              ▼
-              ┌───────────────────────────────┐
-              │        React Dashboard         │
-              │                               │
-              │ Charts + Live Order Book + Metrics │
-              └───────────────────────────────┘
-```
-
----
-
-**Built as a systems-engineering portfolio project demonstrating C++, Python, TypeScript, React, distributed services, networking, real-time systems, quantitative analytics, testing, Docker, and software architecture.**
-
----
-If this project was useful to you, consider [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee\&logoColor=white)](https://buymeacoffee.com/adarsh12kumar)
-
-## Phase 4 Runtime
-
-Phase 4 is complete. The real local multi-service runtime is available through Docker Compose:
-
-- C++ Engine on TCP port 9000
-- Node Gateway on HTTP/WebSocket port 8080
-- Python Analytics receiver on TCP port 8000
-- PostgreSQL on port 5432
-- Analytics Prometheus metrics on port 9101
-
-Start the full stack:
-
-    docker compose up -d --build
-
-Run the real runtime smoke test:
-
-    cd gateway-node
-    bun test tests/runtime-stack.integration.test.ts
-
-Stop the stack:
-
-    docker compose down -v
-
-The runtime smoke test waits for Gateway readiness, subscribes to TRADE and ANALYTICS_UPDATE WebSocket events, and validates that a real Engine-generated trade reaches Analytics and is persisted in PostgreSQL.
-
+> **Engineering principle:** Correctness first. Measure second. Optimize third.
