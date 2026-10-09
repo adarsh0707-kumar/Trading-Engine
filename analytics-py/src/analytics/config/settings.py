@@ -5,6 +5,9 @@ from __future__ import annotations
 import math
 import os
 from dataclasses import dataclass
+from decimal import Decimal
+
+from analytics.config.risk_limits import RiskLimitConfig
 
 
 class ConfigurationError(ValueError):
@@ -35,6 +38,14 @@ class Settings:
     persistence_retry_delay: float = 0.1
     publish_retry_attempts: int = 2
     publish_retry_delay: float = 0.1
+
+    # Defaults are aligned to the processor's $10,000 per-symbol starting equity.
+    # All thresholds can be overridden for a simulation through environment variables.
+    risk_max_position: int = 1000
+    risk_max_position_value: Decimal = Decimal("100000")
+    risk_max_drawdown: Decimal = Decimal("1000")
+    risk_max_daily_loss: Decimal = Decimal("500")
+    risk_warning_ratio: Decimal = Decimal("0.80")
 
     log_level: str = "INFO"
     log_format: str = (
@@ -86,6 +97,22 @@ class Settings:
         if self.metrics_port is not None:
             self._validate_port("metrics_port", self.metrics_port)
 
+        try:
+            self.risk_limit_config
+        except (TypeError, ValueError) as exc:
+            raise ConfigurationError(f"invalid risk-limit configuration: {exc}") from exc
+
+    @property
+    def risk_limit_config(self) -> RiskLimitConfig:
+        """Return validated risk limits used by the streaming processor."""
+        return RiskLimitConfig(
+            max_position=self.risk_max_position,
+            max_position_value=self.risk_max_position_value,
+            max_drawdown=self.risk_max_drawdown,
+            max_daily_loss=self.risk_max_daily_loss,
+            warning_ratio=self.risk_warning_ratio,
+        )
+
     @staticmethod
     def _validate_port(name: str, value: int) -> None:
         if isinstance(value, bool) or not isinstance(value, int):
@@ -103,83 +130,38 @@ class Settings:
     @classmethod
     def from_environment(cls) -> Settings:
         """Create settings from environment variables."""
-
         metrics_port_value = os.getenv("TRADING_ENGINE_METRICS_PORT")
 
         return cls(
-            engine_host=os.getenv(
-                "TRADING_ENGINE_HOST",
-                "127.0.0.1",
-            ),
-            engine_port=int(
-                os.getenv(
-                    "TRADING_ENGINE_PORT",
-                    "9000",
-                )
-            ),
-            connect_timeout=float(
-                os.getenv(
-                    "TRADING_ENGINE_CONNECT_TIMEOUT",
-                    "5.0",
-                )
-            ),
-            receive_timeout=float(
-                os.getenv(
-                    "TRADING_ENGINE_RECEIVE_TIMEOUT",
-                    "1.0",
-                )
-            ),
-            gateway_host=os.getenv(
-                "ANALYTICS_GATEWAY_HOST",
-                "127.0.0.1",
-            ),
-            gateway_port=int(
-                os.getenv(
-                    "ANALYTICS_GATEWAY_PORT",
-                    "8000",
-                )
-            ),
-            reconnect=os.getenv(
-                "TRADING_ENGINE_RECONNECT",
-                "true",
-            ).lower()
+            engine_host=os.getenv("TRADING_ENGINE_HOST", "127.0.0.1"),
+            engine_port=int(os.getenv("TRADING_ENGINE_PORT", "9000")),
+            connect_timeout=float(os.getenv("TRADING_ENGINE_CONNECT_TIMEOUT", "5.0")),
+            receive_timeout=float(os.getenv("TRADING_ENGINE_RECEIVE_TIMEOUT", "1.0")),
+            gateway_host=os.getenv("ANALYTICS_GATEWAY_HOST", "127.0.0.1"),
+            gateway_port=int(os.getenv("ANALYTICS_GATEWAY_PORT", "8000")),
+            reconnect=os.getenv("TRADING_ENGINE_RECONNECT", "true").lower()
             in {"1", "true", "yes", "on"},
-            reconnect_delay=float(
-                os.getenv(
-                    "TRADING_ENGINE_RECONNECT_DELAY",
-                    "1.0",
-                )
-            ),
-            max_payload_size=int(
-                os.getenv(
-                    "TRADING_ENGINE_MAX_PAYLOAD_SIZE",
-                    str(1024 * 1024),
-                )
-            ),
-            database_url=os.getenv(
-                "TRADING_ENGINE_DATABASE_URL",
-            ),
+            reconnect_delay=float(os.getenv("TRADING_ENGINE_RECONNECT_DELAY", "1.0")),
+            max_payload_size=int(os.getenv("TRADING_ENGINE_MAX_PAYLOAD_SIZE", str(1024 * 1024))),
+            database_url=os.getenv("TRADING_ENGINE_DATABASE_URL"),
             backpressure_queue_capacity=int(os.getenv("TRADING_ENGINE_BACKPRESSURE_QUEUE_CAPACITY", "1000")),
             backpressure_enqueue_timeout=float(os.getenv("TRADING_ENGINE_BACKPRESSURE_ENQUEUE_TIMEOUT", "0.1")),
             persistence_retry_attempts=int(os.getenv("TRADING_ENGINE_PERSISTENCE_RETRY_ATTEMPTS", "2")),
             persistence_retry_delay=float(os.getenv("TRADING_ENGINE_PERSISTENCE_RETRY_DELAY", "0.1")),
             publish_retry_attempts=int(os.getenv("TRADING_ENGINE_PUBLISH_RETRY_ATTEMPTS", "2")),
             publish_retry_delay=float(os.getenv("TRADING_ENGINE_PUBLISH_RETRY_DELAY", "0.1")),
+            risk_max_position=int(os.getenv("TRADING_ENGINE_RISK_MAX_POSITION", "1000")),
+            risk_max_position_value=Decimal(os.getenv("TRADING_ENGINE_RISK_MAX_POSITION_VALUE", "100000")),
+            risk_max_drawdown=Decimal(os.getenv("TRADING_ENGINE_RISK_MAX_DRAWDOWN", "1000")),
+            risk_max_daily_loss=Decimal(os.getenv("TRADING_ENGINE_RISK_MAX_DAILY_LOSS", "500")),
+            risk_warning_ratio=Decimal(os.getenv("TRADING_ENGINE_RISK_WARNING_RATIO", "0.80")),
             log_level=os.getenv("TRADING_ENGINE_LOG_LEVEL", "INFO"),
             log_format=os.getenv(
                 "TRADING_ENGINE_LOG_FORMAT",
-                "%(asctime)s %(levelname)s %(name)s "
-                "[%(threadName)s] %(message)s",
+                "%(asctime)s %(levelname)s %(name)s [%(threadName)s] %(message)s",
             ),
-            metrics_host=os.getenv(
-                "TRADING_ENGINE_METRICS_HOST",
-                "0.0.0.0",
-            ),
-            metrics_port=(
-                int(metrics_port_value)
-                if metrics_port_value
-                else None
-            ),
+            metrics_host=os.getenv("TRADING_ENGINE_METRICS_HOST", "0.0.0.0"),
+            metrics_port=int(metrics_port_value) if metrics_port_value else None,
         )
 
 
