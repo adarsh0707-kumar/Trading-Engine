@@ -460,6 +460,12 @@ bun test tests/runtime-stack.integration.test.ts
 
 The runtime integration test validates the real service path rather than a mocked dashboard-only flow.
 
+## Risk limits and enforcement boundary
+
+The analytics service evaluates configured position, position-value, drawdown, and daily-loss limits and publishes risk states/events. The Gateway forwards accepted risk events and exposes the latest analytics state at `GET /api/v1/analytics`.
+
+**Risk reporting is not the same as trade enforcement.** A `breached` state does not, by itself, prove that the engine rejects new orders or halts the simulation. See [Risk Limits, Events, and Enforcement Boundaries](docs/11-risk-limits-and-enforcement.md) for current defaults, runtime verification commands, and the outstanding enforcement acceptance criteria.
+
 ## Observability and reliability
 
 The project treats failure handling as part of the architecture.
