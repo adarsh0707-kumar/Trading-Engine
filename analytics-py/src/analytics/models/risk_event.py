@@ -19,6 +19,7 @@ class RiskEventType(str):
 
     LIMIT_WARNING = "RISK_LIMIT_WARNING"
     LIMIT_BREACHED = "RISK_LIMIT_BREACHED"
+    LIMIT_RECOVERED = "RISK_LIMIT_RECOVERED"
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,6 +45,7 @@ class RiskEvent:
         if self.event_type not in {
             RiskEventType.LIMIT_WARNING,
             RiskEventType.LIMIT_BREACHED,
+            RiskEventType.LIMIT_RECOVERED,
         }:
             raise ValueError("unsupported risk event type")
 
@@ -61,20 +63,14 @@ class RiskEvent:
         if self.current_value < Decimal("0"):
             raise ValueError("current_value must not be negative")
 
-        if (
-            self.event_type == RiskEventType.LIMIT_WARNING
-            and self.status != RiskLimitStatus.WARNING
-        ):
+        expected_status = {
+            RiskEventType.LIMIT_WARNING: RiskLimitStatus.WARNING,
+            RiskEventType.LIMIT_BREACHED: RiskLimitStatus.BREACHED,
+            RiskEventType.LIMIT_RECOVERED: RiskLimitStatus.OK,
+        }[self.event_type]
+        if self.status != expected_status:
             raise ValueError(
-                "LIMIT_WARNING events must have WARNING status"
-            )
-
-        if (
-            self.event_type == RiskEventType.LIMIT_BREACHED
-            and self.status != RiskLimitStatus.BREACHED
-        ):
-            raise ValueError(
-                "LIMIT_BREACHED events must have BREACHED status"
+                f"{self.event_type} events must have {expected_status.value.upper()} status"
             )
 
         if self.symbol is not None and not self.symbol.strip():
@@ -90,14 +86,11 @@ class RiskEvent:
     ) -> "RiskEvent":
         """Create a risk event from an evaluated risk-limit state."""
 
-        if state.status == RiskLimitStatus.WARNING:
-            event_type = RiskEventType.LIMIT_WARNING
-        elif state.status == RiskLimitStatus.BREACHED:
-            event_type = RiskEventType.LIMIT_BREACHED
-        else:
-            raise ValueError(
-                "risk events can only be created for WARNING or BREACHED states"
-            )
+        event_type = {
+            RiskLimitStatus.WARNING: RiskEventType.LIMIT_WARNING,
+            RiskLimitStatus.BREACHED: RiskEventType.LIMIT_BREACHED,
+            RiskLimitStatus.OK: RiskEventType.LIMIT_RECOVERED,
+        }[state.status]
 
         return cls(
             event_id=event_id,
