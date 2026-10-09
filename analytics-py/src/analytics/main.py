@@ -84,7 +84,7 @@ class AnalyticsService:
         self.health_metrics = health_metrics or ServiceHealthMetrics()
 
         self.parser = MessageParser()
-        self.processor = StreamingProcessor()
+        self.processor = StreamingProcessor(risk_limits=settings.risk_limit_config)
 
         self._message_queue = BackpressureQueue(
             capacity=settings.backpressure_queue_capacity,
