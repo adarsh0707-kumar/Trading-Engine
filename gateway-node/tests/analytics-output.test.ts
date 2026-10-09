@@ -239,6 +239,27 @@ describe("analytics output protocol", () => {
     expect(provider.getAnalytics()?.riskStatus).toBe("breached");
   });
 
+  test("applies a recovery event to clear a previously breached status", () => {
+    const provider = createAnalyticsProvider();
+    provider.updateAnalytics(analyticsUpdateForSymbol("SIM"));
+    provider.updateRiskEvent(riskEventForSymbol("SIM"));
+    expect(provider.getAnalytics()?.riskStatus).toBe("breached");
+
+    const raw = JSON.parse(outputMessage("RISK_EVENT")) as {
+      payload: string;
+    };
+    const payload = JSON.parse(raw.payload) as Record<string, unknown>;
+    payload["event_type"] = "RISK_LIMIT_RECOVERED";
+    payload["status"] = "ok";
+    payload["current_value"] = "50";
+    raw.payload = JSON.stringify(payload);
+    const recovery = normalizeAnalyticsOutputMessage(raw);
+    if (recovery.type !== "RISK_EVENT") throw new Error("Expected RISK_EVENT");
+
+    provider.updateRiskEvent(recovery);
+    expect(provider.getAnalytics()?.riskStatus).toBe("ok");
+  });
+
   test("does not leak a symbol-specific risk event to another symbol", () => {
     const provider = createAnalyticsProvider();
     provider.updateAnalytics(analyticsUpdateForSymbol("ETH"));
