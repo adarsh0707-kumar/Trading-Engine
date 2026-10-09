@@ -1,0 +1,27 @@
+name: docker
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  compose-config:
+    name: Validate Compose configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate rendered Compose configuration
+        run: docker compose config --quiet
+
+  build-images:
+    name: Build runtime images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build all Compose services
+        run: docker compose build --parallel

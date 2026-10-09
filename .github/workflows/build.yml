@@ -1,0 +1,40 @@
+name: build
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  engine-cpp:
+    name: C++ build (${{ matrix.build_type }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S engine-cpp -B build/engine-cpp -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+      - name: Build
+        run: cmake --build build/engine-cpp --parallel 2
+
+  dashboard:
+    name: Dashboard production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
+      - name: Install dependencies
+        working-directory: dashboard-react
+        run: bun install
+      - name: Build
+        working-directory: dashboard-react
+        run: bun run build
