@@ -162,6 +162,26 @@ add_test(
 )
 
 # -------------------------
+# Pre-trade risk guard tests
+# -------------------------
+
+add_executable(
+    test_risk_guard
+    tests/unit/test_risk_guard.cpp
+)
+
+target_link_libraries(
+    test_risk_guard
+    PRIVATE
+    engine_core
+)
+
+add_test(
+    NAME test_risk_guard
+    COMMAND test_risk_guard
+)
+
+# -------------------------
 # Book snapshot tests
 # -------------------------
 
@@ -312,6 +332,7 @@ target_sources(
     src/utils/Time.cpp
     src/logging/Logger.cpp
     src/engine/EngineConfig.cpp
+    src/engine/RiskGuard.cpp
     src/engine/EngineState.cpp
     src/engine/Engine.cpp
 )
