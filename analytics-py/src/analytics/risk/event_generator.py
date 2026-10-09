@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from analytics.models.risk_event import RiskEvent
 from analytics.models.risk_limit import RiskLimitState, RiskLimitStatus, RiskLimitType
@@ -20,7 +20,7 @@ class RiskEventGenerator:
         self._event_prefix = event_prefix
         self._sequence = 0
         self._previous_alert_status: dict[
-            tuple[str | None, RiskLimitType], RiskLimitStatus
+            tuple[str | None, RiskLimitType, date | None], RiskLimitStatus
         ] = {}
 
     def generate(
@@ -33,13 +33,27 @@ class RiskEventGenerator:
 
         WARNING and BREACHED states continue to emit events on every evaluation.
         An OK state emits a recovery event only when the same symbol/limit was
-        previously WARNING or BREACHED.
+        previously WARNING or BREACHED during the same risk period. Daily-loss
+        state is scoped to the timestamp's date because its baseline resets at
+        the start of each trading day.
         """
+
+        current_date = timestamp.date()
+        self._previous_alert_status = {
+            key: status
+            for key, status in self._previous_alert_status.items()
+            if key[1] != RiskLimitType.MAX_DAILY_LOSS or key[2] == current_date
+        }
 
         events: list[RiskEvent] = []
 
         for state in states:
-            key = (state.limit.symbol, state.limit.limit_type)
+            risk_date = (
+                current_date
+                if state.limit.limit_type == RiskLimitType.MAX_DAILY_LOSS
+                else None
+            )
+            key = (state.limit.symbol, state.limit.limit_type, risk_date)
 
             if state.status in {
                 RiskLimitStatus.WARNING,
