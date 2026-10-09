@@ -131,6 +131,37 @@ describe("analytics output protocol", () => {
     expect(message.payload.limitType).toBe("MAX_DRAWDOWN");
   });
 
+  test("normalizes explicit risk recovery events as OK", () => {
+    const raw = JSON.parse(outputMessage("RISK_EVENT")) as {
+      payload: string;
+    };
+    const payload = JSON.parse(raw.payload) as Record<string, unknown>;
+    payload["event_type"] = "RISK_LIMIT_RECOVERED";
+    payload["status"] = "ok";
+    payload["current_value"] = "50";
+    raw.payload = JSON.stringify(payload);
+
+    const message = normalizeAnalyticsOutputMessage(raw);
+
+    expect(message.type).toBe("RISK_EVENT");
+    if (message.type !== "RISK_EVENT") throw new Error("Expected RISK_EVENT");
+    expect(message.payload.eventType).toBe("RISK_LIMIT_RECOVERED");
+    expect(message.payload.status).toBe("ok");
+  });
+
+  test("rejects a risk event with a mismatched event type and status", () => {
+    const raw = JSON.parse(outputMessage("RISK_EVENT")) as {
+      payload: string;
+    };
+    const payload = JSON.parse(raw.payload) as Record<string, unknown>;
+    payload["event_type"] = "RISK_LIMIT_RECOVERED";
+    raw.payload = JSON.stringify(payload);
+
+    expect(() => normalizeAnalyticsOutputMessage(raw)).toThrow(
+      "requires status 'ok'",
+    );
+  });
+
   test("receives fragmented output frames on the existing connection", async () => {
     const received: string[] = [];
 
