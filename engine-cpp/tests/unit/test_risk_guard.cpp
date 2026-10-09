@@ -64,7 +64,7 @@ void test_order_larger_than_position_limit_is_rejected()
     const auto order = make_order("B1", engine::Side::BUY, 100.0, 101);
     const auto decision = guard.check_order(*order);
     CHECK(!decision.allowed);
-    CHECK(decision.reason == "order quantity exceeds max_position");
+    CHECK(decision.reason == "projected position exceeds max_position");
 }
 
 void test_invalid_risk_configuration_is_rejected()
