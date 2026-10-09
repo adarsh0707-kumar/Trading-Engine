@@ -250,19 +250,31 @@ export function normalizeAnalyticsOutputMessage(
 
   if (envelope.type === "RISK_EVENT") {
     const status = envelope.payload["status"];
-    if (status !== "warning" && status !== "breached") {
+    if (status !== "ok" && status !== "warning" && status !== "breached") {
       throw new AnalyticsMessageValidationError(
-        "Analytics RISK_EVENT payload field 'status' must be warning or breached",
+        "Analytics RISK_EVENT payload field 'status' must be ok, warning, or breached",
       );
     }
 
     const eventType = envelope.payload["event_type"];
     if (
       eventType !== "RISK_LIMIT_WARNING" &&
-      eventType !== "RISK_LIMIT_BREACHED"
+      eventType !== "RISK_LIMIT_BREACHED" &&
+      eventType !== "RISK_LIMIT_RECOVERED"
     ) {
       throw new AnalyticsMessageValidationError(
         "Analytics RISK_EVENT payload contains an unsupported event_type",
+      );
+    }
+
+    const expectedStatus = {
+      RISK_LIMIT_WARNING: "warning",
+      RISK_LIMIT_BREACHED: "breached",
+      RISK_LIMIT_RECOVERED: "ok",
+    }[eventType];
+    if (status !== expectedStatus) {
+      throw new AnalyticsMessageValidationError(
+        `Analytics RISK_EVENT event_type '${eventType}' requires status '${expectedStatus}'`,
       );
     }
 
