@@ -1,0 +1,38 @@
+name: lint
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  workflow-lint:
+    name: GitHub Actions workflow lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install actionlint
+        run: |
+          ACTIONLINT_VERSION="1.7.7"
+          curl -sSfL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" -o /tmp/actionlint.tar.gz
+          tar -xzf /tmp/actionlint.tar.gz -C /tmp actionlint
+          sudo install /tmp/actionlint /usr/local/bin/actionlint
+      - name: Check workflow syntax and expressions
+        run: actionlint .github/workflows/*.yml
+
+  whitespace:
+    name: Whitespace and patch hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check trailing whitespace and conflict markers
+        run: |
+          git diff --check
+          if grep -RInE '^(<<<<<<< |=======|>>>>>>> )' --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=build .; then
+            echo "Conflict markers detected."
+            exit 1
+          fi
