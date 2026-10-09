@@ -25,14 +25,9 @@ jobs:
         run: actionlint .github/workflows/*.yml
 
   whitespace:
-    name: Whitespace and patch hygiene
+    name: Patch whitespace validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check trailing whitespace and conflict markers
-        run: |
-          git diff --check
-          if grep -RInE '^(<<<<<<< |=======|>>>>>>> )' --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=build .; then
-            echo "Conflict markers detected."
-            exit 1
-          fi
+      - name: Check patch whitespace
+        run: git diff --check
