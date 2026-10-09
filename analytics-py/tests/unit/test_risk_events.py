@@ -80,7 +80,7 @@ def test_breached_state_generates_breached_event() -> None:
     assert event.current_value == Decimal("100")
 
 
-def test_ok_state_does_not_generate_event() -> None:
+def test_ok_state_without_prior_alert_does_not_generate_event() -> None:
     generator = RiskEventGenerator()
 
     events = generator.generate(
@@ -89,6 +89,58 @@ def test_ok_state_does_not_generate_event() -> None:
     )
 
     assert events == ()
+
+
+def test_warning_transition_to_ok_generates_recovery_once() -> None:
+    generator = RiskEventGenerator()
+    warning = make_state(status=RiskLimitStatus.WARNING, current_value="80")
+    recovered = make_state(status=RiskLimitStatus.OK, current_value="50")
+
+    assert len(generator.generate(states=(warning,), timestamp=TIMESTAMP)) == 1
+
+    events = generator.generate(states=(recovered,), timestamp=TIMESTAMP)
+
+    assert len(events) == 1
+    assert events[0].event_type == RiskEventType.LIMIT_RECOVERED
+    assert events[0].status == RiskLimitStatus.OK
+    assert events[0].current_value == Decimal("50")
+    assert generator.generate(states=(recovered,), timestamp=TIMESTAMP) == ()
+
+
+def test_breached_transition_to_ok_generates_recovery() -> None:
+    generator = RiskEventGenerator()
+    breached = make_state(status=RiskLimitStatus.BREACHED, current_value="100")
+    recovered = make_state(status=RiskLimitStatus.OK, current_value="50")
+
+    generator.generate(states=(breached,), timestamp=TIMESTAMP)
+    events = generator.generate(states=(recovered,), timestamp=TIMESTAMP)
+
+    assert len(events) == 1
+    assert events[0].event_type == RiskEventType.LIMIT_RECOVERED
+    assert events[0].status == RiskLimitStatus.OK
+
+
+def test_recovery_state_is_isolated_by_symbol_and_limit_type() -> None:
+    generator = RiskEventGenerator()
+    warning_btc = make_state(status=RiskLimitStatus.WARNING, current_value="80")
+    warning_eth = RiskLimitState(
+        limit=RiskLimit(
+            limit_type=RiskLimitType.MAX_POSITION,
+            threshold=Decimal("100"),
+            warning_threshold=Decimal("80"),
+            symbol="ETH",
+        ),
+        current_value=Decimal("80"),
+        status=RiskLimitStatus.WARNING,
+    )
+    ok_btc = make_state(status=RiskLimitStatus.OK, current_value="50")
+
+    generator.generate(states=(warning_btc, warning_eth), timestamp=TIMESTAMP)
+    events = generator.generate(states=(ok_btc,), timestamp=TIMESTAMP)
+
+    assert len(events) == 1
+    assert events[0].event_type == RiskEventType.LIMIT_RECOVERED
+    assert events[0].symbol == "BTC"
 
 
 def test_multiple_states_generate_only_actionable_events() -> None:
@@ -174,21 +226,20 @@ def test_event_serializes_to_dict() -> None:
     }
 
 
-def test_ok_state_cannot_be_converted_to_event() -> None:
+def test_ok_state_converts_to_recovery_event() -> None:
     state = make_state(
         status=RiskLimitStatus.OK,
         current_value="50",
     )
 
-    with pytest.raises(
-        ValueError,
-        match="only be created for WARNING or BREACHED",
-    ):
-        RiskEvent.from_state(
-            event_id="risk-max_position-1",
-            state=state,
-            timestamp=TIMESTAMP,
-        )
+    event = RiskEvent.from_state(
+        event_id="risk-max_position-1",
+        state=state,
+        timestamp=TIMESTAMP,
+    )
+
+    assert event.event_type == RiskEventType.LIMIT_RECOVERED
+    assert event.status == RiskLimitStatus.OK
 
 
 def test_warning_event_requires_warning_status() -> None:
@@ -212,7 +263,7 @@ def test_warning_event_requires_warning_status() -> None:
 def test_breached_event_requires_breached_status() -> None:
     with pytest.raises(
         ValueError,
-        match="LIMIT_BREACHED events must have BREACHED status",
+        match="RISK_LIMIT_BREACHED events must have BREACHED status",
     ):
         RiskEvent(
             event_id="risk-1",
@@ -245,6 +296,24 @@ def test_event_rejects_blank_event_id() -> None:
         RiskEvent.from_state(
             event_id="",
             state=state,
+            timestamp=TIMESTAMP,
+        )
+
+
+def test_recovery_event_requires_ok_status() -> None:
+    with pytest.raises(
+        ValueError,
+        match="RISK_LIMIT_RECOVERED events must have OK status",
+    ):
+        RiskEvent(
+            event_id="risk-1",
+            event_type=RiskEventType.LIMIT_RECOVERED,
+            symbol="BTC",
+            limit_type=RiskLimitType.MAX_POSITION,
+            status=RiskLimitStatus.WARNING,
+            threshold=Decimal("100"),
+            warning_threshold=Decimal("80"),
+            current_value=Decimal("90"),
             timestamp=TIMESTAMP,
         )
 
