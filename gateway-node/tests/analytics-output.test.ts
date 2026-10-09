@@ -86,6 +86,26 @@ function outputMessage(type: "ANALYTICS_UPDATE" | "RISK_EVENT") {
   });
 }
 
+function riskEventForSymbol(symbol: string | null): GatewayRiskEventMessage {
+  const raw = JSON.parse(outputMessage("RISK_EVENT")) as {
+    payload: string;
+  };
+  const payload = JSON.parse(raw.payload) as Record<string, unknown>;
+  payload["symbol"] = symbol;
+  raw.payload = JSON.stringify(payload);
+  return normalizeAnalyticsOutputMessage(raw) as GatewayRiskEventMessage;
+}
+
+function analyticsUpdateForSymbol(symbol: string): GatewayAnalyticsUpdateMessage {
+  const raw = JSON.parse(outputMessage("ANALYTICS_UPDATE")) as {
+    payload: string;
+  };
+  const payload = JSON.parse(raw.payload) as Record<string, unknown>;
+  payload["symbol"] = symbol;
+  raw.payload = JSON.stringify(payload);
+  return normalizeAnalyticsOutputMessage(raw) as GatewayAnalyticsUpdateMessage;
+}
+
 describe("analytics output protocol", () => {
   test("normalizes analytics updates", () => {
     const message = normalizeAnalyticsOutputMessage(
@@ -156,14 +176,16 @@ describe("analytics output protocol", () => {
     expect(received).toEqual(["analytics-trade-1-1"]);
   });
 
-  test("stores the latest analytics snapshot and risk state", () => {
+  test("starts with unknown risk status instead of assuming healthy", () => {
     const provider = createAnalyticsProvider();
+    provider.updateAnalytics(analyticsUpdateForSymbol("SIM"));
 
-    provider.updateAnalytics(
-      normalizeAnalyticsOutputMessage(
-        JSON.parse(outputMessage("ANALYTICS_UPDATE")),
-      ) as GatewayAnalyticsUpdateMessage,
-    );
+    expect(provider.getAnalytics()?.riskStatus).toBe("unknown");
+  });
+
+  test("stores the latest analytics snapshot and applies its symbol risk event", () => {
+    const provider = createAnalyticsProvider();
+    provider.updateAnalytics(analyticsUpdateForSymbol("SIM"));
 
     expect(provider.getAnalytics()).toEqual({
       symbol: "SIM",
@@ -178,16 +200,34 @@ describe("analytics output protocol", () => {
       realizedPnl: 0,
       unrealizedPnl: 0,
       drawdown: 0,
-      riskStatus: "ok",
+      riskStatus: "unknown",
       timestamp: "2026-10-02T12:00:01.000Z",
     });
 
-    provider.updateRiskEvent(
-      normalizeAnalyticsOutputMessage(
-        JSON.parse(outputMessage("RISK_EVENT")),
-      ) as GatewayRiskEventMessage,
-    );
+    provider.updateRiskEvent(riskEventForSymbol("SIM"));
+    expect(provider.getAnalytics()?.riskStatus).toBe("breached");
+  });
 
+  test("does not leak a symbol-specific risk event to another symbol", () => {
+    const provider = createAnalyticsProvider();
+    provider.updateAnalytics(analyticsUpdateForSymbol("ETH"));
+    provider.updateRiskEvent(riskEventForSymbol("SIM"));
+
+    expect(provider.getAnalytics()?.symbol).toBe("ETH");
+    expect(provider.getAnalytics()?.riskStatus).toBe("unknown");
+
+    provider.updateAnalytics(analyticsUpdateForSymbol("SIM"));
+    expect(provider.getAnalytics()?.riskStatus).toBe("breached");
+  });
+
+  test("applies a portfolio-wide risk event consistently", () => {
+    const provider = createAnalyticsProvider();
+    provider.updateAnalytics(analyticsUpdateForSymbol("ETH"));
+    provider.updateRiskEvent(riskEventForSymbol(null));
+
+    expect(provider.getAnalytics()?.riskStatus).toBe("breached");
+
+    provider.updateAnalytics(analyticsUpdateForSymbol("SIM"));
     expect(provider.getAnalytics()?.riskStatus).toBe("breached");
   });
 });

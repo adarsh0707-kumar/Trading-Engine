@@ -15,7 +15,12 @@ export interface MutableAnalyticsProvider extends AnalyticsProvider {
 
 export function createAnalyticsProvider(): MutableAnalyticsProvider {
   let snapshot: AnalyticsSnapshot | null = null;
-  let riskStatus: RiskStatus = "ok";
+  let globalRiskStatus: RiskStatus = "unknown";
+  const riskStatusBySymbol = new Map<string, RiskStatus>();
+
+  function riskStatusFor(symbol: string): RiskStatus {
+    return riskStatusBySymbol.get(symbol) ?? globalRiskStatus;
+  }
 
   return {
     getAnalytics(): AnalyticsSnapshot | null {
@@ -25,7 +30,7 @@ export function createAnalyticsProvider(): MutableAnalyticsProvider {
 
       return {
         ...snapshot,
-        riskStatus,
+        riskStatus: riskStatusFor(snapshot.symbol),
       };
     },
 
@@ -43,18 +48,27 @@ export function createAnalyticsProvider(): MutableAnalyticsProvider {
         realizedPnl: message.payload.realizedPnl,
         unrealizedPnl: message.payload.unrealizedPnl,
         drawdown: message.payload.drawdown,
-        riskStatus,
+        riskStatus: riskStatusFor(message.payload.symbol),
         timestamp: message.timestamp,
       };
     },
 
     updateRiskEvent(message): void {
-      riskStatus = message.payload.status;
+      const { symbol, status } = message.payload;
 
-      if (snapshot !== null) {
+      if (symbol === null) {
+        // A null symbol denotes a portfolio-wide event. Apply it consistently
+        // to all symbols until a newer symbol-specific event overrides it.
+        globalRiskStatus = status;
+        riskStatusBySymbol.clear();
+      } else {
+        riskStatusBySymbol.set(symbol, status);
+      }
+
+      if (snapshot !== null && (symbol === null || snapshot.symbol === symbol)) {
         snapshot = {
           ...snapshot,
-          riskStatus,
+          riskStatus: riskStatusFor(snapshot.symbol),
           timestamp: message.timestamp,
         };
       }
