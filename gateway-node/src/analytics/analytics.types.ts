@@ -1,4 +1,4 @@
-export type RiskStatus = "ok" | "warning" | "breached";
+export type RiskStatus = "unknown" | "ok" | "warning" | "breached";
 
 export interface AnalyticsSnapshot {
   readonly symbol: string;
