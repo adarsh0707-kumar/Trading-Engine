@@ -54,11 +54,11 @@ export interface GatewayAnalyticsUpdateMessage {
   readonly payload: AnalyticsUpdatePayload;
 }
 
-export type RiskEventStatus = "warning" | "breached";
+export type RiskEventStatus = "ok" | "warning" | "breached";
 
 export interface AnalyticsRiskEventPayload {
   readonly eventId: string;
-  readonly eventType: "RISK_LIMIT_WARNING" | "RISK_LIMIT_BREACHED";
+  readonly eventType: "RISK_LIMIT_WARNING" | "RISK_LIMIT_BREACHED" | "RISK_LIMIT_RECOVERED";
   readonly symbol: string | null;
   readonly limitType: string;
   readonly status: RiskEventStatus;
