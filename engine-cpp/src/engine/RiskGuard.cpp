@@ -27,15 +27,9 @@ RiskDecision RiskGuard::check_order(const ::engine::Order &order) const
     RiskDecision decision;
     decision.projected_position = position_;
 
-    if (!order.is_valid() || !order.is_active())
+    if (!order.is_valid() || !order.is_active() || !std::isfinite(order.price()))
     {
         decision.reason = "order is invalid or inactive";
-        return decision;
-    }
-
-    if (order.quantity() > config_.max_position)
-    {
-        decision.reason = "order quantity exceeds max_position";
         return decision;
     }
 
@@ -54,8 +48,8 @@ RiskDecision RiskGuard::check_order(const ::engine::Order &order) const
         decision.reason = "projected position exceeds max_position";
         decision.projected_position =
             projected > 0
-                ? config_.max_position + 1
-                : -(config_.max_position + 1);
+                ? config_.max_position
+                : -config_.max_position;
         return decision;
     }
 
