@@ -21,6 +21,8 @@ struct EngineConfig
     double max_price{105.0};
     std::int64_t min_quantity{1};
     std::int64_t max_quantity{100};
+    std::int64_t risk_max_position{1000};
+    double risk_max_position_value{100000.0};
 };
 
 } // namespace engine_runtime
