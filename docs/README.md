@@ -18,6 +18,7 @@ This directory contains the engineering documentation for the **Cloud-Based Algo
 | `08-gap-analysis.md` | MVP vs production-style architecture and future gaps |
 | `09-testing-strategy.md` | Unit, integration, contract, E2E, performance and failure testing |
 | `10-glossary.md` | Definitions of domain and engineering terminology |
+| `11-risk-limits-and-enforcement.md` | Risk-limit defaults, event flow, runtime checks, and the distinction between risk reporting and trade enforcement |
 
 ## Architecture at a Glance
 
