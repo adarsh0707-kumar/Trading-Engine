@@ -245,7 +245,7 @@ def test_ok_state_converts_to_recovery_event() -> None:
 def test_warning_event_requires_warning_status() -> None:
     with pytest.raises(
         ValueError,
-        match="LIMIT_WARNING events must have WARNING status",
+        match="RISK_LIMIT_WARNING events must have WARNING status",
     ):
         RiskEvent(
             event_id="risk-1",
