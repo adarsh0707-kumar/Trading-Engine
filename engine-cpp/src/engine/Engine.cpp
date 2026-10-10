@@ -207,13 +207,14 @@ void Engine::run_loop()
                 trade->quantity(),
                 trade->price());
 
-            if (risk_guard_.is_halted())
+            if (risk_guard_.is_halted() && !risk_halt_logged)
             {
                 logger_->error(
                     "risk_halt_triggered reason=" + risk_guard_.halt_reason() +
                     " equity=" + std::to_string(risk_guard_.equity()) +
                     " drawdown=" + std::to_string(risk_guard_.drawdown()) +
                     " daily_loss=" + std::to_string(risk_guard_.daily_loss()));
+                risk_halt_logged = true;
             }
 
             serialization::Message message;
