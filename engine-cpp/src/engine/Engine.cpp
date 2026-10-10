@@ -118,6 +118,7 @@ std::uint16_t Engine::port() const
 void Engine::run_loop()
 {
     logger_->info("Engine loop started");
+    bool risk_halt_logged = false;
 
     while (running_)
     {
@@ -148,13 +149,18 @@ void Engine::run_loop()
 
         if (risk_guard_.is_halted())
         {
-            logger_->error(
-                "risk_halt_active reason=" + risk_guard_.halt_reason() +
-                " equity=" + std::to_string(risk_guard_.equity()) +
-                " drawdown=" + std::to_string(risk_guard_.drawdown()) +
-                " daily_loss=" + std::to_string(risk_guard_.daily_loss()));
-            running_ = false;
-            break;
+            if (!risk_halt_logged)
+            {
+                logger_->error(
+                    "risk_halt_active reason=" + risk_guard_.halt_reason() +
+                    " equity=" + std::to_string(risk_guard_.equity()) +
+                    " drawdown=" + std::to_string(risk_guard_.drawdown()) +
+                    " daily_loss=" + std::to_string(risk_guard_.daily_loss()));
+                risk_halt_logged = true;
+            }
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(config_.tick_interval_ms));
+            continue;
         }
 
         const RiskDecision risk_decision =
