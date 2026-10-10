@@ -256,7 +256,9 @@ int main()
     test_realized_and_unrealized_pnl_when_reducing_and_reversing_position();
     test_drawdown_halts_at_exact_threshold_and_stays_latched();
     test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover();
-    test_state_restores_position_pnl_and_halt_after_restart();\n    test_trade_journal_replays_records_after_stale_snapshot();\n    test_corrupt_trade_journal_fails_closed();
+    test_state_restores_position_pnl_and_halt_after_restart();
+    test_trade_journal_replays_records_after_stale_snapshot();
+    test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
     std::cout << "RiskGuard tests passed (15/15)\n";
