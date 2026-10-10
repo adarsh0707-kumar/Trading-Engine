@@ -23,6 +23,9 @@ struct EngineConfig
     std::int64_t max_quantity{100};
     std::int64_t risk_max_position{1000};
     double risk_max_position_value{100000.0};
+    double risk_max_drawdown{1000.0};
+    double risk_max_daily_loss{500.0};
+    double risk_initial_equity{100000.0};
 };
 
 } // namespace engine_runtime
