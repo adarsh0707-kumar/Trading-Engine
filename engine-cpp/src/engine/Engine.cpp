@@ -76,7 +76,8 @@ void Engine::run_loop() {
         try { result=state_->match(incoming_order); }
         catch (const std::exception &error) { logger_->warn("Rejected order "+tick.order_id+": "+error.what()); continue; }
         for (const auto &trade:result.trades) {
-            risk_guard_.record_trade(trade->symbol(),trade->taker_side(),trade->quantity(),trade->price(),\n                trade->trade_id(),trade->taker_order_id(),trade->maker_order_id());
+            risk_guard_.record_trade(trade->symbol(),trade->taker_side(),trade->quantity(),trade->price(),
+                trade->trade_id(),trade->taker_order_id(),trade->maker_order_id());
             if (risk_guard_.is_halted()) {
                 risk_halted_.store(true);
                 if (!risk_halt_logged) {
