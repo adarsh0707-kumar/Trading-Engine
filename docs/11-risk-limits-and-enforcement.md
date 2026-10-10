@@ -18,7 +18,7 @@ The analytics service currently exposes these default risk limits:
 | Maximum daily loss | 500 | Daily-loss threshold |
 | Warning ratio | 80% | Threshold ratio used to warn before a configured limit is reached |
 
-These are application defaults, not a statement that every running container is using them. Environment/configuration overrides and the image actually deployed must be checked when diagnosing a runtime.
+These are application defaults, not a statement that every running container is using them. Analytics and engine configuration must remain aligned. The engine supports `ENGINE_RISK_MAX_POSITION` and `ENGINE_RISK_MAX_POSITION_VALUE` overrides; the deployed image and effective configuration must be checked when diagnosing a runtime.
 
 ## Risk states and events
 
@@ -38,13 +38,13 @@ Risk event types include:
 
 A breach may produce events for multiple limit types. While a violation persists, repeated event notifications may appear in the logs; inspect event-generation and transition semantics before interpreting each log line as a distinct new breach.
 
-## Detection is not enforcement
+## Enforcement status
 
-**A `breached` status is evidence of risk detection, not proof that the matching engine has stopped accepting or executing orders.**
+**The engine now performs pre-trade checks for maximum absolute position and maximum position value.** It rejects a generated order before matching when the projected position or projected position value exceeds the configured hard limit. Rejections are logged with the order ID, current position, and reason. These checks run in the C++ engine order-admission loop, before `EngineState::match`.
 
-The analytics pipeline evaluates completed trade data and reports risk state. That reporting path alone does not guarantee that a new order is rejected before it can reach the matching engine.
+This is deliberately narrower than the complete analytics risk set. **Drawdown and daily-loss limits are still reported by analytics and are not yet enforced as engine halts.** A `breached` analytics status is not, by itself, proof that the simulation has stopped. The engine's position accounting follows the trade's taker side, matching the current analytics risk manager's convention; this convention is not a full two-sided brokerage ledger.
 
-Until pre-trade enforcement is implemented and verified at the authoritative order-admission or execution boundary, do not describe the current analytics risk status as a trading halt, kill switch, or guarantee that limits cannot be exceeded.
+Keep the analytics event stream and dashboard as observability surfaces, not the sole enforcement mechanism. Do not describe drawdown/daily-loss reporting as a kill switch until a tested engine-control path exists.
 
 A future enforcement implementation should:
 
@@ -91,18 +91,18 @@ Rebuilding/recreating a service can reset in-memory streaming state. Do not assu
 
 ## Incident interpretation example
 
-A runtime snapshot observed on 2026-10-09 returned `riskStatus: "breached"`, position `2225`, equity `-11847.11`, and drawdown `21977.63`. Gateway logs also showed accepted risk events for `max_position`, `max_position_value`, `max_drawdown`, and `max_daily_loss`.
+A runtime snapshot observed on 2026-10-09 returned `riskStatus: "breached"`, position `2225`, equity `-11847.11`, and drawdown `21977.63`. Gateway logs also showed accepted risk events for all four risk-limit types.
 
-That snapshot demonstrated that risk reporting and event delivery were active while metrics were outside configured limits. It did **not** demonstrate that new trades were blocked. Runtime values are a diagnostic example, not a fixed expected result or a benchmark.
+That snapshot demonstrated risk reporting and event delivery while metrics were outside configured limits. After engine pre-trade enforcement is deployed, verify that rejected-order logs appear and that the position remains within the configured position limit. The historical values are diagnostic examples, not fixed expected results or benchmarks.
 
 ## Acceptance criteria for risk enforcement
 
-Do not mark enforcement complete until automated tests demonstrate that:
+Do not mark full risk enforcement complete until automated tests demonstrate that:
 
-- An order that would breach a hard pre-trade limit is rejected before execution.
-- An order within all hard limits remains admissible.
+- An order that would breach a hard position or position-value limit is rejected before execution.
+- An order within the configured hard limits remains admissible.
 - Position and position-value boundaries are tested at, below, and above the limit.
-- Drawdown and daily-loss halt policies are explicitly defined and tested.
+- Drawdown and daily-loss halt policies are explicitly defined and enforced by the engine or an authoritative execution guard.
 - A breach produces a traceable reason and structured log/event.
 - Recovery requires the documented policy and cannot accidentally bypass the limit.
 - Restart behavior and in-memory state recovery are documented and tested.

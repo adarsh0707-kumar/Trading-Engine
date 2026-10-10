@@ -4,6 +4,7 @@
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
+#include <stdexcept>
 #include <thread>
 
 static volatile std::sig_atomic_t running = 1;
@@ -25,6 +26,18 @@ int main()
         bind_address != nullptr && *bind_address != '\0')
     {
         config.bind_address = bind_address;
+    }
+
+    if (const char *max_position = std::getenv("ENGINE_RISK_MAX_POSITION");
+        max_position != nullptr && *max_position != '\0')
+    {
+        config.risk_max_position = std::stoll(max_position);
+    }
+
+    if (const char *max_position_value = std::getenv("ENGINE_RISK_MAX_POSITION_VALUE");
+        max_position_value != nullptr && *max_position_value != '\0')
+    {
+        config.risk_max_position_value = std::stod(max_position_value);
     }
 
     config.symbol = "SIM";
@@ -51,6 +64,8 @@ int main()
         << "Symbol: " << config.symbol << "\n"
         << "Bind: " << config.bind_address << "\n"
         << "Transport: " << config.bind_address << ":" << engine.port() << "\n"
+        << "Risk max position: " << config.risk_max_position << "\n"
+        << "Risk max position value: " << config.risk_max_position_value << "\n"
         << "Press Ctrl+C to stop.\n"
         << std::flush;
 

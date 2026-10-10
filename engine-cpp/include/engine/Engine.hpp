@@ -2,6 +2,7 @@
 
 #include "engine/EngineConfig.hpp"
 #include "engine/EngineState.hpp"
+#include "engine/RiskGuard.hpp"
 #include "logging/Logger.hpp"
 #include "market/MockMarketGenerator.hpp"
 #include "network/SocketServer.hpp"
@@ -41,6 +42,7 @@ private:
         const serialization::Message &request);
 
     EngineConfig config_;
+    RiskGuard risk_guard_;
     std::unique_ptr<EngineState> state_;
     std::unique_ptr<network::SocketServer> server_;
     std::unique_ptr<::engine::MockMarketGenerator> generator_;

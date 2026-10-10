@@ -19,6 +19,9 @@ namespace engine_runtime
 
 Engine::Engine(const EngineConfig &config)
     : config_(config),
+      risk_guard_(RiskGuardConfig{
+          config.risk_max_position,
+          config.risk_max_position_value}),
       state_(std::make_unique<EngineState>(config.symbol)),
       server_(std::make_unique<network::SocketServer>(
           config.port,
@@ -138,6 +141,25 @@ void Engine::run_loop()
             continue;
         }
 
+        const RiskDecision risk_decision =
+            risk_guard_.check_order(*incoming_order);
+
+        if (!risk_decision.allowed)
+        {
+            incoming_order->reject();
+            logger_->warn(
+                "risk_order_rejected order_id=" +
+                tick.order_id +
+                " symbol=" + tick.symbol +
+                " side=" + ::engine::to_string(tick.side) +
+                " quantity=" + std::to_string(tick.quantity) +
+                " current_position=" + std::to_string(risk_guard_.position()) +
+                " reason=" + risk_decision.reason);
+            std::this_thread::sleep_for(
+                std::chrono::milliseconds(config_.tick_interval_ms));
+            continue;
+        }
+
         ::engine::MatchResult result;
 
         try
@@ -157,6 +179,11 @@ void Engine::run_loop()
 
         for (const auto &trade : result.trades)
         {
+            risk_guard_.record_trade(
+                trade->symbol(),
+                trade->taker_side(),
+                trade->quantity());
+
             serialization::Message message;
 
             message.type =
