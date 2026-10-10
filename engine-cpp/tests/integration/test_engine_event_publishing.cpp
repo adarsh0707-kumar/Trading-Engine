@@ -13,6 +13,7 @@
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 using namespace trading;
@@ -254,7 +255,7 @@ static void test_engine_stops_matching_after_risk_halt()
     engine_runtime::EngineConfig config;
     config.symbol = "TEST";
     config.port = 0;
-    config.tick_interval_ms = 2;
+    config.tick_interval_ms = 10;
     config.market_seed = 999;
     config.min_price = 80.0;
     config.max_price = 120.0;
