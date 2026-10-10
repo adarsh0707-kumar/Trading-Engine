@@ -30,7 +30,7 @@ Engine::~Engine() { stop(); }
 bool Engine::start() {
     if (running_.exchange(true)) return false;
     if (!server_->start()) { running_=false; logger_->error("Failed to start SocketServer"); return false; }
-    logger_->info("Engine started on port "+std::to_string(server_->port()));
+    logger_->info("Engine started on port "+std::to_string(server_->port()));\n    logger_->info("risk_journal_reconciliation replayed_records="+std::to_string(risk_guard_.replayed_trade_count())+\n        " last_sequence="+std::to_string(risk_guard_.journal_sequence()));
     engine_thread_=std::thread(&Engine::run_loop,this); return true;
 }
 void Engine::stop() {
