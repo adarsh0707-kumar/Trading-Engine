@@ -143,7 +143,10 @@ int main()
     test_sell_can_reduce_long_position();
     test_position_value_limit_is_enforced();
     test_order_larger_than_position_limit_is_rejected();
+    test_drawdown_halts_and_latches();
+    test_daily_loss_halts_and_stays_latched_after_utc_rollover();
+    test_invalid_loss_limits_are_rejected();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (6/6)\n";
+    std::cout << "RiskGuard tests passed (9/9)\n";
     return 0;
 }
