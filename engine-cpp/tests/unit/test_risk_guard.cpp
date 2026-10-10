@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -190,6 +191,7 @@ void test_trade_journal_replays_records_after_stale_snapshot()
         RiskGuard recovered(config);
         CHECK(recovered.position() == 10);
         CHECK(recovered.equity() == 10000.0);
+        CHECK(recovered.replayed_trade_count() == 1);
     }
     {
         std::ifstream records(journal);
