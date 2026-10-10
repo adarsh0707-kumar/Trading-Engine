@@ -35,7 +35,7 @@ public:
     const std::string &halt_reason() const noexcept;
     double equity() const noexcept;
     double drawdown() const noexcept;
-    double daily_loss() const noexcept;
+    double daily_loss() const noexcept;\n    std::uint64_t journal_sequence() const noexcept;\n    std::uint64_t replayed_trade_count() const noexcept;
 private:
     void evaluate_limits() noexcept;
     void roll_daily_window(std::chrono::system_clock::time_point now) noexcept;
@@ -56,6 +56,6 @@ private:
     std::int64_t utc_day_{-1};
     bool halted_{false};
     std::string halt_reason_;
-    std::uint64_t journal_sequence_{0};
+    std::uint64_t journal_sequence_{0};\n    std::uint64_t replayed_trade_count_{0};
 };
 } } // namespace trading::engine_runtime
