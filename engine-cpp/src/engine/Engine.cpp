@@ -21,7 +21,10 @@ Engine::Engine(const EngineConfig &config)
     : config_(config),
       risk_guard_(RiskGuardConfig{
           config.risk_max_position,
-          config.risk_max_position_value}),
+          config.risk_max_position_value,
+          config.risk_max_drawdown,
+          config.risk_max_daily_loss,
+          config.risk_initial_equity}),
       state_(std::make_unique<EngineState>(config.symbol)),
       server_(std::make_unique<network::SocketServer>(
           config.port,
@@ -141,6 +144,19 @@ void Engine::run_loop()
             continue;
         }
 
+        risk_guard_.update_mark_price(tick.price);
+
+        if (risk_guard_.is_halted())
+        {
+            logger_->error(
+                "risk_halt_active reason=" + risk_guard_.halt_reason() +
+                " equity=" + std::to_string(risk_guard_.equity()) +
+                " drawdown=" + std::to_string(risk_guard_.drawdown()) +
+                " daily_loss=" + std::to_string(risk_guard_.daily_loss()));
+            running_ = false;
+            break;
+        }
+
         const RiskDecision risk_decision =
             risk_guard_.check_order(*incoming_order);
 
@@ -182,7 +198,17 @@ void Engine::run_loop()
             risk_guard_.record_trade(
                 trade->symbol(),
                 trade->taker_side(),
-                trade->quantity());
+                trade->quantity(),
+                trade->price());
+
+            if (risk_guard_.is_halted())
+            {
+                logger_->error(
+                    "risk_halt_triggered reason=" + risk_guard_.halt_reason() +
+                    " equity=" + std::to_string(risk_guard_.equity()) +
+                    " drawdown=" + std::to_string(risk_guard_.drawdown()) +
+                    " daily_loss=" + std::to_string(risk_guard_.daily_loss()));
+            }
 
             serialization::Message message;
 
