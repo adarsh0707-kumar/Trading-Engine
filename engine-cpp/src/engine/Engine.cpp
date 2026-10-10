@@ -13,7 +13,7 @@ Engine::Engine(const EngineConfig &config)
     : config_(config),
       risk_guard_(RiskGuardConfig{config.risk_max_position, config.risk_max_position_value,
           config.risk_max_drawdown, config.risk_max_daily_loss, config.risk_initial_equity,
-          config.risk_state_file_path}),
+          config.risk_state_file_path, config.risk_trade_journal_file_path}),
       state_(std::make_unique<EngineState>(config.symbol)),
       server_(std::make_unique<network::SocketServer>(config.port, 10000, 30, config.bind_address)),
       logger_(std::make_unique<logging::Logger>("Engine"))
@@ -31,6 +31,8 @@ bool Engine::start() {
     if (running_.exchange(true)) return false;
     if (!server_->start()) { running_=false; logger_->error("Failed to start SocketServer"); return false; }
     logger_->info("Engine started on port "+std::to_string(server_->port()));
+    logger_->info("risk_journal_reconciliation replayed_records="+std::to_string(risk_guard_.replayed_trade_count())+
+        " last_sequence="+std::to_string(risk_guard_.journal_sequence()));
     engine_thread_=std::thread(&Engine::run_loop,this); return true;
 }
 void Engine::stop() {
@@ -76,7 +78,8 @@ void Engine::run_loop() {
         try { result=state_->match(incoming_order); }
         catch (const std::exception &error) { logger_->warn("Rejected order "+tick.order_id+": "+error.what()); continue; }
         for (const auto &trade:result.trades) {
-            risk_guard_.record_trade(trade->symbol(),trade->taker_side(),trade->quantity(),trade->price());
+            risk_guard_.record_trade(trade->symbol(),trade->taker_side(),trade->quantity(),trade->price(),
+                trade->trade_id(),trade->taker_order_id(),trade->maker_order_id());
             if (risk_guard_.is_halted()) {
                 risk_halted_.store(true);
                 if (!risk_halt_logged) {
