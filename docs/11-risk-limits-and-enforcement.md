@@ -43,11 +43,23 @@ A breach may produce events for multiple limit types. While a violation persists
 
 **The engine now performs pre-trade checks for maximum absolute position and maximum position value.** It rejects a generated order before matching when the projected position or projected position value exceeds the configured hard limit. Rejections are logged with the order ID, current position, and reason. These checks run in the C++ engine order-admission loop, before `EngineState::match`.
 
-This is deliberately narrower than the complete analytics risk set. **The engine now latches a halt when its own equity-based maximum drawdown or daily-loss threshold is reached.** Equity starts at `ENGINE_RISK_INITIAL_EQUITY` (default `100000`) and uses realized P&L plus mark-to-market unrealized P&L for the engine's tracked net position. The latest generated tick price is used as the mark. Daily loss is measured from the start-of-UTC-day equity. Once either limit trips, the engine remains alive for observability but does not admit further orders; recovery in price or UTC day rollover does not clear the halt. Restarting the process initializes fresh in-memory risk state, so restart persistence and operator-controlled resume are not implemented. The engine's position accounting follows the trade's taker side, matching the current analytics risk manager's convention; this convention is not a full two-sided brokerage ledger.
+This is deliberately narrower than the complete analytics risk set. **The engine now latches a halt when its own equity-based maximum drawdown or daily-loss threshold is reached.** Equity starts at `ENGINE_RISK_INITIAL_EQUITY` (default `100000`) and uses realized P&L plus mark-to-market unrealized P&L for the engine's tracked net position. The latest generated tick price is used as the mark. Daily loss is measured from the start-of-UTC-day equity. Once either limit trips, the engine remains alive for observability but does not admit further orders; recovery in price or UTC day rollover does not clear the halt. The halt, position, average entry, realized P&L, peak equity, and daily baseline exist only in process memory. Restarting the engine initializes fresh risk state; the engine currently cannot prove that a prior halt or open position is still in effect after restart. Operator-controlled resume and durable recovery are not implemented. The engine's position accounting follows the trade's taker side, matching the current analytics risk manager's convention; this convention is not a full two-sided brokerage ledger.
 
 Keep the analytics event stream and dashboard as observability surfaces, not the sole enforcement mechanism. Do not describe drawdown/daily-loss reporting as a kill switch until a tested engine-control path exists.
 
-Remaining work includes durable risk-state persistence across restart, an explicit operator-authorized resume control, and integration tests proving the end-to-end gateway/dashboard state reflects an engine halt. Continue to treat the analytics event stream and dashboard as observability surfaces, not the sole enforcement mechanism.
+Remaining work includes durable risk-state persistence across restart, an explicit operator-authorized resume control, and integration tests proving the end-to-end gateway/dashboard state reflects an engine halt. Unit coverage now exercises position and position-value boundaries below/at/above the threshold, long-position reductions and reversals, realized and unrealized P&L, exact drawdown/daily-loss thresholds, and UTC midnight rollover. The engine integration test observes the live process over repeated tick intervals after the halt signal and verifies no additional trade events are broadcast while the engine remains running. Continue to treat the analytics event stream and dashboard as observability surfaces, not the sole enforcement mechanism.
+
+## Operational response to a risk halt
+
+Until durable state and a guarded resume workflow exist, treat a risk halt as an incident that requires explicit operator review:
+
+1. **Do not restart merely to clear the halt.** A restart resets the in-memory halt, position, P&L, peak equity, and daily-loss baseline. The current implementation cannot automatically restore those values.
+2. **Capture evidence first.** Preserve engine logs, the effective risk-limit configuration, the halt reason and reported equity/drawdown/daily-loss values, plus relevant Gateway and analytics logs.
+3. **Stop and investigate the simulation.** Confirm the configured limits, trade sequence, mark prices, and P&L calculations. Do not assume analytics reporting alone proves engine enforcement.
+4. **If a restart is necessary, treat it as a manual reset.** Record the incident and obtain an explicit operator decision before restarting. Reconcile or intentionally reset the simulated position and risk baseline; do not silently resume the previous session.
+5. **Verify the restarted process.** Confirm effective risk configuration, health/readiness, and that new trades are expected only after the reset decision. A healthy process does not prove prior risk state was restored.
+
+This is a documented manual operating policy, not a technical guarantee: there is no persistent halt record or enforced operator authorization in the current implementation. Do not classify the risk controls as production-grade until risk state survives restart, corrupted/missing state fails safely, and resume is explicit and tested.
 
 ## Runtime verification
 
@@ -98,6 +110,7 @@ Do not mark full risk enforcement complete until automated tests demonstrate tha
 - Drawdown and daily-loss limits are calculated from equity, latched by the engine, and block all subsequent order matching until an explicit recovery policy is implemented.
 - UTC daily rollover resets the daily-loss baseline without clearing a latched halt.
 - Restart behavior is documented: risk state is currently in memory and resets on process restart.
+- Operational guidance prohibits an unreviewed restart after a halt and requires evidence capture and explicit manual reset approval.
 - A breach produces a traceable reason and structured log/event.
 - Recovery requires the documented policy and cannot accidentally bypass the limit.
 - Restart behavior and in-memory state recovery are documented and tested.
