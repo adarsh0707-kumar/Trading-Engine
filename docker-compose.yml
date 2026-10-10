@@ -17,17 +17,19 @@ services:
       retries: 20
       start_period: 5s
     restart: unless-stopped
-
   engine:
     build:
       context: ./engine-cpp
       dockerfile: Dockerfile
     environment:
       ENGINE_BIND_ADDRESS: 0.0.0.0
+      ENGINE_RISK_STATE_FILE: /var/lib/trading-engine/risk-state.snapshot
       ENGINE_RISK_MAX_DRAWDOWN: ${ENGINE_RISK_MAX_DRAWDOWN:-1000}
       ENGINE_RISK_MAX_DAILY_LOSS: ${ENGINE_RISK_MAX_DAILY_LOSS:-500}
     ports:
       - "${ENGINE_PORT:-9000}:9000"
+    volumes:
+      - trading-engine-risk-state:/var/lib/trading-engine
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 9000"]
       interval: 5s
@@ -35,7 +37,6 @@ services:
       retries: 20
       start_period: 5s
     restart: unless-stopped
-
   analytics:
     build:
       context: ./analytics-py
@@ -64,7 +65,6 @@ services:
       retries: 20
       start_period: 10s
     restart: unless-stopped
-
   gateway:
     build:
       context: ./gateway-node
@@ -94,7 +94,6 @@ services:
       retries: 20
       start_period: 10s
     restart: unless-stopped
-
   dashboard:
     build:
       context: ./dashboard-react
@@ -111,6 +110,6 @@ services:
       retries: 10
       start_period: 5s
     restart: unless-stopped
-
 volumes:
   trading-engine-postgres:
+  trading-engine-risk-state:
