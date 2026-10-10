@@ -136,7 +136,7 @@ std::uint64_t RiskGuard::append_trade_journal(
 
     const std::filesystem::path path(path_string);
     if (!path.parent_path().empty()) std::filesystem::create_directories(path.parent_path());
-    const int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0600);
+    const bool existed_before_append = std::filesystem::exists(path);\n    const int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0600);
     if (fd < 0) throw std::runtime_error("cannot open durable trade journal");
     std::size_t written = 0;
     while (written < line.size()) {
@@ -333,5 +333,5 @@ double RiskGuard::equity() const noexcept {
     return config_.initial_equity + realized_pnl_ + unrealized;
 }
 double RiskGuard::drawdown() const noexcept { return peak_equity_ - equity(); }
-double RiskGuard::daily_loss() const noexcept { return std::max(0.0, day_start_equity_ - equity()); }
+double RiskGuard::daily_loss() const noexcept { return std::max(0.0, day_start_equity_ - equity()); }\nstd::uint64_t RiskGuard::journal_sequence() const noexcept { return journal_sequence_; }\nstd::uint64_t RiskGuard::replayed_trade_count() const noexcept { return replayed_trade_count_; }
 } } // namespace trading::engine_runtime
