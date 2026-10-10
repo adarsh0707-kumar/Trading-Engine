@@ -111,6 +111,9 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Start real Phase 4 runtime stack
+        env:
+          ENGINE_RISK_MAX_DRAWDOWN: "100000000"
+          ENGINE_RISK_MAX_DAILY_LOSS: "100000000"
         run: docker compose up -d --build
 
       - name: Wait for runtime readiness

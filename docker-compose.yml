@@ -24,6 +24,8 @@ services:
       dockerfile: Dockerfile
     environment:
       ENGINE_BIND_ADDRESS: 0.0.0.0
+      ENGINE_RISK_MAX_DRAWDOWN: ${ENGINE_RISK_MAX_DRAWDOWN:-1000}
+      ENGINE_RISK_MAX_DAILY_LOSS: ${ENGINE_RISK_MAX_DAILY_LOSS:-500}
     ports:
       - "${ENGINE_PORT:-9000}:9000"
     healthcheck:
