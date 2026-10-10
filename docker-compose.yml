@@ -24,6 +24,7 @@ services:
     environment:
       ENGINE_BIND_ADDRESS: 0.0.0.0
       ENGINE_RISK_STATE_FILE: /var/lib/trading-engine/risk-state.snapshot
+      ENGINE_TRADE_JOURNAL_FILE: /var/lib/trading-engine/trades.log
       ENGINE_RISK_MAX_DRAWDOWN: ${ENGINE_RISK_MAX_DRAWDOWN:-1000}
       ENGINE_RISK_MAX_DAILY_LOSS: ${ENGINE_RISK_MAX_DAILY_LOSS:-500}
     ports:
