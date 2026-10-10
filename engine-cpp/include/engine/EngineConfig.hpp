@@ -19,5 +19,6 @@ struct EngineConfig {
     double risk_max_daily_loss{500.0};
     double risk_initial_equity{100000.0};
     std::string risk_state_file_path{};
+    std::string risk_trade_journal_file_path{};
 };
 } }
