@@ -36,7 +36,8 @@ public:
     double equity() const noexcept;
     double drawdown() const noexcept;
     double daily_loss() const noexcept;
-    std::uint64_t journal_sequence() const noexcept;\n    std::uint64_t replayed_trade_count() const noexcept;
+    std::uint64_t journal_sequence() const noexcept;
+    std::uint64_t replayed_trade_count() const noexcept;
 private:
     void evaluate_limits() noexcept;
     void roll_daily_window(std::chrono::system_clock::time_point now) noexcept;
