@@ -58,6 +58,7 @@ private:
     std::int64_t utc_day_{-1};
     bool halted_{false};
     std::string halt_reason_;
-    std::uint64_t journal_sequence_{0};\n    std::uint64_t replayed_trade_count_{0};
+    std::uint64_t journal_sequence_{0};
+    std::uint64_t replayed_trade_count_{0};
 };
 } } // namespace trading::engine_runtime
