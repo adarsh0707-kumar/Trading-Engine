@@ -16,9 +16,10 @@ The analytics service currently exposes these default risk limits:
 | Maximum position value | 100,000 | Maximum permitted position value under the evaluator's valuation rule |
 | Maximum drawdown | 1,000 | Drawdown threshold |
 | Maximum daily loss | 500 | Daily-loss threshold |
+| Initial engine equity | 100,000 | Starting simulated account equity for engine-side P&L risk calculations |
 | Warning ratio | 80% | Threshold ratio used to warn before a configured limit is reached |
 
-These are application defaults, not a statement that every running container is using them. Analytics and engine configuration must remain aligned. The engine supports `ENGINE_RISK_MAX_POSITION` and `ENGINE_RISK_MAX_POSITION_VALUE` overrides; the deployed image and effective configuration must be checked when diagnosing a runtime.
+These are application defaults, not a statement that every running container is using them. Analytics and engine configuration must remain aligned. The engine supports `ENGINE_RISK_MAX_POSITION`, `ENGINE_RISK_MAX_POSITION_VALUE`, `ENGINE_RISK_MAX_DRAWDOWN`, `ENGINE_RISK_MAX_DAILY_LOSS`, and `ENGINE_RISK_INITIAL_EQUITY` overrides; the deployed image and effective configuration must be checked when diagnosing a runtime.
 
 ## Risk states and events
 
@@ -42,19 +43,11 @@ A breach may produce events for multiple limit types. While a violation persists
 
 **The engine now performs pre-trade checks for maximum absolute position and maximum position value.** It rejects a generated order before matching when the projected position or projected position value exceeds the configured hard limit. Rejections are logged with the order ID, current position, and reason. These checks run in the C++ engine order-admission loop, before `EngineState::match`.
 
-This is deliberately narrower than the complete analytics risk set. **Drawdown and daily-loss limits are still reported by analytics and are not yet enforced as engine halts.** A `breached` analytics status is not, by itself, proof that the simulation has stopped. The engine's position accounting follows the trade's taker side, matching the current analytics risk manager's convention; this convention is not a full two-sided brokerage ledger.
+This is deliberately narrower than the complete analytics risk set. **The engine now latches a halt when its own equity-based maximum drawdown or daily-loss threshold is reached.** Equity starts at `ENGINE_RISK_INITIAL_EQUITY` (default `100000`) and uses realized P&L plus mark-to-market unrealized P&L for the engine's tracked net position. The latest generated tick price is used as the mark. Daily loss is measured from the start-of-UTC-day equity. Once either limit trips, the engine remains alive for observability but does not admit further orders; recovery in price or UTC day rollover does not clear the halt. Restarting the process initializes fresh in-memory risk state, so restart persistence and operator-controlled resume are not implemented. The engine's position accounting follows the trade's taker side, matching the current analytics risk manager's convention; this convention is not a full two-sided brokerage ledger.
 
 Keep the analytics event stream and dashboard as observability surfaces, not the sole enforcement mechanism. Do not describe drawdown/daily-loss reporting as a kill switch until a tested engine-control path exists.
 
-A future enforcement implementation should:
-
-1. Check proposed orders against applicable limits before admitting them to the engine.
-2. Define whether the rule evaluates the resulting position/exposure, not only the current position.
-3. Specify which limits reject individual orders and which trigger a simulation-wide halt.
-4. Make breach, rejection, halt, and recovery transitions explicit and observable.
-5. Define an explicit recovery/resume policy rather than silently resuming after a transient status change.
-6. Test boundary values, concurrent/order bursts, partial fills, long and short positions, valuation changes, daily rollover, and recovery.
-7. Keep the analytics event stream and dashboard as observability surfaces, not the sole enforcement mechanism.
+Remaining work includes durable risk-state persistence across restart, an explicit operator-authorized resume control, and integration tests proving the end-to-end gateway/dashboard state reflects an engine halt. Continue to treat the analytics event stream and dashboard as observability surfaces, not the sole enforcement mechanism.
 
 ## Runtime verification
 
@@ -102,7 +95,9 @@ Do not mark full risk enforcement complete until automated tests demonstrate tha
 - An order that would breach a hard position or position-value limit is rejected before execution.
 - An order within the configured hard limits remains admissible.
 - Position and position-value boundaries are tested at, below, and above the limit.
-- Drawdown and daily-loss halt policies are explicitly defined and enforced by the engine or an authoritative execution guard.
+- Drawdown and daily-loss limits are calculated from equity, latched by the engine, and block all subsequent order matching until an explicit recovery policy is implemented.
+- UTC daily rollover resets the daily-loss baseline without clearing a latched halt.
+- Restart behavior is documented: risk state is currently in memory and resets on process restart.
 - A breach produces a traceable reason and structured log/event.
 - Recovery requires the documented policy and cannot accidentally bypass the limit.
 - Restart behavior and in-memory state recovery are documented and tested.
