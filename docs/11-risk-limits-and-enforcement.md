@@ -24,7 +24,7 @@ When `ENGINE_RISK_STATE_FILE` is set, the engine stores a versioned snapshot con
 
 Docker Compose sets `ENGINE_RISK_STATE_FILE=/var/lib/trading-engine/risk-state.snapshot` and mounts the named volume `trading-engine-risk-state`. Ordinary container replacement/restarts preserve this volume. Deleting the named volume destroys the risk snapshot. Local runs default to `./data/risk-state.snapshot`; keep this path on durable storage.
 
-The persisted state is an atomic single-file snapshot, not a transactional trade ledger. It does not protect against storage-device failure, external edits, or a crash between a successful match and its subsequent snapshot write. The simulation is single-process and must not run two engines against the same state file. For production-grade guarantees, use durable append-only trade records, checksums, locking, fsync/dirsync, and recovery reconciliation.
+The snapshot is paired with an append-only trade journal (`ENGINE_TRADE_JOURNAL_FILE`; default `<snapshot-path>.trades.log`). Every executed trade is recorded with its sequence, trade ID, symbol, taker side, quantity, price, order IDs, timestamp, and checksum. The engine appends the journal record and calls `fsync` before applying the trade to risk accounting or broadcasting it. The snapshot stores the last journal sequence. On startup, the engine validates the full journal sequence and checksums, then replays valid records newer than the snapshot sequence. Missing journal data referenced by a snapshot, malformed records, checksum mismatches, or sequence gaps fail startup closed. This recovers the crash window after durable journal append but before snapshot replacement.\n\nThe journal improves trade accounting recovery but is not a full order-book/event-sourcing solution: the in-memory order book is not restored, market marks are stored in the snapshot rather than replayed as journal events, and a crash before the journal append means the matched in-memory result was not durably committed or broadcast. A recovered trade can be in the ledger even if the process crashed before broadcasting it; consumers still need a future durable outbox/acknowledgement protocol for exactly-once delivery. The simulation is single-process and must not run two engines against the same files. This remains simulation-grade, not production-grade financial infrastructure.
 
 ## Halt and operator-authorized resume
 
@@ -54,7 +54,7 @@ Do not use `docker compose down -v` when you intend to preserve risk state.
 
 - Position, P&L, peak equity, UTC daily baseline, and halt state restore across restart.
 - Invalid or incompatible snapshots prevent engine startup.
-- State updates use atomic replacement and storage failures fail closed.
+- Snapshot updates use atomic replacement; executed trades are fsynced to an append-only journal before risk accounting and event broadcast. Storage failures fail closed.\n- Startup verifies journal checksums and contiguous sequence numbers, then replays journal entries newer than the snapshot.\n- Journal trade IDs and order IDs are retained for recovery investigation and downstream reconciliation.
 - Halt remains latched after restart unless the explicit local operator acknowledgement is supplied.
 - Resume preserves accounting state and re-evaluates active risk limits.
 - Docker Compose uses persistent storage for the snapshot.
