@@ -184,7 +184,7 @@ void test_trade_journal_replays_records_after_stale_snapshot()
     const auto utc_day = now_seconds / 86400;
     {
         std::ofstream stale(path, std::ios::trunc);
-        stale << "2 0 0 0 0 10000 10000 " << utc_day << " 0 - 0\\n";
+        stale << "2 0 0 0 0 10000 10000 " << utc_day << " 0 - 0\n";
     }
     {
         RiskGuard recovered(config);
@@ -207,7 +207,7 @@ void test_corrupt_trade_journal_fails_closed()
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-journal-corrupt.snapshot";
     const auto journal = std::filesystem::path(path.string() + ".trades.log");
     std::filesystem::remove(path);
-    { std::ofstream output(journal); output << "1 \\"trade-1\\" \\"SIM\\" BUY 10 100 0 \\"taker\\" \\"maker\\" 123\\n"; }
+    { std::ofstream output(journal); output << "1 trade-1 SIM BUY 10 100 0 taker maker 123\n"; }
     bool threw = false;
     try { RiskGuard guard(RiskGuardConfig{100, 100000.0, 1000.0, 500.0, 10000.0, path.string()}); }
     catch (const std::runtime_error &) { threw = true; }
