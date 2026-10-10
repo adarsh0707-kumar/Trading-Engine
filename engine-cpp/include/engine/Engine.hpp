@@ -32,6 +32,9 @@ public:
 
     bool is_running() const;
 
+    // True once the runtime has observed the risk halt and stopped admitting ticks.
+    bool is_risk_halted() const;
+
     std::uint16_t port() const;
 
 private:
@@ -49,6 +52,7 @@ private:
     std::unique_ptr<logging::Logger> logger_;
 
     std::atomic<bool> running_{false};
+    std::atomic<bool> risk_halted_{false};
     std::thread engine_thread_;
 };
 
