@@ -43,7 +43,7 @@ void test_order_that_would_exceed_position_is_rejected()
 void test_sell_can_reduce_long_position()
 {
     RiskGuard guard(RiskGuardConfig{100, 100000.0});
-    guard.record_trade("SIM", engine::Side::BUY, 80);
+    guard.record_trade("SIM", engine::Side::BUY, 80, 100.0);
     const auto order = make_order("S1", engine::Side::SELL, 100.0, 30);
     const auto decision = guard.check_order(*order);
     CHECK(decision.allowed);
