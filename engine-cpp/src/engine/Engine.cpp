@@ -110,6 +110,11 @@ bool Engine::is_running() const
     return running_.load();
 }
 
+bool Engine::is_risk_halted() const
+{
+    return risk_halted_.load();
+}
+
 std::uint16_t Engine::port() const
 {
     return server_->port();
@@ -149,6 +154,10 @@ void Engine::run_loop()
 
         if (risk_guard_.is_halted())
         {
+            // Publish an atomic testable/runtime signal only after the loop
+            // reaches the branch that suppresses further matching.
+            risk_halted_.store(true);
+
             if (!risk_halt_logged)
             {
                 logger_->error(
