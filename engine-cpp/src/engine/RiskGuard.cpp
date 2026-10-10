@@ -158,6 +158,14 @@ std::uint64_t RiskGuard::append_trade_journal(
                                  std::string(std::strerror(saved_errno)));
     }
     if (::close(fd) != 0) throw std::runtime_error("failed to close durable trade journal");
+    if (!existed_before_append) {
+        const auto parent = path.parent_path().empty() ? std::filesystem::path(".") : path.parent_path();
+        const int directory_fd = ::open(parent.c_str(), O_RDONLY | O_DIRECTORY);
+        if (directory_fd < 0) throw std::runtime_error("cannot open trade-journal directory for sync");
+        const int sync_result = ::fsync(directory_fd);
+        ::close(directory_fd);
+        if (sync_result != 0) throw std::runtime_error("failed to fsync trade-journal directory");
+    }
     return sequence;
 }
 
@@ -205,6 +213,7 @@ void RiskGuard::replay_trade_journal() {
         if (sequence > snapshot_sequence) {
             apply_trade(symbol, side_text == "BUY" ? ::engine::Side::BUY : ::engine::Side::SELL, quantity, price);
             journal_sequence_ = sequence;
+            ++replayed_trade_count_;
         }
     }
     if (!in.eof()) throw std::runtime_error("failed while reading durable trade journal; refusing startup");
@@ -335,5 +344,6 @@ double RiskGuard::equity() const noexcept {
 }
 double RiskGuard::drawdown() const noexcept { return peak_equity_ - equity(); }
 double RiskGuard::daily_loss() const noexcept { return std::max(0.0, day_start_equity_ - equity()); }
-std::uint64_t RiskGuard::journal_sequence() const noexcept { return journal_sequence_; }\nstd::uint64_t RiskGuard::replayed_trade_count() const noexcept { return replayed_trade_count_; }
+std::uint64_t RiskGuard::journal_sequence() const noexcept { return journal_sequence_; }
+std::uint64_t RiskGuard::replayed_trade_count() const noexcept { return replayed_trade_count_; }
 } } // namespace trading::engine_runtime
