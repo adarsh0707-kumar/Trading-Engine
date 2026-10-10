@@ -166,6 +166,56 @@ void test_state_restores_position_pnl_and_halt_after_restart()
     std::filesystem::remove(path);
 }
 
+void test_trade_journal_replays_records_after_stale_snapshot()
+{
+    const auto path = std::filesystem::temp_directory_path() / "risk-guard-journal-replay.snapshot";
+    const auto journal = std::filesystem::path(path.string() + ".trades.log");
+    std::filesystem::remove(path);
+    std::filesystem::remove(journal);
+    RiskGuardConfig config{100, 100000.0, 1000.0, 500.0, 10000.0, path.string()};
+    {
+        RiskGuard guard(config);
+        guard.record_trade("SIM", engine::Side::BUY, 10, 100.0, "trade-001", "taker-001", "maker-001");
+        CHECK(guard.position() == 10);
+    }
+
+    const auto now_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto utc_day = now_seconds / 86400;
+    {
+        std::ofstream stale(path, std::ios::trunc);
+        stale << "2 0 0 0 0 10000 10000 " << utc_day << " 0 - 0\\n";
+    }
+    {
+        RiskGuard recovered(config);
+        CHECK(recovered.position() == 10);
+        CHECK(recovered.equity() == 10000.0);
+    }
+    {
+        std::ifstream records(journal);
+        std::string contents((std::istreambuf_iterator<char>(records)), std::istreambuf_iterator<char>());
+        CHECK(contents.find("trade-001") != std::string::npos);
+        CHECK(contents.find("taker-001") != std::string::npos);
+        CHECK(contents.find("maker-001") != std::string::npos);
+    }
+    std::filesystem::remove(path);
+    std::filesystem::remove(journal);
+}
+
+void test_corrupt_trade_journal_fails_closed()
+{
+    const auto path = std::filesystem::temp_directory_path() / "risk-guard-journal-corrupt.snapshot";
+    const auto journal = std::filesystem::path(path.string() + ".trades.log");
+    std::filesystem::remove(path);
+    { std::ofstream output(journal); output << "1 \\"trade-1\\" \\"SIM\\" BUY 10 100 0 \\"taker\\" \\"maker\\" 123\\n"; }
+    bool threw = false;
+    try { RiskGuard guard(RiskGuardConfig{100, 100000.0, 1000.0, 500.0, 10000.0, path.string()}); }
+    catch (const std::runtime_error &) { threw = true; }
+    CHECK(threw);
+    std::filesystem::remove(path);
+    std::filesystem::remove(journal);
+}
+
 void test_corrupt_state_fails_closed()
 {
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-corrupt-test.snapshot";
@@ -206,9 +256,9 @@ int main()
     test_realized_and_unrealized_pnl_when_reducing_and_reversing_position();
     test_drawdown_halts_at_exact_threshold_and_stays_latched();
     test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover();
-    test_state_restores_position_pnl_and_halt_after_restart();
+    test_state_restores_position_pnl_and_halt_after_restart();\n    test_trade_journal_replays_records_after_stale_snapshot();\n    test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (13/13)\n";
+    std::cout << "RiskGuard tests passed (15/15)\n";
     return 0;
 }
