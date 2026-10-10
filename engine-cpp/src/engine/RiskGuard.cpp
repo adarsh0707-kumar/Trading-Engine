@@ -4,7 +4,6 @@
 #include <cerrno>
 #include <cmath>
 #include <filesystem>
-#include <fcntl.h>
 #include <fstream>
 #include <iomanip>
 #include <limits>
@@ -13,8 +12,15 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include <unistd.h>
 #include <vector>
+#ifdef _WIN32
+#include <io.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#else
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 
 namespace trading { namespace engine_runtime {
 namespace {
@@ -137,35 +143,61 @@ std::uint64_t RiskGuard::append_trade_journal(
     const std::filesystem::path path(path_string);
     if (!path.parent_path().empty()) std::filesystem::create_directories(path.parent_path());
     const bool existed_before_append = std::filesystem::exists(path);
+#ifdef _WIN32
+    const int fd = ::_open(path.string().c_str(), _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY, _S_IREAD | _S_IWRITE);
+#else
     const int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0600);
+#endif
     if (fd < 0) throw std::runtime_error("cannot open durable trade journal");
     std::size_t written = 0;
     while (written < line.size()) {
-        const ssize_t count = ::write(fd, line.data() + written, line.size() - written);
+#ifdef _WIN32
+        const auto count = ::_write(fd, line.data() + written,
+                                    static_cast<unsigned int>(line.size() - written));
+#else
+        const auto count = ::write(fd, line.data() + written, line.size() - written);
+#endif
         if (count < 0 && errno == EINTR) continue;
         if (count <= 0) {
             const int saved_errno = errno;
+#ifdef _WIN32
+            ::_close(fd);
+#else
             ::close(fd);
+#endif
             throw std::runtime_error("failed to append durable trade journal: " +
                                      std::string(std::strerror(saved_errno)));
         }
         written += static_cast<std::size_t>(count);
     }
-    if (::fsync(fd) != 0) {
+#ifdef _WIN32
+    const int sync_result = ::_commit(fd);
+#else
+    const int sync_result = ::fsync(fd);
+#endif
+    if (sync_result != 0) {
         const int saved_errno = errno;
+#ifdef _WIN32
+        ::_close(fd);
+#else
         ::close(fd);
-        throw std::runtime_error("failed to fsync durable trade journal: " +
+#endif
+        throw std::runtime_error("failed to sync durable trade journal: " +
                                  std::string(std::strerror(saved_errno)));
     }
+#ifdef _WIN32
+    if (::_close(fd) != 0) throw std::runtime_error("failed to close durable trade journal");
+#else
     if (::close(fd) != 0) throw std::runtime_error("failed to close durable trade journal");
     if (!existed_before_append) {
         const auto parent = path.parent_path().empty() ? std::filesystem::path(".") : path.parent_path();
         const int directory_fd = ::open(parent.c_str(), O_RDONLY | O_DIRECTORY);
         if (directory_fd < 0) throw std::runtime_error("cannot open trade-journal directory for sync");
-        const int sync_result = ::fsync(directory_fd);
+        const int directory_sync_result = ::fsync(directory_fd);
         ::close(directory_fd);
-        if (sync_result != 0) throw std::runtime_error("failed to fsync trade-journal directory");
+        if (directory_sync_result != 0) throw std::runtime_error("failed to fsync trade-journal directory");
     }
+#endif
     return sequence;
 }
 
