@@ -139,7 +139,9 @@ void test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollov
 void test_state_restores_position_pnl_and_halt_after_restart()
 {
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-persist-test.snapshot";
+    const auto journal = std::filesystem::path(path.string() + ".trades.log");
     std::filesystem::remove(path);
+    std::filesystem::remove(journal);
     RiskGuardConfig config{100, 100000.0, 100.0, 10000.0, 10000.0, path.string()};
     {
         RiskGuard guard(config);
@@ -165,6 +167,7 @@ void test_state_restores_position_pnl_and_halt_after_restart()
         CHECK(restored.position() == 10);
     }
     std::filesystem::remove(path);
+    std::filesystem::remove(journal);
 }
 
 void test_trade_journal_replays_records_after_stale_snapshot()
@@ -221,6 +224,8 @@ void test_corrupt_trade_journal_fails_closed()
 void test_corrupt_state_fails_closed()
 {
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-corrupt-test.snapshot";
+    std::filesystem::remove(path);
+    std::filesystem::remove(path.string() + ".trades.log");
     { std::ofstream output(path); output << "partial snapshot"; }
     bool threw = false;
     try { RiskGuard guard(RiskGuardConfig{100, 100000.0, 1000.0, 500.0, 100000.0, path.string()}); }
