@@ -13,7 +13,7 @@ int main() {
     trading::engine_runtime::EngineConfig config;
     config.risk_state_file_path="./data/risk-state.snapshot";
     if(const char *v=std::getenv("ENGINE_BIND_ADDRESS");v&&*v) config.bind_address=v;
-    if(const char *v=std::getenv("ENGINE_RISK_STATE_FILE");v&&*v) config.risk_state_file_path=v;
+    if(const char *v=std::getenv("ENGINE_RISK_STATE_FILE");v&&*v) config.risk_state_file_path=v;\n    if(const char *v=std::getenv("ENGINE_TRADE_JOURNAL_FILE");v&&*v) config.risk_trade_journal_file_path=v;
     if(const char *v=std::getenv("ENGINE_RISK_MAX_POSITION");v&&*v) config.risk_max_position=std::stoll(v);
     if(const char *v=std::getenv("ENGINE_RISK_MAX_POSITION_VALUE");v&&*v) config.risk_max_position_value=std::stod(v);
     if(const char *v=std::getenv("ENGINE_RISK_MAX_DRAWDOWN");v&&*v) config.risk_max_drawdown=std::stod(v);
