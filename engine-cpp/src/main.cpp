@@ -40,6 +40,24 @@ int main()
         config.risk_max_position_value = std::stod(max_position_value);
     }
 
+    if (const char *max_drawdown = std::getenv("ENGINE_RISK_MAX_DRAWDOWN");
+        max_drawdown != nullptr && *max_drawdown != '\0')
+    {
+        config.risk_max_drawdown = std::stod(max_drawdown);
+    }
+
+    if (const char *max_daily_loss = std::getenv("ENGINE_RISK_MAX_DAILY_LOSS");
+        max_daily_loss != nullptr && *max_daily_loss != '\0')
+    {
+        config.risk_max_daily_loss = std::stod(max_daily_loss);
+    }
+
+    if (const char *initial_equity = std::getenv("ENGINE_RISK_INITIAL_EQUITY");
+        initial_equity != nullptr && *initial_equity != '\0')
+    {
+        config.risk_initial_equity = std::stod(initial_equity);
+    }
+
     config.symbol = "SIM";
     config.port = 9000;
     config.tick_interval_ms = 100;
@@ -66,6 +84,9 @@ int main()
         << "Transport: " << config.bind_address << ":" << engine.port() << "\n"
         << "Risk max position: " << config.risk_max_position << "\n"
         << "Risk max position value: " << config.risk_max_position_value << "\n"
+        << "Risk max drawdown: " << config.risk_max_drawdown << "\n"
+        << "Risk max daily loss: " << config.risk_max_daily_loss << "\n"
+        << "Risk initial equity: " << config.risk_initial_equity << "\n"
         << "Press Ctrl+C to stop.\n"
         << std::flush;
 
