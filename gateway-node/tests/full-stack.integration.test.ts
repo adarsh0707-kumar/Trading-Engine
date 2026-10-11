@@ -42,6 +42,25 @@ const ANALYTICS_UPDATE = {
   },
 };
 
+const RISK_EVENT = {
+  version: 1,
+  type: "RISK_EVENT",
+  event_id: "risk-event-1",
+  request_id: "trade-request-1",
+  timestamp: "2026-10-04T10:00:02.000Z",
+  payload: {
+    event_id: "risk-event-1",
+    event_type: "RISK_LIMIT_WARNING",
+    symbol: "SIM",
+    limit_type: "max_drawdown",
+    status: "warning",
+    threshold: 100,
+    warning_threshold: 80,
+    current_value: 85,
+    timestamp: "2026-10-04T10:00:02.000Z",
+  },
+};
+
 function frame(value: unknown): Buffer {
   const body = Buffer.from(JSON.stringify(value), "utf8");
   const result = Buffer.alloc(4 + body.length);
@@ -99,7 +118,7 @@ async function closeServer(server: Server): Promise<void> {
 }
 
 function writeAnalyticsResponse(socket: Socket): void {
-  socket.write(frame(ANALYTICS_UPDATE));
+  socket.write(Buffer.concat([frame(ANALYTICS_UPDATE), frame(RISK_EVENT)]));
 }
 
 describe("full gateway integration path", () => {
@@ -172,7 +191,7 @@ describe("full gateway integration path", () => {
 
         ws.send(JSON.stringify({
           action: "subscribe",
-          events: ["TRADE", "ANALYTICS_UPDATE"],
+          events: ["TRADE", "ANALYTICS_UPDATE", "RISK_EVENT"],
         }));
 
         await waitFor(() =>
@@ -216,6 +235,24 @@ describe("full gateway integration path", () => {
           },
         });
 
+        const riskEvent = await waitFor(() =>
+          received.find((message) => message.type === "RISK_EVENT"),
+        );
+
+        expect(riskEvent).toMatchObject({
+          type: "RISK_EVENT",
+          eventId: "risk-event-1",
+          requestId: "trade-request-1",
+          payload: {
+            eventId: "risk-event-1",
+            eventType: "RISK_LIMIT_WARNING",
+            symbol: "SIM",
+            limitType: "max_drawdown",
+            status: "warning",
+            currentValue: 85,
+          },
+        });
+
         await waitFor(() => analyticsReceived);
         expect(analyticsReceived).toMatchObject({
           version: 1,
@@ -237,6 +274,46 @@ describe("full gateway integration path", () => {
         });
 
         expect(engineSocket).toBeDefined();
+
+        const [marketResponse, tradesResponse, analyticsResponse] = await Promise.all([
+          fetch(`http://127.0.0.1:${address.port}/api/v1/market`),
+          fetch(`http://127.0.0.1:${address.port}/api/v1/trades`),
+          fetch(`http://127.0.0.1:${address.port}/api/v1/analytics`),
+        ]);
+
+        expect(marketResponse.status).toBe(200);
+        expect(tradesResponse.status).toBe(200);
+        expect(analyticsResponse.status).toBe(200);
+
+        const marketBody = await marketResponse.json() as {
+          data: Record<string, unknown>;
+        };
+        const tradesBody = await tradesResponse.json() as {
+          data: { trades: Record<string, unknown>[] };
+        };
+        const analyticsBody = await analyticsResponse.json() as {
+          data: Record<string, unknown>;
+        };
+
+        expect(marketBody.data).toMatchObject({
+          symbol: "SIM",
+          lastPrice: 100,
+          lastQuantity: 2,
+        });
+        expect(tradesBody.data.trades).toContainEqual(expect.objectContaining({
+          tradeId: "trade-1",
+          symbol: "SIM",
+          price: 100,
+          quantity: 2,
+        }));
+        expect(analyticsBody.data).toMatchObject({
+          symbol: "SIM",
+          price: 100,
+          vwap: 100,
+          position: 2,
+          riskStatus: "warning",
+          timestamp: RISK_EVENT.timestamp,
+        });
       } finally {
         ws?.close();
         await gateway.stop();
