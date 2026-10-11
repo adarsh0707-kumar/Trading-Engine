@@ -1,3 +1,36 @@
+# 2026-10-11 — Phase 5.12 — Halted-State Market Data
+
+**Status:** ✅ Merged — PR #132
+
+Phase 5.12 fixes the market-data path when the engine's persisted risk state is halted. Market updates are now independent of matching and trade execution, so the dashboard can continue to show current simulated prices without bypassing risk controls.
+
+### Implemented
+
+- C++ engine publishes `MARKET_DATA` before the risk-halt matching guard.
+- Gateway validates and normalizes market-data events.
+- Gateway updates the REST market snapshot and publishes `MARKET_DATA` over WebSocket.
+- Dashboard subscribes to market-data events and updates the displayed price.
+- Only actual `TRADE` events enter trade history and the analytics pipeline.
+- Tests and protocol documentation cover the separate market-data and trade paths.
+
+### Local runtime validation
+
+- Gateway health: HTTP 200.
+- Gateway readiness: HTTP 200; engine and analytics connected.
+- `GET /api/v1/market`: HTTP 200.
+- Ten consecutive market polls showed advancing timestamps and changing prices at two-second intervals.
+- Dashboard reported Gateway connected and WebSocket open, displayed a live price, and showed zero trades.
+- Zero trades is compatible with the halted state; a market update is not an execution.
+
+### Risk boundary
+
+No risk snapshot was reset, no risk limit was changed, and no halt bypass was added. Do not reset or resume the engine solely to populate dashboard trade history.
+
+### Next target
+
+**Phase 5.13 — Data Integrity & Observability**
+
+---
 ## 2026-10-06 — Phase 5.8 — Portfolio, P&L & Risk Dashboard
 
 ### Status
