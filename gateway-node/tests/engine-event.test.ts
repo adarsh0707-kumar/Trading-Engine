@@ -91,18 +91,30 @@ describe("normalizeEngineEvent", () => {
     );
   });
 
-  test("rejects MARKET_DATA until an engine market-data contract exists", () => {
-    expect(() =>
+  test("normalizes MARKET_DATA ticks independently from trades", () => {
+    expect(
       normalizeEngineEvent({
         type: "MARKET_DATA",
-        eventId: "market-1",
-        requestId: "market-1",
+        eventId: "market-42",
+        requestId: "market-42",
         timestamp: "2026-10-01T12:00:00.000Z",
-        payload: "{}",
+        payload: JSON.stringify({
+          symbol: "SIM",
+          price: 104.88,
+          sequence: 42,
+        }),
       }),
-    ).toThrow(
-      new UnsupportedEngineEventError("MARKET_DATA"),
-    );
+    ).toEqual({
+      type: "MARKET_DATA",
+      eventId: "market-42",
+      requestId: "market-42",
+      timestamp: "2026-10-01T12:00:00.000Z",
+      payload: {
+        symbol: "SIM",
+        price: 104.88,
+        sequence: 42,
+      },
+    });
   });
 
   test("rejects BOOK_SNAPSHOT until an engine book contract exists", () => {
