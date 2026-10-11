@@ -123,6 +123,60 @@ describe("engine event client", () => {
     });
   });
 
+  test("normalizes live MARKET_DATA frames without treating them as trades", async () => {
+    const server = createServer((socket) => {
+      socket.write(frame(JSON.stringify({
+        type: "MARKET_DATA",
+        request_id: "market-42",
+        timestamp: "2026-10-09T12:00:00.000Z",
+        payload: JSON.stringify({ symbol: "SIM", price: 104.88, sequence: 42 }),
+      })));
+    });
+
+    servers.push(server);
+    await new Promise<void>((resolve) => {
+      server.listen(0, "127.0.0.1", () => resolve());
+    });
+
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("Test server did not expose an address");
+    }
+
+    const events: unknown[] = [];
+    const client = createEngineEventClient({
+      host: "127.0.0.1",
+      port: address.port,
+      connectTimeoutMs: 1000,
+      reconnectInitialDelayMs: 10,
+      reconnectMaxDelayMs: 20,
+      reconnectMaxAttempts: 1,
+      onEvent: (event) => events.push(event),
+    });
+
+    client.start();
+    await new Promise<void>((resolve) => {
+      const deadline = Date.now() + 1000;
+      const check = (): void => {
+        if (events.length === 1 || Date.now() >= deadline) {
+          resolve();
+          return;
+        }
+        setTimeout(check, 5);
+      };
+      check();
+    });
+    client.stop();
+
+    expect(events).toEqual([{
+      type: "MARKET_DATA",
+      eventId: "market-42",
+      requestId: "market-42",
+      timestamp: "2026-10-09T12:00:00.000Z",
+      payload: { symbol: "SIM", price: 104.88, sequence: 42 },
+    }]);
+  });
+
   test("ignores the engine HELLO control frame", async () => {
     const server = createServer((socket) => {
       socket.write(
