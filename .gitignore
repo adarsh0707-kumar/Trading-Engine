@@ -467,3 +467,6 @@ build-asan/
 
 # Bun gateway dependency lockfile
 !gateway-node/bun.lock
+
+# Local risk-state and trade-log backups
+/backups/
