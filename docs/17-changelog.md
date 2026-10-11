@@ -1,3 +1,15 @@
+# 2026-10-11 — Analytics PostgreSQL Recovery and Pytest Warning Cleanup
+
+**Status:** Merged and locally verified; Phase 5.14 runtime integration remains in progress.
+
+- PR #138 merged analytics PostgreSQL connection-recovery hardening.
+- PR #139 removed an empty-string `pytest.raises(..., match="")` assertion that emitted warnings.
+- Focused Gateway message tests: **10 passed**, with no warnings.
+- Full analytics suite: **483 passed** on Python 3.14.7 with `TRADING_ENGINE_TEST_DATABASE_URL` configured for the dedicated `trading_engine_test` database.
+- These test results do not establish live runtime trade delivery, runtime persistence, browser reconnect/recovery, or dependency-failure recovery; retain the Phase 5.14 exit criteria until separately evidenced.
+
+---
+
 # 2026-10-11 — Documentation status reconciliation
 
 **Status:** Documentation aligned with merged implementation milestones and the remaining Phase 5.14 acceptance work.
