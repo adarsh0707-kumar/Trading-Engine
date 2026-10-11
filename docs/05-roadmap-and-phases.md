@@ -1770,7 +1770,7 @@ Risk UI updates
 
 ## Phase 5.14 — Full Runtime Integration Validation
 
-**Status:** 🚧 In Progress — analytics tests pass (483 passed locally); read-only smoke validation is available, but full live-path validation remains outstanding
+**Status:** 🚧 In Progress — analytics tests pass (483 passed locally), read-only runtime smoke checks pass, and deterministic analytics-client reconnect coverage is being added; full live-path validation remains outstanding
 
 Validate the dashboard against the real backend stack rather than mocks alone.
 
@@ -1814,6 +1814,16 @@ bash scripts/validate-runtime.sh
 ```
 
 This script is deliberately non-destructive: it does not start or stop containers, generate orders, reset risk state, or change persisted data. A passing smoke check verifies reachability and basic response contracts only. It does **not** replace the full live TRADE/ANALYTICS_UPDATE/RISK_EVENT, PostgreSQL persistence, disconnect/reconnect, and browser recovery checks below. Those checks must be run and recorded separately; never claim runtime validation solely from a successful build or passive health check.
+
+### Analytics TCP-client disconnect/reconnect regression test
+
+Run from `gateway-node/`:
+
+```bash
+bun test tests/analytics-client.test.ts
+```
+
+The recovery case forces the first isolated Analytics TCP connection to close, verifies a subsequent trade is buffered while disconnected, and checks that the queued frame is delivered after the client reconnects. This is deterministic service-level coverage; it does not establish browser reconnect behavior, PostgreSQL persistence, or recovery of the full Docker Compose runtime.
 
 ### Deterministic gateway event-path contract test
 

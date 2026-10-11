@@ -166,6 +166,99 @@ describe("analytics client", () => {
     expect(client.getQueueSize()).toBe(0);
   });
 
+  test("reconnects after analytics disconnect and flushes queued trades", async () => {
+    let connections = 0;
+    const receivedTradeIds: string[] = [];
+    const states: string[] = [];
+
+    const server = createServer((socket) => {
+      const connectionNumber = ++connections;
+      let buffer = Buffer.alloc(0);
+
+      socket.on("data", (chunk) => {
+        buffer = Buffer.concat([buffer, Buffer.from(chunk)]);
+
+        while (buffer.length >= 4) {
+          const payloadSize = buffer.readUInt32BE(0);
+          const frameSize = payloadSize + 4;
+          if (buffer.length < frameSize) return;
+
+          const message = decodeFrame(buffer.subarray(0, frameSize));
+          buffer = buffer.subarray(frameSize);
+          receivedTradeIds.push(String(message.event_id));
+
+          if (connectionNumber === 1) {
+            socket.destroy();
+            return;
+          }
+        }
+      });
+    });
+
+    servers.push(server);
+    await new Promise<void>((resolve) => {
+      server.listen(0, "127.0.0.1", () => resolve());
+    });
+
+    const address = server.address();
+    if (address === null || typeof address === "string") {
+      throw new Error("Test server did not expose an address");
+    }
+
+    const client = createAnalyticsClient({
+      host: "127.0.0.1",
+      port: address.port,
+      connectTimeoutMs: 1000,
+      reconnectInitialDelayMs: 10,
+      reconnectMaxDelayMs: 20,
+      reconnectMaxAttempts: 5,
+      maxQueueSize: 2,
+      onStateChange: (state) => states.push(state),
+    });
+
+    const waitFor = async (
+      predicate: () => boolean,
+      timeoutMs = 1500,
+    ): Promise<void> => {
+      const deadline = Date.now() + timeoutMs;
+      while (!predicate() && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(predicate()).toBe(true);
+    };
+
+    try {
+      client.start();
+      await waitFor(() => client.isConnected() && connections === 1);
+
+      expect(client.sendTrade(tradeEvent())).toBe(true);
+      await waitFor(() => receivedTradeIds.length === 1);
+      await waitFor(() => client.getState() === "disconnected");
+
+      const queuedTrade = {
+        ...tradeEvent(),
+        eventId: "trade-2",
+        tradeId: "trade-2",
+        requestId: "trade-2",
+      };
+      expect(client.sendTrade(queuedTrade)).toBe(true);
+      expect(client.getQueueSize()).toBe(1);
+
+      await waitFor(() => receivedTradeIds.length === 2);
+
+      expect(receivedTradeIds).toEqual([
+        "trade-00000001-buy-1-sell-1",
+        "trade-2",
+      ]);
+      expect(connections).toBeGreaterThanOrEqual(2);
+      expect(client.getQueueSize()).toBe(0);
+      expect(states).toContain("disconnected");
+      expect(states).toContain("connected");
+    } finally {
+      client.stop();
+    }
+  });
+
   test("rejects trades when the bounded queue is full", () => {
     const errors: Error[] = [];
     const healthEvents: string[] = [];
