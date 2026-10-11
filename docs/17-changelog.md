@@ -1,3 +1,31 @@
+# 2026-10-11 — Phase 5.14 — Read-only Runtime Smoke Validation
+
+**Status:** ✅ Smoke-check tooling merged; full runtime integration remains in progress
+
+Added `scripts/validate-runtime.sh` as a passive preflight for an already-running local Docker Compose stack.
+
+### Checks covered
+
+- Gateway health and readiness HTTP responses.
+- Market and recent-trade REST responses parse as JSON.
+- Dashboard HTTP endpoint returns a non-empty response.
+- Analytics Prometheus metrics endpoint returns content.
+- PostgreSQL accepts connections and a read-only `SELECT 1` succeeds.
+
+### Safety and scope
+
+The script does not start or stop containers, generate orders or synthetic trades, reset persisted risk state, change risk limits, or modify persisted data. It validates basic reachability and response shape only. Live TRADE/ANALYTICS_UPDATE/RISK_EVENT propagation, persistence verification, and dependency disconnect/reconnect recovery remain separate runtime acceptance criteria.
+
+Run it against a stack that is already running:
+
+```bash
+bash scripts/validate-runtime.sh
+```
+
+See [Phase 5.14 runtime integration validation](05-roadmap-and-phases.md#phase-514--full-runtime-integration-validation) for the complete validation sequence.
+
+---
+
 # 2026-10-11 — Phase 5.12 — Halted-State Market Data
 
 **Status:** ✅ Merged — PR #132
