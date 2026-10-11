@@ -1,10 +1,11 @@
 # 2026-10-11 — Phase 5.14 — Analytics Disconnect/Recovery Regression Coverage
 
-**Status:** Regression test added on a feature branch; CI and merge are pending.
+**Status:** ✅ Merged in PR #140 (merge commit `a36d757ad6e051c074e092593f97396ab1564494`).
 
 - Added a deterministic Gateway Analytics TCP-client test that closes the first connection unexpectedly, verifies a subsequent trade is queued while disconnected, and verifies the queued frame is delivered after automatic reconnection.
 - The test uses an isolated local TCP fixture and does not connect to Docker Compose, PostgreSQL, or the running trading simulation.
-- This improves service-level recovery evidence but does not prove full browser recovery or runtime-generated trade persistence.
+- This improves service-level recovery evidence but does not prove full browser recovery, PostgreSQL persistence, or recovery of the full Docker Compose runtime.
+- Next Phase 5.14 implementation focus: add dashboard WebSocket disconnect/reconnect and subscription-restoration regression coverage, then continue safe live-runtime validation without resetting or mutating existing persisted state.
 
 Run from `gateway-node/`:
 
