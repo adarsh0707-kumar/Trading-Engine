@@ -14,6 +14,8 @@ The gateway exposes a versioned application API under `/api/v1`.
 
 WebSocket support is implemented at `/ws` for live dashboard events. Clients explicitly subscribe to supported event types and receive normalized Gateway event envelopes.
 
+The engine emits `MARKET_DATA` events independently of trade execution. Each event payload contains `symbol`, `price`, and `sequence`. The gateway publishes these events over WebSocket and updates `GET /api/v1/market` without adding a trade to history. Market-price updates continue while the engine is risk-halted; a halt still prevents matching and trade execution. Subscribe to `MARKET_DATA` for price ticks and `TRADE` for executed trades.
+
 ---
 
 ## 2. Currently Implemented Endpoints
