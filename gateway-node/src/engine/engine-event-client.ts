@@ -321,7 +321,7 @@ export function createEngineEventClient(
           continue;
         }
 
-        if (message.type !== "TRADE") {
+        if (message.type !== "TRADE" && message.type !== "MARKET_DATA") {
           continue;
         }
 
