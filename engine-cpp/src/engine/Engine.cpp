@@ -57,6 +57,19 @@ void Engine::run_loop() {
             tick.order_type,tick.price,tick.quantity,static_cast<std::int64_t>(tick.sequence),tick.time_in_force);
         if (!incoming_order->is_valid()) { logger_->warn("Skipped invalid order: "+tick.order_id); continue; }
         risk_guard_.update_mark_price(tick.price);
+
+        // Market data is independent of order matching and must remain available
+        // while risk controls halt trading.
+        serialization::Message market_message;
+        market_message.type = serialization::MessageType::MARKET_DATA;
+        market_message.requestId = "market-" + std::to_string(tick.sequence);
+        market_message.timestamp = utils::Time::iso8601();
+        std::ostringstream market_payload;
+        market_payload << "{\\"symbol\\":\\"" << tick.symbol
+            << "\\" ,\\"price\\":" << std::fixed << std::setprecision(8) << tick.price
+            << ",\\"sequence\\":" << tick.sequence << "}";
+        market_message.payload = market_payload.str();
+        server_->broadcast(market_message);
         if (risk_guard_.is_halted()) {
             risk_halted_.store(true);
             if (!risk_halt_logged) {
