@@ -5,7 +5,7 @@ A polyglot trading **simulation platform** built from the socket layer up: a C++
 The project focuses on the engineering problems behind real-time trading infrastructure — order-book correctness, price-time matching, framed TCP protocols, service boundaries, backpressure, resilience, observability, and live browser updates.
 
 > **Status:** Active development  
-> **Current focus:** Phase 5 dashboard production hardening and final validation  
+> **Current focus:** Phase 5.13 — dashboard data integrity, freshness, and observability  
 > **Important:** This is a simulation. It does not connect to an exchange or execute real financial trades.
 
 ## Architecture
@@ -147,6 +147,7 @@ Implemented dashboard areas include:
 - Engine, gateway, and analytics status
 - REST client with typed API errors
 - WebSocket subscriptions and reconnect handling
+- Independent `MARKET_DATA` updates, including while matching is risk-halted
 - Loading, error, empty, and stale-data states
 
 ## Technology stack
@@ -237,7 +238,7 @@ ERROR
 SHUTDOWN
 ```
 
-The Gateway validates and normalizes supported engine messages before exposing them to browser clients or forwarding trade data to analytics.
+The Gateway validates and normalizes supported engine messages before exposing them to browser clients. `MARKET_DATA` updates the market snapshot and WebSocket stream; only `TRADE` events enter trade history and the analytics pipeline.
 
 ## REST API
 
@@ -562,7 +563,7 @@ Potential future optimizations include binary protocols, shared memory, zero-cop
 | Order-book dashboard | ✅ Complete |
 | Analytics / portfolio / risk views | ✅ Complete |
 | Loading / error / stale-data UX | ✅ Complete |
-| Dashboard production polish | 🚧 In progress |
+| Dashboard production polish | ✅ Complete for current milestone scope |
 | Final browser/E2E validation | ⏳ Planned |
 | Historical analytics | ⏳ Planned |
 | Cloud deployment | ⏳ Planned |
@@ -586,10 +587,9 @@ The repository also contains documentation for architecture, API contracts, secu
 
 ### Next
 
-- Complete dashboard production hardening
-- Finish browser-level validation
-- Improve measured frontend performance
+- Validate dashboard freshness, event ordering, and reconnect recovery
 - Expand runtime and failure-path validation
+- Recheck measured frontend performance
 
 ### Later
 
