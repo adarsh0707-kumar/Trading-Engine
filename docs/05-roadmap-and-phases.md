@@ -17,7 +17,7 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest merged implementation milestones:** Phase 5.14 analytics PostgreSQL connection-recovery hardening (PR #138) and pytest warning cleanup (PR #139)
+**Latest merged implementation milestones:** Phase 5.14 analytics PostgreSQL connection-recovery hardening (PR #138), pytest warning cleanup (PR #139), and deterministic Gateway Analytics TCP-client reconnect regression coverage (PR #140; merge commit `a36d757ad6e051c074e092593f97396ab1564494`)
 
 **Current milestone:** Phase 5.14 — Full Runtime Integration Validation
 
@@ -1770,7 +1770,7 @@ Risk UI updates
 
 ## Phase 5.14 — Full Runtime Integration Validation
 
-**Status:** 🚧 In Progress — analytics tests pass (483 passed locally), read-only runtime smoke checks pass, and deterministic analytics-client reconnect coverage is being added; full live-path validation remains outstanding
+**Status:** 🚧 In Progress — analytics tests pass (483 passed locally), read-only runtime smoke checks pass, and deterministic analytics-client reconnect regression coverage is merged (PR #140); full live-path validation remains outstanding
 
 Validate the dashboard against the real backend stack rather than mocks alone.
 
@@ -1823,7 +1823,7 @@ Run from `gateway-node/`:
 bun test tests/analytics-client.test.ts
 ```
 
-The recovery case forces the first isolated Analytics TCP connection to close, verifies a subsequent trade is buffered while disconnected, and checks that the queued frame is delivered after the client reconnects. This is deterministic service-level coverage; it does not establish browser reconnect behavior, PostgreSQL persistence, or recovery of the full Docker Compose runtime.
+The recovery case forces the first isolated Analytics TCP connection to close, verifies a subsequent trade is buffered while disconnected, and checks that the queued frame is delivered after the client reconnects. This is deterministic service-level coverage merged in PR #140; it does not establish browser reconnect behavior, PostgreSQL persistence, or recovery of the full Docker Compose runtime.
 
 ### Deterministic gateway event-path contract test
 
@@ -1958,7 +1958,7 @@ Document:
 - [ ] Cleanup complete.
 - [ ] CI passes.
 
-**Phase 5 overall status:** 🚧 In Progress — implementation hardening through PR #139 is merged. Phase 5.14 runtime acceptance remains active because real runtime event delivery, persistence, browser recovery, and dependency-failure evidence are still outstanding.
+**Phase 5 overall status:** 🚧 In Progress — implementation hardening through PR #140 is merged. Phase 5.14 runtime acceptance remains active because real runtime event delivery, persistence, browser recovery, and dependency-failure evidence are still outstanding.
 
 ### Recommended Phase 5 commit sequence
 
