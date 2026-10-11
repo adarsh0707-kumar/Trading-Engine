@@ -1,6 +1,16 @@
+# Changelog
+
 ## [Unreleased]
 
-### Phase 5.7 — Analytics Charts & Indicator Views — In Progress
+### Phase 5.14 — Runtime Integration Validation — In Progress
+
+- Merged analytics PostgreSQL connection-recovery hardening in PR #138.
+- Merged the analytics pytest empty-match warning fix in PR #139.
+- Verified the analytics suite locally: 483 tests passed on Python 3.14.7 with `TRADING_ENGINE_TEST_DATABASE_URL` pointed at the dedicated `trading_engine_test` database.
+- Verified the focused Gateway message parser test file: 10 tests passed with no warnings.
+- Full runtime acceptance remains open: real event delivery, PostgreSQL persistence of a runtime-generated trade, browser-level reconnect/recovery, and dependency-failure recovery must be evidenced separately.
+
+### Phase 5.7 — Analytics Charts & Indicator Views
 
 - Added server-calculated rolling volatility to the analytics result model and Gateway output contract.
 - Persisted volatility alongside VWAP, SMA, and EMA analytics results.
@@ -10,9 +20,7 @@
 - Added live risk-state updates from `RISK_EVENT` events.
 - Added Analytics page summary metrics and Price/VWAP/SMA/EMA, Volatility, Equity, and P&L views.
 
-Status: In Progress
-
-# Changelog
+Status: Complete
 
 ## [Unreleased]
 
