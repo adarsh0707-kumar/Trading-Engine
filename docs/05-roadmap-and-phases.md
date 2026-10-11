@@ -17,7 +17,7 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest merged implementation milestone:** Phase 5.13 — Data Integrity & Observability hardening (PRs #133 and #134, merged)
+**Latest merged implementation milestones:** Phase 5.14 analytics PostgreSQL connection-recovery hardening (PR #138) and pytest warning cleanup (PR #139)
 
 **Current milestone:** Phase 5.14 — Full Runtime Integration Validation
 
@@ -1770,7 +1770,7 @@ Risk UI updates
 
 ## Phase 5.14 — Full Runtime Integration Validation
 
-**Status:** 🚧 In Progress — read-only smoke validation available; full live-path validation remains outstanding
+**Status:** 🚧 In Progress — analytics tests pass (483 passed locally); read-only smoke validation is available, but full live-path validation remains outstanding
 
 Validate the dashboard against the real backend stack rather than mocks alone.
 
@@ -1948,7 +1948,7 @@ Document:
 - [ ] Cleanup complete.
 - [ ] CI passes.
 
-**Phase 5 overall status:** 🚧 In Progress — implementation milestones through Phase 5.13 are merged. Phase 5.14 remains active because real runtime event delivery, persistence, browser recovery, and dependency-failure evidence are still outstanding.
+**Phase 5 overall status:** 🚧 In Progress — implementation hardening through PR #139 is merged. Phase 5.14 runtime acceptance remains active because real runtime event delivery, persistence, browser recovery, and dependency-failure evidence are still outstanding.
 
 ### Recommended Phase 5 commit sequence
 
