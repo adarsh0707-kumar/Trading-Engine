@@ -91,10 +91,11 @@ The project is intended to demonstrate:
 - Phase 4.5 — WebSocket Gateway: ✅ Complete
 - Phase 4.6 — Python Analytics Integration: ✅ Complete
 - Phase 4.7 — Error Handling, Resilience & Backpressure: ✅ Complete
-- Phase 4.8 — Security Boundaries & Input Hardening: 🚧 Current
-- Phase 4.8.5 — Rate-Limit Boundary: 🚧 Complete on milestone branch
-
-Phase 4.8.6 is the latest completed Gateway milestone on its milestone branch. Phase 4.8 remains the active security milestone, with rate limiting and the authentication/authorization boundary preparation are now implemented; concrete identity-provider integration remains.
+- Phase 4 — Gateway: ✅ Complete
+- Phase 5.10 — Loading, Error, and Stale-Data UX: ✅ Complete
+- Phase 5.11 — Dashboard production polish: ✅ Complete for current milestone scope
+- Phase 5.12 — Halted-State Market Data: ✅ Merged
+- Phase 5.13 — Data Integrity & Observability: ⏳ Next
 
 ## Documentation Rule
 
@@ -120,17 +121,15 @@ unless the latter has actually been measured and documented.
 
 The project should be presented as a **trading-infrastructure simulation and distributed-systems project**, not as a real exchange or financial product.
 
-The strongest engineering story is the complete event path:
+The strongest engineering story is the two distinct live-data paths:
 
 ```text
-order
- → matching
- → trade event
- → analytics
- → gateway
- → WebSocket
- → dashboard
+MARKET_DATA → Gateway market snapshot → WebSocket → dashboard
+TRADE       → Gateway trade history ─┬→ WebSocket → dashboard
+                                     └→ analytics → PostgreSQL
 ```
+
+Market-price updates are independent of trade execution and can continue while the engine is risk-halted. A risk halt still prevents matching and trade execution.
 
 and the engineering trade-offs involved at each boundary.
 
