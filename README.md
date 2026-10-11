@@ -574,7 +574,8 @@ Potential future optimizations include binary protocols, shared memory, zero-cop
 | Analytics / portfolio / risk views | ✅ Complete |
 | Loading / error / stale-data UX | ✅ Complete |
 | Dashboard production polish | ✅ Complete for current milestone scope |
-| Final browser/E2E validation | ⏳ Planned |
+| Real runtime event/persistence/recovery validation | 🚧 In progress — Phase 5.14 |
+| Final browser/E2E validation | 🚧 In progress — Phase 5.14 |
 | Historical analytics | ⏳ Planned |
 | Cloud deployment | ⏳ Planned |
 
