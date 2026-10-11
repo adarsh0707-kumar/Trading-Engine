@@ -58,6 +58,7 @@ class AnalyticsService:
         self.settings = settings
         self._owns_repositories = False
         self._lifecycle_lock = Lock()
+        self._persistence_lock = Lock()
         self._started = False
         self._shutdown_complete = False
 
@@ -236,20 +237,54 @@ class AnalyticsService:
             raise cleanup_error
 
     def check_persistence_health(self) -> bool | None:
-        """Check configured PostgreSQL persistence health."""
-        if self.repositories is None:
-            return None
+        """Check PostgreSQL health and recover owned connections when possible."""
+        with self._persistence_lock:
+            if self.repositories is None:
+                return None
 
-        healthy = check_postgres_health(
-            self.repositories.connection,
-        )
+            if check_postgres_health(self.repositories.connection):
+                logger.info("persistence health check succeeded")
+                return True
 
-        if healthy:
-            logger.info("persistence health check succeeded")
-        else:
             logger.error("persistence health check failed")
 
-        return healthy
+            # Injected repositories belong to the caller; never replace or close
+            # their connections behind the caller's back.
+            if not self._owns_repositories or not self.settings.database_url:
+                return False
+
+            try:
+                replacement = create_postgres_repositories(
+                    self.settings.database_url,
+                )
+            except Exception as exc:
+                logger.error(
+                    "persistence_connection_recovery_failed error_type=%s",
+                    type(exc).__name__,
+                )
+                return False
+
+            if not check_postgres_health(replacement.connection):
+                try:
+                    replacement.close()
+                except Exception:
+                    logger.exception(
+                        "failed to close unhealthy replacement PostgreSQL connection"
+                    )
+                logger.error("persistence_connection_recovery_failed reason=health_check")
+                return False
+
+            previous = self.repositories
+            self.repositories = replacement
+            try:
+                previous.close()
+            except Exception:
+                logger.exception(
+                    "failed to close replaced PostgreSQL repositories"
+                )
+
+            logger.info("persistence_connection_recovered")
+            return True
 
     def _handle_message(self, message: str) -> None:
         """Handle one inbound message with lifecycle-aware backpressure."""
@@ -394,6 +429,11 @@ class AnalyticsService:
         )
 
     def _persist(self, result: ProcessedTrade) -> None:
+        """Persist a processed trade while coordinating connection recovery."""
+        with self._persistence_lock:
+            self._persist_with_retries(result)
+
+    def _persist_with_retries(self, result: ProcessedTrade) -> None:
         """Persist one complete processed trade in a single transaction."""
         if self.repositories is None:
             return

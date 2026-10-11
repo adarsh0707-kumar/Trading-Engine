@@ -494,6 +494,52 @@ def test_check_persistence_health_returns_false_when_postgres_is_unhealthy(
     assert service.check_persistence_health() is False
 
 
+
+def test_check_persistence_health_recovers_owned_connection(monkeypatch) -> None:
+    """An owned stale connection is replaced when PostgreSQL is reachable."""
+    old_repositories = Mock()
+    replacement_repositories = Mock()
+    factory = Mock(side_effect=[old_repositories, replacement_repositories])
+    health_check = Mock(side_effect=[False, True])
+
+    monkeypatch.setattr("analytics.main.create_postgres_repositories", factory)
+    monkeypatch.setattr("analytics.main.check_postgres_health", health_check)
+
+    service = _service(
+        settings=Settings(database_url="postgresql://test-database"),
+    )
+
+    assert service.repositories is old_repositories
+    assert service._owns_repositories is True
+    assert service.check_persistence_health() is True
+    assert service.repositories is replacement_repositories
+    assert factory.call_count == 2
+    replacement_repositories.close.assert_not_called()
+    old_repositories.close.assert_called_once_with()
+
+
+def test_check_persistence_health_keeps_old_repositories_if_recovery_fails(
+    monkeypatch,
+) -> None:
+    """Failed recovery must not install an unhealthy replacement."""
+    old_repositories = Mock()
+    replacement_repositories = Mock()
+    factory = Mock(side_effect=[old_repositories, replacement_repositories])
+    health_check = Mock(side_effect=[False, False])
+
+    monkeypatch.setattr("analytics.main.create_postgres_repositories", factory)
+    monkeypatch.setattr("analytics.main.check_postgres_health", health_check)
+
+    service = _service(
+        settings=Settings(database_url="postgresql://test-database"),
+    )
+
+    assert service.check_persistence_health() is False
+    assert service.repositories is old_repositories
+    replacement_repositories.close.assert_called_once_with()
+    old_repositories.close.assert_not_called()
+
+
 def test_persist_records_success_metrics() -> None:
     """Successful persistence should update success metrics."""
 
