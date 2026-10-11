@@ -1,3 +1,17 @@
+# 2026-10-11 — Documentation status reconciliation
+
+**Status:** Documentation aligned with merged implementation milestones and the remaining Phase 5.14 acceptance work.
+
+- Phase 5.10 implementation is recorded as complete (PR #120).
+- Phase 5.11 dashboard production-polish implementation is recorded as complete for its current scope; responsive/accessibility checklist evidence must not be inferred from CI alone.
+- Phase 5.12 halted-state market-data work is complete (PR #132).
+- Phase 5.13 data-integrity/observability hardening is complete (PRs #133 and #134).
+- Phase 5.14 remains in progress. Read-only smoke validation and deterministic gateway event-path tests are useful evidence, but neither proves real runtime trade delivery, PostgreSQL persistence, browser-level recovery, or dependency-failure recovery.
+
+The detailed acceptance checklist remains in [the Phase 5 roadmap](05-roadmap-and-phases.md#phase-514--full-runtime-integration-validation).
+
+---
+
 # 2026-10-11 — Phase 5.14 — Deterministic Event-Path Contract Coverage
 
 **Status:** Automated gateway contract coverage expanded; full runtime integration remains in progress.
