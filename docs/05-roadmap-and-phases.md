@@ -1768,7 +1768,7 @@ Risk UI updates
 
 ## Phase 5.14 — Full Runtime Integration Validation
 
-**Status:** 🚧 In Progress
+**Status:** 🚧 In Progress — read-only smoke validation available; full live-path validation remains outstanding
 
 Validate the dashboard against the real backend stack rather than mocks alone.
 
@@ -1814,6 +1814,8 @@ bash scripts/validate-runtime.sh
 This script is deliberately non-destructive: it does not start or stop containers, generate orders, reset risk state, or change persisted data. A passing smoke check verifies reachability and basic response contracts only. It does **not** replace the full live TRADE/ANALYTICS_UPDATE/RISK_EVENT, PostgreSQL persistence, disconnect/reconnect, and browser recovery checks below. Those checks must be run and recorded separately; never claim runtime validation solely from a successful build or passive health check.
 
 ### Validation sequence
+
+The smoke script is a passive preflight, not the full integration acceptance test. Record the live-event, persistence, and recovery evidence below separately. Do not mark Phase 5.14 complete based on smoke-check output alone.
 
 ```text
 1. Start PostgreSQL.
