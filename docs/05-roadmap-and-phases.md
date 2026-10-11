@@ -1813,6 +1813,16 @@ bash scripts/validate-runtime.sh
 
 This script is deliberately non-destructive: it does not start or stop containers, generate orders, reset risk state, or change persisted data. A passing smoke check verifies reachability and basic response contracts only. It does **not** replace the full live TRADE/ANALYTICS_UPDATE/RISK_EVENT, PostgreSQL persistence, disconnect/reconnect, and browser recovery checks below. Those checks must be run and recorded separately; never claim runtime validation solely from a successful build or passive health check.
 
+### Deterministic gateway event-path contract test
+
+Run from `gateway-node/`:
+
+```bash
+bun test tests/full-stack.integration.test.ts
+```
+
+This test uses isolated fake Engine and Analytics TCP servers plus a local Gateway instance. It verifies deterministic `TRADE`, `ANALYTICS_UPDATE`, and `RISK_EVENT` WebSocket delivery, then checks that the market, recent-trades, and analytics REST snapshots reflect those fixtures. It does not start Docker Compose, connect to PostgreSQL, mutate live persisted risk state, or prove real runtime persistence/reconnect behavior. Treat it as contract coverage, not a substitute for the end-to-end exit criteria.
+
 ### Validation sequence
 
 The smoke script is a passive preflight, not the full integration acceptance test. Record the live-event, persistence, and recovery evidence below separately. Do not mark Phase 5.14 complete based on smoke-check output alone.
