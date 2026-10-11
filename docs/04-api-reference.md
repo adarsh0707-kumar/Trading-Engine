@@ -433,17 +433,20 @@ The Gateway WebSocket is the browser-facing live-event boundary. The dashboard m
 ### Supported event types
 
 ```text
+MARKET_DATA
 TRADE
 ANALYTICS_UPDATE
 RISK_EVENT
 ```
+
+`MARKET_DATA` is emitted independently of matching and trade execution. It updates the market snapshot and dashboard price display, including while the engine is risk-halted. It must not be recorded as a trade or forwarded to analytics as a trade. `TRADE` represents an actual execution.
 
 ### Subscription message
 
 ```json
 {
   "action": "subscribe",
-  "events": ["TRADE"]
+  "events": ["MARKET_DATA", "TRADE"]
 }
 ```
 
@@ -452,6 +455,23 @@ Unsubscribe uses the same shape with `action: "unsubscribe"`.
 ### Control messages
 
 The connection lifecycle may emit `CONNECTION_READY`, `SUBSCRIPTION_UPDATED`, and `ERROR` control messages.
+
+### MARKET_DATA event
+
+`MARKET_DATA` payloads contain the symbol, current simulated price, and monotonically increasing market sequence. The gateway exposes the event through the normalized WebSocket envelope:
+
+```json
+{
+  "type": "MARKET_DATA",
+  "payload": {
+    "symbol": "SIM",
+    "price": 100.25,
+    "sequence": 42
+  }
+}
+```
+
+The market snapshot endpoint (`GET /api/v1/market`) reflects the latest accepted market update. Market updates do not imply that an order matched or a trade occurred.
 
 ### TRADE event
 
@@ -516,7 +536,7 @@ Live real-time streaming uses the Gateway WebSocket boundary:
 ws://localhost:<GATEWAY_PORT>/ws
 ```
 
-WebSocket protocol and event contracts are deferred to the later WebSocket phase.
+The WebSocket protocol and event contracts are implemented; supported live event types are documented in the WebSocket API section.
 
 ---
 
