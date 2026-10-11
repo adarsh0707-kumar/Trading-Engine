@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest completed milestone:** Phase 5.9 — Engine, Analytics & System Status
+**Latest completed milestone:** Phase 5.12 — Halted-State Market Data (PR #132, merged)
 
-**Current milestone:** Phase 5.10 — Loading, Empty, Error & Stale-Data UX
+**Current milestone:** Phase 5.13 — Data Integrity & Observability
 
 **Phase 4 overall status:** ✅ Complete
 
@@ -1612,11 +1612,52 @@ Mobile
 
 ---
 
-## Phase 5.12 — Dashboard Testing
+## Phase 5.12 — Halted-State Market Data
+
+**Status:** ✅ Complete — merged in PR #132
+
+Fix the market-data path so live simulated prices remain available when the engine's persisted risk state is halted, without changing the risk boundary.
+
+Implemented:
+
+- C++ engine emits `MARKET_DATA` before the risk-halt matching guard.
+- Gateway validates and normalizes market-data events.
+- Gateway updates the `GET /api/v1/market` snapshot and publishes `MARKET_DATA` over WebSocket.
+- Dashboard subscribes to market-data events and updates the live price.
+- Only actual `TRADE` events enter trade history and the analytics pipeline.
+- Protocol documentation and tests distinguish market ticks from executed trades.
+
+Local validation:
+
+- Gateway health and readiness returned HTTP 200; engine and analytics were connected.
+- `GET /api/v1/market` returned HTTP 200.
+- Ten consecutive polls showed advancing timestamps and changing prices at two-second intervals.
+- Dashboard showed Gateway connected, WebSocket open, a live market price, and zero trades.
+
+Risk boundary:
+
+- No risk snapshot was reset.
+- No risk limit was changed.
+- No halt bypass was added.
+- Market-data validation does not require generating trades.
+
+---
+
+## Phase 5.13 — Data Integrity & Observability
 
 **Status:** ⏳ Planned
 
-Establish automated frontend confidence before full runtime validation.
+Validate dashboard event correctness, freshness, ordering, and recovery before full runtime closeout.
+
+### Data-integrity guarantees
+
+- `MARKET_DATA` updates market state but never creates a trade record.
+- Only `TRADE` events are forwarded to analytics as executions.
+- REST market snapshots and WebSocket market events converge on the latest accepted price.
+- Stale/disconnected state is shown when live updates stop and clears after recovery.
+- Reconnect restores subscriptions without duplicating or corrupting displayed state.
+- Sequence/order handling does not allow older market events to overwrite newer state.
+- Risk-halt behavior is tested without resetting risk state or bypassing enforcement.
 
 ### Test layers
 
@@ -1723,7 +1764,7 @@ Risk UI updates
 
 ---
 
-## Phase 5.13 — Full Runtime Integration Validation
+## Phase 5.14 — Full Runtime Integration Validation
 
 **Status:** ⏳ Planned
 
@@ -1754,8 +1795,8 @@ C++ Trading Engine
 6. Open the dashboard.
 7. Verify REST snapshots.
 8. Verify WebSocket connection.
-9. Generate a real engine trade.
-10. Verify TRADE reaches the dashboard.
+9. Verify the independent MARKET_DATA path while observing the current risk state.
+10. When a real trade can be generated safely under the configured risk controls, verify TRADE reaches the dashboard.
 11. Verify analytics update reaches the dashboard.
 12. Verify risk update/event reaches the dashboard when generated.
 13. Verify trade/analytics persistence in PostgreSQL.
@@ -1800,7 +1841,7 @@ Gateway
 
 ---
 
-## Phase 5.14 — Documentation, Cleanup & Phase Exit
+## Phase 5.15 — Documentation, Cleanup & Phase Exit
 
 **Status:** ⏳ Planned
 
@@ -1864,7 +1905,7 @@ Document:
 - [ ] Cleanup complete.
 - [ ] CI passes.
 
-**Phase 5 overall status:** 🚧 In Progress — Phases 5.1–5.8 are complete; Phase 5.9 is next.
+**Phase 5 overall status:** 🚧 In Progress — Phase 5.12 is merged; Phase 5.13 is next.
 
 ### Recommended Phase 5 commit sequence
 
