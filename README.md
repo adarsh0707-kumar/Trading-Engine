@@ -5,7 +5,7 @@ A polyglot trading **simulation platform** built from the socket layer up: a C++
 The project focuses on the engineering problems behind real-time trading infrastructure — order-book correctness, price-time matching, framed TCP protocols, service boundaries, backpressure, resilience, observability, and live browser updates.
 
 > **Status:** Active development  
-> **Current focus:** Phase 5.13 — dashboard data integrity, freshness, and observability  
+> **Current focus:** Phase 5.14 — runtime integration validation  
 > **Important:** This is a simulation. It does not connect to an exchange or execute real financial trades.
 
 ## Architecture
@@ -339,6 +339,16 @@ Check dependency readiness:
 ```bash
 curl http://localhost:8080/api/v1/status
 ```
+
+### Read-only runtime smoke validation
+
+With the Docker Compose stack already running, run:
+
+```bash
+bash scripts/validate-runtime.sh
+```
+
+The script checks Gateway health/readiness, market and recent-trade REST JSON, dashboard HTTP, Analytics metrics, and PostgreSQL connectivity with a read-only `SELECT 1`. It does not start or stop containers, generate orders, reset risk state, change risk limits, or modify persisted data. A pass confirms basic reachability and response shape only; it does not prove live trade/analytics/risk-event delivery or disconnect/reconnect recovery. See [Phase 5.14](docs/05-roadmap-and-phases.md#phase-514--full-runtime-integration-validation) for the full acceptance path.
 
 Open the dashboard:
 
