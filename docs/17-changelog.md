@@ -6,6 +6,7 @@
 - Phase 5.11 dashboard production-polish implementation is recorded as complete for its current scope; responsive/accessibility checklist evidence must not be inferred from CI alone.
 - Phase 5.12 halted-state market-data work is complete (PR #132).
 - Phase 5.13 data-integrity/observability hardening is complete (PRs #133 and #134).
+- The architecture reference was reconciled with the implemented framed TCP Engine ↔ Gateway ↔ Analytics path and the bidirectional analytics output contract.
 - Phase 5.14 remains in progress. Read-only smoke validation and deterministic gateway event-path tests are useful evidence, but neither proves real runtime trade delivery, PostgreSQL persistence, browser-level recovery, or dependency-failure recovery.
 
 The detailed acceptance checklist remains in [the Phase 5 roadmap](05-roadmap-and-phases.md#phase-514--full-runtime-integration-validation).
