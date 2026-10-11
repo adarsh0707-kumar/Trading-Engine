@@ -95,7 +95,7 @@ def test_rejects_invalid_envelopes(
 ) -> None:
     message = {**VALID_MESSAGE, **patch}
 
-    with pytest.raises(GatewayMessageParseError, match=""):
+    with pytest.raises(GatewayMessageParseError):
         GatewayTradeMessage.parse(json.dumps(message))
 
 
