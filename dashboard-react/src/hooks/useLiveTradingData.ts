@@ -36,6 +36,7 @@ export function useLiveTradingData(): LiveTradingData {
   const [tradesError, setTradesError] = useState<string | null>(null);
   const [websocketState, setWebsocketState] = useState<GatewayWebSocketState>("idle");
   const seenTradeIds = useRef(new Set<string>());
+  const liveTradesById = useRef(new Map<string, Trade>());
   const hasMarketData = useRef(false);
   const hasTradeData = useRef(false);
 
@@ -57,13 +58,24 @@ export function useLiveTradingData(): LiveTradingData {
     }
   };
 
+  const rememberLiveTrade = (trade: Trade): void => {
+    liveTradesById.current.delete(trade.tradeId);
+    liveTradesById.current.set(trade.tradeId, trade);
+    while (liveTradesById.current.size > MAX_RECENT_TRADES) {
+      const oldest = liveTradesById.current.keys().next().value;
+      if (oldest === undefined) break;
+      liveTradesById.current.delete(oldest);
+    }
+    rememberTradeIds([trade.tradeId]);
+  };
+
   const loadSnapshots = async (): Promise<void> => {
     const requestId = ++snapshotRequestId.current;
     const marketRevisionAtStart = marketEventRevision.current;
     const tradeRevisionAtStart = tradeEventRevision.current;
 
-    setMarketState((current) => market !== null ? current : "loading");
-    setTradesState((current) => trades.length > 0 ? current : "loading");
+    setMarketState((current) => hasMarketData.current ? current : "loading");
+    setTradesState((current) => hasTradeData.current ? current : "loading");
     setMarketError(null);
     setTradesError(null);
     const [marketResult, tradesResult] = await Promise.allSettled([api.getMarket(), api.getTrades()]);
@@ -85,9 +97,14 @@ export function useLiveTradingData(): LiveTradingData {
 
     if (tradesResult.status === "fulfilled") {
       if (tradeRevisionAtStart === tradeEventRevision.current) {
-        const nextTrades = tradesResult.value.trades.slice(0, MAX_RECENT_TRADES);
+        const mergedById = new Map<string, Trade>();
+        for (const trade of tradesResult.value.trades) mergedById.set(trade.tradeId, trade);
+        for (const trade of liveTradesById.current.values()) mergedById.set(trade.tradeId, trade);
+        const nextTrades = [...mergedById.values()]
+          .sort((left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp))
+          .slice(0, MAX_RECENT_TRADES);
         hasTradeData.current = nextTrades.length > 0 || hasTradeData.current;
-        seenTradeIds.current = new Set(nextTrades.map((trade) => trade.tradeId));
+        rememberTradeIds(nextTrades.map((trade) => trade.tradeId));
         setTrades(nextTrades);
         setTradesState("ready");
         setTradesError(null);
@@ -124,7 +141,7 @@ export function useLiveTradingData(): LiveTradingData {
         marketEventRevision.current += 1;
         const trade = tradeFromEvent(event);
         if (seenTradeIds.current.has(trade.tradeId)) return;
-        rememberTradeIds([trade.tradeId]);
+        rememberLiveTrade(trade);
         hasTradeData.current = true;
         hasMarketData.current = true;
         setTrades((current) => [trade, ...current].slice(0, MAX_RECENT_TRADES));
