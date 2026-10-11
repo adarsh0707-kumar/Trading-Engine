@@ -301,7 +301,7 @@ describe("full gateway integration path", () => {
           lastQuantity: 2,
         });
         expect(tradesBody.data.trades).toContainEqual(expect.objectContaining({
-          tradeId: "trade-1",
+          tradeId: "trade-event-1",
           symbol: "SIM",
           price: 100,
           quantity: 2,
