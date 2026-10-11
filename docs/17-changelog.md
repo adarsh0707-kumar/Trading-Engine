@@ -1,3 +1,27 @@
+# 2026-10-11 — Phase 5.14 — Deterministic Event-Path Contract Coverage
+
+**Status:** Automated gateway contract coverage expanded; full runtime integration remains in progress.
+
+Expanded `gateway-node/tests/full-stack.integration.test.ts` to verify that deterministic Engine and Analytics fixtures reach WebSocket consumers as `TRADE`, `ANALYTICS_UPDATE`, and `RISK_EVENT` messages. The test also checks that the Gateway market, recent-trades, and analytics REST snapshots reflect those events, including the risk-warning status.
+
+### Scope and safety
+
+- Uses isolated fake TCP services and an in-process Gateway.
+- Does not require a real engine-generated trade or a live risk-state change.
+- Does not connect to PostgreSQL or prove persistence.
+- Does not replace real-stack browser delivery, dependency-failure, reconnect/recovery, or persistence validation.
+
+Run with:
+
+```bash
+cd gateway-node
+bun test tests/full-stack.integration.test.ts
+```
+
+Phase 5.14 remains in progress until the runtime exit criteria in `docs/05-roadmap-and-phases.md` are evidenced.
+
+---
+
 # 2026-10-11 — Phase 5.14 — Read-only Runtime Smoke Validation
 
 **Status:** ✅ Smoke-check tooling merged; full runtime integration remains in progress
