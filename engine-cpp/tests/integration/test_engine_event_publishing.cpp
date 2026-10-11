@@ -337,19 +337,32 @@ static void test_engine_stops_matching_after_risk_halt()
     // Keep observing across many tick intervals. The engine must remain alive
     // for diagnostics while suppressing all subsequent matching/trade events.
     int tradesAfterHalt = 0;
+    int marketDataAfterHalt = 0;
     const auto observationDeadline =
         std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
 
     while (std::chrono::steady_clock::now() < observationDeadline)
     {
         const std::string json = receiveMessage(clientFd, buffer);
-        if (!json.empty() && isTradeMessage(json))
+        if (json.empty())
+        {
+            continue;
+        }
+
+        const serialization::Message message =
+            serialization::JsonSerializer::deserialize(json);
+        if (message.type == serialization::MessageType::TRADE)
         {
             ++tradesAfterHalt;
+        }
+        else if (message.type == serialization::MessageType::MARKET_DATA)
+        {
+            ++marketDataAfterHalt;
         }
     }
 
     CHECK(tradesAfterHalt == 0);
+    CHECK(marketDataAfterHalt > 0);
     CHECK(engine.is_risk_halted());
     CHECK(engine.is_running());
 
