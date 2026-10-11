@@ -70,7 +70,22 @@ export function useLiveTradingData(): LiveTradingData {
     const client = createGatewayWebSocketClient({
       onStateChange: (state) => { if (active) setWebsocketState(state); },
       onEvent: (event) => {
-        if (!active || event.type !== "TRADE") return;
+        if (!active) return;
+
+        if (event.type === "MARKET_DATA") {
+          hasMarketData.current = true;
+          setMarket((current) => ({
+            symbol: event.payload.symbol,
+            lastPrice: event.payload.price,
+            lastQuantity: current?.lastQuantity ?? 0,
+            timestamp: event.timestamp,
+          }));
+          setMarketState("ready");
+          setMarketError(null);
+          return;
+        }
+
+        if (event.type !== "TRADE") return;
         const trade = tradeFromEvent(event);
         if (seenTradeIds.current.has(trade.tradeId)) return;
         seenTradeIds.current.add(trade.tradeId);
@@ -85,7 +100,7 @@ export function useLiveTradingData(): LiveTradingData {
       },
     });
     void loadSnapshots();
-    client.subscribe(["TRADE"]);
+    client.subscribe(["TRADE", "MARKET_DATA"]);
     client.connect();
     return () => { active = false; client.disconnect(); };
   }, [api]);

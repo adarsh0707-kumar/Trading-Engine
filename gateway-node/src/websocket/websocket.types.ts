@@ -8,6 +8,7 @@ import type {
 
 export const WEBSOCKET_EVENT_TYPES = [
   "TRADE",
+  "MARKET_DATA",
   "ANALYTICS_UPDATE",
   "RISK_EVENT",
 ] as const;

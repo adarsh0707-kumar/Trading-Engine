@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { NormalizedTradeEvent } from "../src/engine-protocol/engine-trade.types.ts";
+import type { NormalizedMarketDataEvent } from "../src/engine-protocol/engine-market-data.types.ts";
 import { createLiveTradingState } from "../src/live-trading/live-trading-state.ts";
 
 function createTradeEvent(
@@ -47,6 +48,27 @@ describe("live trading state", () => {
       lastQuantity: 10,
       timestamp: "2026-10-05T12:00:00.000Z",
     });
+  });
+
+  test("updates market price from a market tick without adding a trade", () => {
+    const state = createLiveTradingState();
+    const event: NormalizedMarketDataEvent = {
+      type: "MARKET_DATA",
+      eventId: "market-42",
+      requestId: "market-42",
+      timestamp: "2026-10-09T12:00:00.000Z",
+      payload: { symbol: "SIM", price: 104.88, sequence: 42 },
+    };
+
+    state.onMarketData(event);
+
+    expect(state.getMarket()).toEqual({
+      symbol: "SIM",
+      lastPrice: 104.88,
+      lastQuantity: 0,
+      timestamp: "2026-10-09T12:00:00.000Z",
+    });
+    expect(state.getTrades()).toEqual({ trades: [] });
   });
 
   test("maps a trade event into the public trade shape", () => {

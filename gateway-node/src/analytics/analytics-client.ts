@@ -11,8 +11,8 @@ import type {
   GatewayTradeMessage,
 } from "./analytics-message.types.ts";
 import type {
-  NormalizedEngineEventResult,
-} from "../engine-protocol/engine-event.ts";
+  NormalizedTradeEvent,
+} from "../engine-protocol/engine-trade.types.ts";
 import { QueueOverflow } from "../resilience/error-model.ts";
 
 export type AnalyticsClientState =
@@ -42,7 +42,7 @@ export interface AnalyticsClientOptions {
 export interface AnalyticsClient {
   readonly start: () => void;
   readonly stop: () => void;
-  readonly sendTrade: (event: NormalizedEngineEventResult) => boolean;
+  readonly sendTrade: (event: NormalizedTradeEvent) => boolean;
   readonly isConnected: () => boolean;
   readonly getState: () => AnalyticsClientState;
   readonly getQueueSize: () => number;
@@ -63,7 +63,7 @@ function frame(payload: string): Buffer {
 }
 
 function toGatewayTradeMessage(
-  event: NormalizedEngineEventResult,
+  event: NormalizedTradeEvent,
 ): GatewayTradeMessage {
   return {
     version: 1,
@@ -316,7 +316,7 @@ export function createAnalyticsClient(
   };
 
   const sendTrade = (
-    event: NormalizedEngineEventResult,
+    event: NormalizedTradeEvent,
   ): boolean => {
     const payload = serializeGatewayTradeMessage(
       toGatewayTradeMessage(event),

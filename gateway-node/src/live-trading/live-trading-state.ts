@@ -1,4 +1,5 @@
 import type { NormalizedTradeEvent } from "../engine-protocol/engine-trade.types.ts";
+import type { NormalizedMarketDataEvent } from "../engine-protocol/engine-market-data.types.ts";
 import type {
   MarketProvider,
   MarketState,
@@ -14,6 +15,7 @@ const DEFAULT_MAX_TRADES = 100;
 export interface LiveTradingState
   extends MarketProvider, TradesProvider {
   readonly onTrade: (event: NormalizedTradeEvent) => void;
+  readonly onMarketData: (event: NormalizedMarketDataEvent) => void;
 }
 
 export function createLiveTradingState(
@@ -27,6 +29,16 @@ export function createLiveTradingState(
   let trades: Trade[] = [];
 
   return {
+    onMarketData(event: NormalizedMarketDataEvent): void {
+      market = {
+        symbol: event.payload.symbol,
+        lastPrice: event.payload.price,
+        // This field represents the last executed trade quantity, not tick size.
+        lastQuantity: market?.lastQuantity ?? 0,
+        timestamp: event.timestamp,
+      };
+    },
+
     onTrade(event: NormalizedTradeEvent): void {
       const { payload } = event;
 

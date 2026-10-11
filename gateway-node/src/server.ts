@@ -272,20 +272,33 @@ export function createGatewayServer(
     reconnectMaxDelayMs: config.engine.reconnectMaxDelayMs,
     reconnectMaxAttempts: config.engine.reconnectMaxAttempts,
     onEvent: (event) => {
-      liveTradingState.onTrade(event);
-      metrics.recordEngineTrade();
-      operationalLog.info("engine_trade_event", {
-        eventId: event.eventId,
-        requestId: event.requestId,
-        outcome: "accepted",
-      });
+      if (event.type === "TRADE") {
+        liveTradingState.onTrade(event);
+        metrics.recordEngineTrade();
+        operationalLog.info("engine_trade_event", {
+          eventId: event.eventId,
+          requestId: event.requestId,
+          outcome: "accepted",
+        });
+      } else {
+        liveTradingState.onMarketData(event);
+        operationalLog.info("engine_market_data_event", {
+          eventId: event.eventId,
+          requestId: event.requestId,
+          outcome: "accepted",
+        });
+      }
+
       websocketHub.publish(event);
       metrics.recordWebSocketPublishedEvent(event.type);
-      const sentToAnalytics = analyticsClient.sendTrade(event);
-      if (sentToAnalytics) {
-        metrics.recordAnalyticsTradeSent();
-      } else {
-        metrics.recordAnalyticsTradeSendFailure();
+
+      if (event.type === "TRADE") {
+        const sentToAnalytics = analyticsClient.sendTrade(event);
+        if (sentToAnalytics) {
+          metrics.recordAnalyticsTradeSent();
+        } else {
+          metrics.recordAnalyticsTradeSendFailure();
+        }
       }
     },
     onError: (error) => {
