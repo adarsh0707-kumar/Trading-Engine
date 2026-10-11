@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 def check_postgres_health(connection: Any) -> bool:
@@ -13,7 +17,14 @@ def check_postgres_health(connection: Any) -> bool:
             row = cursor.fetchone()
 
         return row == (1,)
-    except Exception:
+    except Exception as exc:
+        # Keep the check non-raising for readiness probes, but retain useful
+        # diagnostics without logging connection strings or credentials.
+        logger.warning(
+            "postgres_health_check_failed error_type=%s error=%s",
+            type(exc).__name__,
+            str(exc),
+        )
         return False
 
 
