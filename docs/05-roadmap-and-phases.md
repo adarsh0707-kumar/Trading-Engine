@@ -17,9 +17,9 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest completed milestone:** Phase 5.12 — Halted-State Market Data (PR #132, merged)
+**Latest merged implementation milestone:** Phase 5.13 — Data Integrity & Observability hardening (PRs #133 and #134, merged)
 
-**Current milestone:** Phase 5.13 — Data Integrity & Observability
+**Current milestone:** Phase 5.14 — Full Runtime Integration Validation
 
 **Phase 4 overall status:** ✅ Complete
 
@@ -1645,7 +1645,9 @@ Risk boundary:
 
 ## Phase 5.13 — Data Integrity & Observability
 
-**Status:** ⏳ Planned
+**Status:** 🚧 Implementation hardening merged — PRs #133 and #134
+
+Merged work prevents callbacks from replaced WebSocket connections from mutating state, makes subscribe/unsubscribe idempotent, protects newer live market state from stale REST responses, and reconciles recent live executions with REST trade snapshots using bounded ID-based deduplication. Automated CI passed for both merged pull requests. These changes do not by themselves prove browser-level recovery; that remains a Phase 5.14 runtime validation requirement.
 
 Validate dashboard event correctness, freshness, ordering, and recovery before full runtime closeout.
 
@@ -1766,7 +1768,7 @@ Risk UI updates
 
 ## Phase 5.14 — Full Runtime Integration Validation
 
-**Status:** ⏳ Planned
+**Status:** 🚧 In Progress
 
 Validate the dashboard against the real backend stack rather than mocks alone.
 
@@ -1783,6 +1785,33 @@ React Dashboard
     ↑
 C++ Trading Engine
 ```
+
+### Read-only local smoke checks
+
+With the existing Docker Compose stack already running, execute:
+
+```bash
+bash scripts/validate-runtime.sh
+```
+
+The script checks:
+
+- Gateway health and readiness endpoints.
+- Market and recent-trade REST responses are successful JSON.
+- Dashboard HTTP response is non-empty.
+- Analytics Prometheus metrics endpoint responds with content.
+- PostgreSQL accepts connections and a read-only `SELECT 1` succeeds.
+
+Optional URL overrides:
+
+```bash
+GATEWAY_URL=http://127.0.0.1:8080 \
+DASHBOARD_URL=http://127.0.0.1:5173 \
+ANALYTICS_METRICS_URL=http://127.0.0.1:9101/metrics \
+bash scripts/validate-runtime.sh
+```
+
+This script is deliberately non-destructive: it does not start or stop containers, generate orders, reset risk state, or change persisted data. A passing smoke check verifies reachability and basic response contracts only. It does **not** replace the full live TRADE/ANALYTICS_UPDATE/RISK_EVENT, PostgreSQL persistence, disconnect/reconnect, and browser recovery checks below. Those checks must be run and recorded separately; never claim runtime validation solely from a successful build or passive health check.
 
 ### Validation sequence
 
@@ -1905,7 +1934,7 @@ Document:
 - [ ] Cleanup complete.
 - [ ] CI passes.
 
-**Phase 5 overall status:** 🚧 In Progress — Phase 5.12 is merged; Phase 5.13 is next.
+**Phase 5 overall status:** 🚧 In Progress — Phase 5.13 WebSocket/data-integrity hardening is merged; Phase 5.14 runtime integration validation is active.
 
 ### Recommended Phase 5 commit sequence
 
@@ -2092,7 +2121,8 @@ Planned:
 | 5.6 | Order Book Visualization | ✅ Complete |
 | 5.7 | Analytics Charts & Indicator Views | ✅ Complete |
 | 5.8 | Portfolio, P&L & Risk Dashboard | ✅ Complete |
-| 5.9–5.14 | Remaining Dashboard Hardening & Exit Work | ⏳ Planned |
+| 5.9–5.13 | Dashboard Status, UX & Data-Integrity Hardening | 🚧 In Progress / implementation merged |
+| 5.14 | Full Runtime Integration Validation | 🚧 In Progress |
 | 5 | React Dashboard | 🚧 In Progress |
 | 6 | Historical Analytics | ⏳ Planned |
 | 7 | Authentication & Security | ⏳ Planned |
