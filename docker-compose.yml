@@ -1,6 +1,9 @@
 services:
   postgres:
-    image: postgres:17
+    build:
+      context: ./analytics-py/docker
+      dockerfile: Dockerfile
+    image: trading-engine-postgres:17
     environment:
       POSTGRES_USER: trading_engine
       POSTGRES_PASSWORD: trading_engine
@@ -9,7 +12,6 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - trading-engine-postgres:/var/lib/postgresql/data
-      - ./analytics-py/docker/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U trading_engine -d trading_engine"]
       interval: 5s
