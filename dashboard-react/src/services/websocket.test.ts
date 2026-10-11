@@ -207,6 +207,65 @@ describe("Gateway WebSocket client", () => {
     }]);
   });
 
+  test("makes repeated subscribe and unsubscribe calls idempotent", () => {
+    resetSockets();
+    const client = createGatewayWebSocketClient({
+      reconnect: false,
+      webSocketFactory: (url) => new FakeWebSocket(url),
+    });
+
+    client.connect();
+    const socket = FakeWebSocket.instances[0];
+    socket?.open();
+
+    client.subscribe(["TRADE", "TRADE", "MARKET_DATA"]);
+    client.subscribe(["TRADE", "MARKET_DATA", "RISK_EVENT"]);
+    client.unsubscribe(["TRADE", "TRADE", "ANALYTICS_UPDATE"]);
+    client.unsubscribe(["TRADE"]);
+
+    expect(socket?.sent).toEqual([
+      JSON.stringify({ action: "subscribe", events: ["TRADE", "MARKET_DATA"] }),
+      JSON.stringify({ action: "subscribe", events: ["RISK_EVENT"] }),
+      JSON.stringify({ action: "unsubscribe", events: ["TRADE"] }),
+    ]);
+  });
+
+  test("ignores late callbacks from a replaced socket", async () => {
+    resetSockets();
+    const events: unknown[] = [];
+    const client = createGatewayWebSocketClient({
+      reconnectInitialDelayMs: 1,
+      reconnectMaxDelayMs: 1,
+      maxReconnectAttempts: 2,
+      webSocketFactory: (url) => new FakeWebSocket(url),
+      onEvent: (event) => events.push(event),
+    });
+
+    client.connect();
+    const first = FakeWebSocket.instances[0];
+    first?.open();
+    first?.remoteClose();
+    await Bun.sleep(5);
+
+    const second = FakeWebSocket.instances[1];
+    expect(second).toBeDefined();
+    second?.open();
+
+    first?.message(JSON.stringify({
+      type: "MARKET_DATA",
+      eventId: "late-event",
+      requestId: "late-request",
+      timestamp: "2026-10-09T10:00:00.000Z",
+      payload: { symbol: "SIM", price: 100, sequence: 1 },
+    }));
+    first?.remoteClose();
+    await Bun.sleep(5);
+
+    expect(events).toHaveLength(0);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    expect(client.getState()).toBe("open");
+  });
+
   test("disconnects intentionally without scheduling a reconnect", async () => {
     resetSockets();
     const states: string[] = [];

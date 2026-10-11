@@ -165,12 +165,15 @@ export function createGatewayWebSocketClient(
       socket = nextSocket;
 
       nextSocket.onopen = () => {
+        if (socket !== nextSocket || manuallyClosed) return;
         reconnectAttempts = 0;
         setState("open");
         sendAllSubscriptions();
       };
 
       nextSocket.onmessage = (event) => {
+        // Ignore late messages from a socket that has already been replaced.
+        if (socket !== nextSocket || manuallyClosed) return;
         const message = parseServerMessage(event.data);
         if (message === null) return;
         if ("code" in message) {
@@ -181,6 +184,7 @@ export function createGatewayWebSocketClient(
       };
 
       nextSocket.onerror = () => {
+        if (socket !== nextSocket || manuallyClosed) return;
         reportError({
           code: "CONNECTION_ERROR",
           message: "Gateway WebSocket connection failed",
@@ -188,7 +192,9 @@ export function createGatewayWebSocketClient(
       };
 
       nextSocket.onclose = () => {
-        if (socket === nextSocket) socket = null;
+        // A delayed close from an old socket must not schedule a second reconnect.
+        if (socket !== nextSocket) return;
+        socket = null;
         if (!manuallyClosed) scheduleReconnect();
         else setState("closed");
       };
@@ -239,15 +245,21 @@ export function createGatewayWebSocketClient(
   };
 
   const subscribe = (events: readonly GatewayWebSocketEventType[]): void => {
-    const uniqueEvents = [...new Set(events)].filter(isEventType);
-    for (const event of uniqueEvents) subscriptions.add(event);
-    sendSubscription("subscribe", uniqueEvents);
+    // Only send newly-added subscriptions; repeated calls must be idempotent.
+    const newEvents = [...new Set(events)]
+      .filter(isEventType)
+      .filter((event) => !subscriptions.has(event));
+    for (const event of newEvents) subscriptions.add(event);
+    sendSubscription("subscribe", newEvents);
   };
 
   const unsubscribe = (events: readonly GatewayWebSocketEventType[]): void => {
-    const uniqueEvents = [...new Set(events)].filter(isEventType);
-    for (const event of uniqueEvents) subscriptions.delete(event);
-    sendSubscription("unsubscribe", uniqueEvents);
+    // Avoid sending unsubscribe commands for events we were not subscribed to.
+    const activeEvents = [...new Set(events)]
+      .filter(isEventType)
+      .filter((event) => subscriptions.has(event));
+    for (const event of activeEvents) subscriptions.delete(event);
+    sendSubscription("unsubscribe", activeEvents);
   };
 
   return {
