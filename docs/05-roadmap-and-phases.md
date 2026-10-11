@@ -1526,7 +1526,7 @@ ERROR
 
 ## Phase 5.10 — Loading, Empty, Error & Stale-Data UX
 
-**Status:** 🚧 In Progress
+**Status:** ✅ Implementation complete — PR #120 merged
 
 Make dependency and data failures explicit instead of silently showing incorrect values.
 
@@ -1577,7 +1577,9 @@ ERROR
 
 ## Phase 5.11 — Responsive UI & Accessibility
 
-**Status:** ⏳ Planned
+**Status:** ✅ Implementation complete for the current dashboard production-polish scope
+
+The milestone implementation is present, but do not infer that every responsive/accessibility acceptance item has been independently audited solely from CI. Track explicit evidence for the checklist below as part of the remaining dashboard closeout.
 
 Make the dashboard usable across laptop, tablet, and mobile displays.
 
@@ -1645,7 +1647,7 @@ Risk boundary:
 
 ## Phase 5.13 — Data Integrity & Observability
 
-**Status:** 🚧 Implementation hardening merged — PRs #133 and #134
+**Status:** ✅ Implementation hardening merged — PRs #133 and #134
 
 Merged work prevents callbacks from replaced WebSocket connections from mutating state, makes subscribe/unsubscribe idempotent, protects newer live market state from stale REST responses, and reconciles recent live executions with REST trade snapshots using bounded ID-based deduplication. Automated CI passed for both merged pull requests. These changes do not by themselves prove browser-level recovery; that remains a Phase 5.14 runtime validation requirement.
 
@@ -1946,7 +1948,7 @@ Document:
 - [ ] Cleanup complete.
 - [ ] CI passes.
 
-**Phase 5 overall status:** 🚧 In Progress — Phase 5.13 WebSocket/data-integrity hardening is merged; Phase 5.14 runtime integration validation is active.
+**Phase 5 overall status:** 🚧 In Progress — implementation milestones through Phase 5.13 are merged. Phase 5.14 remains active because real runtime event delivery, persistence, browser recovery, and dependency-failure evidence are still outstanding.
 
 ### Recommended Phase 5 commit sequence
 
@@ -2133,8 +2135,12 @@ Planned:
 | 5.6 | Order Book Visualization | ✅ Complete |
 | 5.7 | Analytics Charts & Indicator Views | ✅ Complete |
 | 5.8 | Portfolio, P&L & Risk Dashboard | ✅ Complete |
-| 5.9–5.13 | Dashboard Status, UX & Data-Integrity Hardening | 🚧 In Progress / implementation merged |
-| 5.14 | Full Runtime Integration Validation | 🚧 In Progress |
+| 5.9 | Engine, Analytics & System Status | ✅ Implementation complete |
+| 5.10 | Loading, Error & Stale-Data UX | ✅ Implementation complete — PR #120 |
+| 5.11 | Responsive UI & Dashboard Production Polish | ✅ Implementation complete for current scope |
+| 5.12 | Halted-State Market Data | ✅ Complete — PR #132 |
+| 5.13 | Data Integrity & Observability | ✅ Complete — PRs #133 and #134 |
+| 5.14 | Full Runtime Integration Validation | 🚧 In Progress — live-path evidence outstanding |
 | 5 | React Dashboard | 🚧 In Progress |
 | 6 | Historical Analytics | ⏳ Planned |
 | 7 | Authentication & Security | ⏳ Planned |
