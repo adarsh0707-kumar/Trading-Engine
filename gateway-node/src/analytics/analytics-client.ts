@@ -316,7 +316,7 @@ export function createAnalyticsClient(
   };
 
   const sendTrade = (
-    event: NormalizedEngineEventResult,
+    event: NormalizedTradeEvent,
   ): boolean => {
     const payload = serializeGatewayTradeMessage(
       toGatewayTradeMessage(event),
