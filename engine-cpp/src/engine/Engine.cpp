@@ -65,9 +65,9 @@ void Engine::run_loop() {
         market_message.requestId = "market-" + std::to_string(tick.sequence);
         market_message.timestamp = utils::Time::iso8601();
         std::ostringstream market_payload;
-        market_payload << "{\\"symbol\\":\\"" << tick.symbol
-            << "\\" ,\\"price\\":" << std::fixed << std::setprecision(8) << tick.price
-            << ",\\"sequence\\":" << tick.sequence << "}";
+        market_payload << "{\"symbol\":\"" << tick.symbol
+            << "\",\"price\":" << std::fixed << std::setprecision(8) << tick.price
+            << ",\"sequence\":" << tick.sequence << "}";
         market_message.payload = market_payload.str();
         server_->broadcast(market_message);
         if (risk_guard_.is_halted()) {
