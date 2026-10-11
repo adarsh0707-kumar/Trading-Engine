@@ -135,8 +135,8 @@ static void test_engine_broadcasts_trades()
     const int clientFd =
         connectToServer(engine.port());
 
-    const std::string hello =
-        receiveMessage(clientFd);
+    std::vector<std::uint8_t> eventBuffer;
+    const std::string hello = receiveMessage(clientFd, eventBuffer);
 
     CHECK(!hello.empty());
 
@@ -150,7 +150,6 @@ static void test_engine_broadcasts_trades()
 
     std::string tradeJson;
     bool sawMarketData = false;
-    std::vector<std::uint8_t> eventBuffer;
 
     for (int i = 0; i < 100; ++i)
     {
@@ -166,9 +165,9 @@ static void test_engine_broadcasts_trades()
         if (eventMsg.type == serialization::MessageType::MARKET_DATA)
         {
             sawMarketData = true;
-            CHECK(eventMsg.payload.find("\\"symbol\\":\\"TEST\\"") !=
+            CHECK(eventMsg.payload.find(R"("symbol":"TEST")") !=
                   std::string::npos);
-            CHECK(eventMsg.payload.find("\\"price\\":100") !=
+            CHECK(eventMsg.payload.find(R"("price":100)") !=
                   std::string::npos);
             continue;
         }
