@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createGatewayApiClient } from "../services/api";
 import { createGatewayWebSocketClient, type GatewayWebSocketEvent } from "../services/websocket";
+import { mergeRecentTrades } from "../services/tradeReconciliation";
 import type { GatewayWebSocketState } from "../types/websocket";
 import type { MarketSnapshot, Trade } from "../types";
 
@@ -97,12 +98,11 @@ export function useLiveTradingData(): LiveTradingData {
 
     if (tradesResult.status === "fulfilled") {
       if (tradeRevisionAtStart === tradeEventRevision.current) {
-        const mergedById = new Map<string, Trade>();
-        for (const trade of tradesResult.value.trades) mergedById.set(trade.tradeId, trade);
-        for (const trade of liveTradesById.current.values()) mergedById.set(trade.tradeId, trade);
-        const nextTrades = [...mergedById.values()]
-          .sort((left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp))
-          .slice(0, MAX_RECENT_TRADES);
+        const nextTrades = mergeRecentTrades(
+          tradesResult.value.trades,
+          [...liveTradesById.current.values()],
+          MAX_RECENT_TRADES,
+        );
         hasTradeData.current = nextTrades.length > 0 || hasTradeData.current;
         rememberTradeIds(nextTrades.map((trade) => trade.tradeId));
         setTrades(nextTrades);
