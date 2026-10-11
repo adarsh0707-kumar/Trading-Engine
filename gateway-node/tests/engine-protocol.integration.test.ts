@@ -132,7 +132,9 @@ describe("engine protocol integration", () => {
       events[0]!,
     );
 
-    expect(trade.type).toBe("TRADE");
+    if (trade.type !== "TRADE") {
+      throw new Error("Expected a normalized trade event");
+    }
     expect(trade.tradeId).toBe(
       "trade-43-sell-buy",
     );
@@ -191,6 +193,10 @@ describe("engine protocol integration", () => {
     const secondTrade = normalizeEngineEvent(
       events[1]!,
     );
+
+    if (firstTrade.type !== "TRADE" || secondTrade.type !== "TRADE") {
+      throw new Error("Expected normalized trade events");
+    }
 
     expect(firstTrade.tradeId).toBe(
       "trade-44-buy-sell",
