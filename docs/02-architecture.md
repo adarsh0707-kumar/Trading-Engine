@@ -6,11 +6,12 @@ The system uses a polyglot, event-driven architecture:
 
 ```mermaid
 flowchart LR
-    A[Mock Market / Order Generator] --> B[C++ Matching Engine]
-    B -->|Engine Events| C[Python Analytics]
-    C -->|Enriched Events| D[Node.js API Gateway]
-    D -->|WebSocket| E[React Dashboard]
-    E -->|REST Control| D
+    A[Simulated Market / Order Generator] --> B[C++ Matching Engine]
+    B -->|Framed TCP events| C[Bun + Fastify Gateway]
+    C -->|Framed TCP TRADE contract| D[Python Analytics]
+    D -->|ANALYTICS_UPDATE / RISK_EVENT| C
+    C -->|REST snapshots + WebSocket events| E[React Dashboard]
+    E -->|REST requests| C
     D -->|Control| B
 ```
 
@@ -150,27 +151,21 @@ The algorithm must preserve deterministic ordering.
 
 ## 7. Transport Boundary
 
-### Initial design
+### Engine ↔ Gateway
 
-The initial transport is a TCP or Unix-domain socket stream.
+The C++ engine and Gateway communicate over TCP using the shared engine protocol:
 
-Example event:
-
-```json
-{
-  "event": "trade",
-  "event_id": "evt-000123",
-  "timestamp": "2026-09-07T12:00:01.250Z",
-  "symbol": "SIM",
-  "price": 101.25,
-  "quantity": 25,
-  "taker_side": "BUY",
-  "buy_order_id": "B-100",
-  "sell_order_id": "S-044"
-}
+```text
+4-byte big-endian payload length | UTF-8 JSON payload (maximum 1 MiB)
 ```
 
-Newline-delimited JSON is recommended for the first implementation because it is easy to debug with command-line tools.
+The Gateway decodes fragmented and coalesced TCP reads, validates message types and payloads, and normalizes supported events. TCP is a byte stream; message framing is part of the application protocol. The engine emits `TRADE` for executions and `MARKET_DATA` for simulated market ticks. A market tick is not a trade and must not enter trade history or analytics as an execution.
+
+### Gateway ↔ Python Analytics
+
+The Gateway forwards validated trade envelopes to the Python Analytics receiver over the same length-prefixed TCP framing. The connection is bidirectional: Python sends `ANALYTICS_UPDATE` and `RISK_EVENT` messages back to the Gateway. The wire contract preserves event/request identity and uses the existing shared schemas; analytics calculations remain owned by Python.
+
+Example normalized trade fields include event identity, timestamp, symbol, price, quantity, taker side, and buy/sell order IDs. Concrete envelopes and endpoints are defined in `docs/04-api-reference.md` and the shared schemas.
 
 ---
 
@@ -334,34 +329,25 @@ This prevents an unlimited browser memory growth problem during long simulations
 
 ## 11. Communication Patterns
 
-### Engine → Analytics
-
-Initial:
+### Engine → Gateway
 
 ```text
-TCP/Unix socket
-NDJSON messages
+TCP + 4-byte big-endian length-prefixed UTF-8 JSON
 ```
 
-Future:
+### Gateway → Analytics
 
 ```text
-gRPC + Protobuf
+TCP + versioned trade envelope + bounded queue/reconnect
 ```
 
 ### Analytics → Gateway
 
-Initial:
-
 ```text
-TCP/HTTP callback
+Bidirectional TCP output: ANALYTICS_UPDATE and RISK_EVENT
 ```
 
-Future:
-
-```text
-Redis Streams / PubSub
-```
+A broker, Protobuf, or gRPC transport remains a possible future evolution only if measured scale or operational requirements justify the change.
 
 ### Gateway → Dashboard
 
