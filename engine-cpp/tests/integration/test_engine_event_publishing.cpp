@@ -149,30 +149,44 @@ static void test_engine_broadcasts_trades()
         serialization::MessageType::HELLO);
 
     std::string tradeJson;
+    bool sawMarketData = false;
+    std::vector<std::uint8_t> eventBuffer;
 
-    for (int i = 0; i < 50; ++i)
+    for (int i = 0; i < 100; ++i)
     {
-        tradeJson =
-            receiveMessage(clientFd);
-
-        if (!tradeJson.empty())
+        const std::string eventJson = receiveMessage(clientFd, eventBuffer);
+        if (eventJson.empty())
         {
-            break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
         }
 
-        std::this_thread::sleep_for(
-            std::chrono::milliseconds(10));
+        const serialization::Message eventMsg =
+            serialization::JsonSerializer::deserialize(eventJson);
+        if (eventMsg.type == serialization::MessageType::MARKET_DATA)
+        {
+            sawMarketData = true;
+            CHECK(eventMsg.payload.find("\\"symbol\\":\\"TEST\\"") !=
+                  std::string::npos);
+            CHECK(eventMsg.payload.find("\\"price\\":100") !=
+                  std::string::npos);
+            continue;
+        }
+
+        if (eventMsg.type == serialization::MessageType::TRADE)
+        {
+            tradeJson = eventJson;
+            break;
+        }
     }
 
+    CHECK(sawMarketData);
     CHECK(!tradeJson.empty());
 
     const serialization::Message tradeMsg =
-        serialization::JsonSerializer::deserialize(
-            tradeJson);
+        serialization::JsonSerializer::deserialize(tradeJson);
 
-    CHECK(
-        tradeMsg.type ==
-        serialization::MessageType::TRADE);
+    CHECK(tradeMsg.type == serialization::MessageType::TRADE);
 
     CHECK(tradeMsg.payload.find("TEST") !=
            std::string::npos);
