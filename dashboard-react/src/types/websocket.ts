@@ -1,5 +1,6 @@
 export const GATEWAY_WEBSOCKET_EVENT_TYPES = [
   "TRADE",
+  "MARKET_DATA",
   "ANALYTICS_UPDATE",
   "RISK_EVENT",
 ] as const;
@@ -21,6 +22,18 @@ export interface GatewayTradeWebSocketEvent {
     readonly takerSide: "BUY" | "SELL";
     readonly buyOrderId: string;
     readonly sellOrderId: string;
+  };
+}
+
+export interface GatewayMarketDataWebSocketEvent {
+  readonly type: "MARKET_DATA";
+  readonly eventId: string;
+  readonly requestId: string;
+  readonly timestamp: string;
+  readonly payload: {
+    readonly symbol: string;
+    readonly price: number;
+    readonly sequence: number;
   };
 }
 
@@ -65,6 +78,7 @@ export interface GatewayRiskEventWebSocketEvent {
 
 export type GatewayWebSocketEvent =
   | GatewayTradeWebSocketEvent
+  | GatewayMarketDataWebSocketEvent
   | GatewayAnalyticsUpdateWebSocketEvent
   | GatewayRiskEventWebSocketEvent;
 
