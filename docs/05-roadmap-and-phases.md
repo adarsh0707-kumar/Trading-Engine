@@ -1774,7 +1774,7 @@ Risk UI updates
 
 The dashboard WebSocket test suite covers subscription registration and idempotency, unexpected disconnect/reconnect, restoration of subscriptions after a replacement socket opens, ignoring stale callbacks from obsolete sockets, and manual disconnect suppression of pending reconnects. These are fake-socket tests and do not establish browser-level delivery or recovery against the running Docker Compose stack.
 
-# Phase 5.14 — Full Runtime Integration Validation
+## Phase 5.14 — Full Runtime Integration Validation
 
 **Status:** 🚧 In Progress — live runtime smoke validation passed on 2026-10-12, and the Gateway full-stack integration test passed (1 test, 11 assertions). Remaining exit criteria are a fresh trade/risk event proven through the running Compose stack and browser-level WebSocket recovery validation.
 
