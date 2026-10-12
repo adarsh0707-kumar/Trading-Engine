@@ -61,6 +61,12 @@ The Node.js gateway now provides the browser-facing HTTP boundary and a typed no
 
 ---
 
+## Phase 5.14 — Dashboard WebSocket Recovery Regression Coverage
+
+**Status:** Automated client-level recovery coverage expanded; full runtime integration remains in progress.
+
+The dashboard WebSocket test suite covers subscription registration and idempotency, unexpected disconnect/reconnect, restoration of subscriptions after a replacement socket opens, ignoring stale callbacks from obsolete sockets, and manual disconnect suppression of pending reconnects. These are fake-socket tests and do not establish browser-level delivery or recovery against the running Docker Compose stack.
+
 # Phase 1 — C++ Order Book & Matching Engine
 
 **Status:** ✅ Complete
