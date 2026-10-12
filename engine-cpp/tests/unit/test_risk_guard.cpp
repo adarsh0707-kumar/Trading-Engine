@@ -17,6 +17,17 @@ using trading::engine_runtime::RiskGuardConfig;
 
 namespace
 {
+std::uint64_t journal_checksum(const std::string &text)
+{
+    std::uint64_t value = 14695981039346656037ULL;
+    for (const unsigned char byte : text)
+    {
+        value ^= byte;
+        value *= 1099511628211ULL;
+    }
+    return value;
+}
+
 std::shared_ptr<engine::Order> make_order(
     const char *id, engine::Side side, double price, std::int64_t quantity)
 {
@@ -207,6 +218,77 @@ void test_trade_journal_replays_records_after_stale_snapshot()
     std::filesystem::remove(journal);
 }
 
+void test_duplicate_trade_ids_are_rejected_during_replay()
+{
+    const auto path = std::filesystem::temp_directory_path() / "risk-guard-duplicate-id.snapshot";
+    const auto journal = std::filesystem::path(path.string() + ".trades.log");
+    std::filesystem::remove(path);
+    std::filesystem::remove(journal);
+    RiskGuardConfig config{100, 100000.0, 1000.0, 500.0, 10000.0, path.string()};
+    {
+        RiskGuard guard(config);
+        guard.record_trade("SIM", engine::Side::BUY, 1, 100.0, "trade-duplicate", "taker-1", "maker-1");
+        CHECK(guard.journal_sequence() == 1);
+    }
+    {
+        const std::string body = "2 \\\"trade-duplicate\\\" \\\"SIM\\\" SELL 1 100 1791645644276 \\\"taker-2\\\" \\\"maker-2\\\"";
+        std::ofstream output(journal, std::ios::app);
+        output << body << ' ' << journal_checksum(body) << '\\n';
+    }
+
+    bool rejected_duplicate = false;
+    try { RiskGuard restored(config); }
+    catch (const std::runtime_error &error)
+    {
+        rejected_duplicate = std::string(error.what()).find("duplicate trade ID") != std::string::npos;
+    }
+    CHECK(rejected_duplicate);
+    std::filesystem::remove(path);
+    std::filesystem::remove(journal);
+}
+
+void test_duplicate_trade_id_is_rejected_before_append()
+{
+    const auto path = std::filesystem::temp_directory_path() / "risk-guard-duplicate-live.snapshot";
+    const auto journal = std::filesystem::path(path.string() + ".trades.log");
+    std::filesystem::remove(path);
+    std::filesystem::remove(journal);
+    RiskGuardConfig config{100, 100000.0, 1000.0, 500.0, 10000.0, path.string()};
+    {
+        RiskGuard guard(config);
+        guard.record_trade("SIM", engine::Side::BUY, 1, 100.0, "trade-once", "taker-1", "maker-1");
+        bool rejected_duplicate = false;
+        try { guard.record_trade("SIM", engine::Side::BUY, 1, 100.0, "trade-once", "taker-2", "maker-2"); }
+        catch (const std::logic_error &) { rejected_duplicate = true; }
+        CHECK(rejected_duplicate);
+        CHECK(guard.position() == 1);
+        CHECK(guard.journal_sequence() == 1);
+    }
+    std::filesystem::remove(path);
+    std::filesystem::remove(journal);
+}
+
+void test_journal_write_failure_does_not_apply_risk_trade()
+{
+    const auto path = std::filesystem::temp_directory_path() / "risk-guard-journal-write-failure.snapshot";
+    const auto journal = std::filesystem::path(path.string() + ".trades.log");
+    std::filesystem::remove(path);
+    std::filesystem::remove_all(journal);
+    RiskGuardConfig config{100, 100000.0, 1000.0, 500.0, 10000.0, path.string(), journal.string()};
+    {
+        RiskGuard guard(config);
+        std::filesystem::create_directory(journal); // A directory cannot be opened as an append-only journal.
+        bool failed_closed = false;
+        try { guard.record_trade("SIM", engine::Side::BUY, 1, 100.0, "trade-no-write", "taker", "maker"); }
+        catch (const std::runtime_error &) { failed_closed = true; }
+        CHECK(failed_closed);
+        CHECK(guard.position() == 0);
+        CHECK(guard.journal_sequence() == 0);
+    }
+    std::filesystem::remove(path);
+    std::filesystem::remove_all(journal);
+}
+
 void test_corrupt_trade_journal_fails_closed()
 {
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-journal-corrupt.snapshot";
@@ -265,6 +347,9 @@ int main()
     test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover();
     test_state_restores_position_pnl_and_halt_after_restart();
     test_trade_journal_replays_records_after_stale_snapshot();
+    test_duplicate_trade_ids_are_rejected_during_replay();
+    test_duplicate_trade_id_is_rejected_before_append();
+    test_journal_write_failure_does_not_apply_risk_trade();
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
