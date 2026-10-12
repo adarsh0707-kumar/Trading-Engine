@@ -263,7 +263,7 @@ void test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay()
     {
         const std::string body = R"(2 "trade-covered" "SIM" SELL 1 100 1791645644276 "taker-2" "maker-2")";
         std::ofstream output(journal, std::ios::app);
-        output << body << ' ' << journal_checksum(body) << '\\n';
+        output << body << ' ' << journal_checksum(body) << '\n';
     }
     {
         std::ifstream input(path);
@@ -273,7 +273,7 @@ void test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay()
         CHECK(last_space != std::string::npos);
         state.replace(last_space + 1, std::string::npos, "2");
         std::ofstream output(path, std::ios::trunc);
-        output << state << '\\n';
+        output << state << '\n';
     }
 
     {
