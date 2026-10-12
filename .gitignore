@@ -119,6 +119,7 @@ Makefile.in
 
 # C++ build directories
 engine-cpp/build/
+engine-cpp/build-*/
 engine-cpp/bin/
 engine-cpp/obj/
 engine-cpp/out/

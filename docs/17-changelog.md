@@ -1,3 +1,16 @@
+# 2026-10-12 — C++ Trade Journal Restart Safety
+
+**Status:** Implementation submitted for CI validation; existing runtime incident remains unresolved until its duplicate journal ID is reconciled.
+
+- Matching-engine trade IDs now resume from the durable journal sequence after restart instead of resetting to sequence 1.
+- Risk journal replay rejects empty or duplicate trade IDs, including duplicates in records already covered by the snapshot; new duplicate IDs are rejected before append.
+- Unexpected engine-loop failures, including durable persistence errors, are logged and stop the engine loop and transport fail-closed. Risk accounting is not advanced when journal append fails.
+- Added regression coverage for sequence restoration, duplicate-ID replay rejection, duplicate append rejection, and journal write failure.
+- The currently observed persisted journal contains a duplicate ID at record 18 (matching record 1). This code intentionally refuses startup with that journal until the incident is reconciled. Do not truncate the journal, delete the risk snapshot, or authorize a risk resume as a workaround. No live volume was modified during this implementation.
+- CI must pass before merge. After merge, validate recovery against a disposable copy of the persisted files before planning any live-runtime migration.
+
+---
+
 # 2026-10-12 — Phase 5.14 — Live Runtime Smoke Validation
 
 **Status:** Runtime smoke validation passed; full Phase 5.14 exit criteria remain in progress.

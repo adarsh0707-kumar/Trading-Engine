@@ -1272,6 +1272,19 @@ void test_trade_records_buyer_and_seller_for_sell_taker()
     CHECK(trade->sell_order_id() == "S1");
 }
 
+void test_trade_sequence_can_resume_after_restart()
+{
+    OrderBook book("BTC-USD");
+    book.add_order(make_order("S1", Side::SELL, 100.0, 4, 1));
+
+    // The durable journal already contains 18 trades from the prior process.
+    MatchingEngine matcher(18);
+    MatchResult result = matcher.match(book, make_order("B1", Side::BUY, 101.0, 4, 2));
+
+    CHECK(result.trades.size() == 1);
+    CHECK(result.trades.front()->trade_id() == "trade-00000019-B1-S1");
+}
+
 void test_trade_ids_are_unique_across_matches()
 {
     MatchingEngine matcher;
@@ -1359,12 +1372,13 @@ int main()
     test_partially_filled_order_rests_after_existing_orders();
 
     test_trade_ids_are_unique_across_matches();
+    test_trade_sequence_can_resume_after_restart();
 
     test_trade_records_buyer_and_seller_for_buy_taker();
     test_trade_records_buyer_and_seller_for_sell_taker();
 
     std::cout
-        << "All MatchingEngine Phase 1.13 tests passed (37/37)"
+        << "All MatchingEngine Phase 1.13 tests passed (38/38)"
         << std::endl;
 
     return 0;
