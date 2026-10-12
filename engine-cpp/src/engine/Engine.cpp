@@ -14,7 +14,7 @@ Engine::Engine(const EngineConfig &config)
       risk_guard_(RiskGuardConfig{config.risk_max_position, config.risk_max_position_value,
           config.risk_max_drawdown, config.risk_max_daily_loss, config.risk_initial_equity,
           config.risk_state_file_path, config.risk_trade_journal_file_path}),
-      state_(std::make_unique<EngineState>(config.symbol)),
+      state_(std::make_unique<EngineState>(config.symbol, risk_guard_.journal_sequence())),
       server_(std::make_unique<network::SocketServer>(config.port, 10000, 30, config.bind_address)),
       logger_(std::make_unique<logging::Logger>("Engine"))
 {
@@ -36,9 +36,10 @@ bool Engine::start() {
     engine_thread_=std::thread(&Engine::run_loop,this); return true;
 }
 void Engine::stop() {
-    if (!running_.exchange(false)) return;
+    running_.store(false);
     if (engine_thread_.joinable()) engine_thread_.join();
-    server_->stop(); logger_->info("Engine stopped");
+    server_->stop();
+    logger_->info("Engine stopped");
 }
 bool Engine::is_running() const { return running_.load(); }
 bool Engine::is_risk_halted() const { return risk_halted_.load(); }
@@ -51,6 +52,7 @@ std::uint16_t Engine::port() const { return server_->port(); }
 void Engine::run_loop() {
     logger_->info("Engine loop started");
     bool risk_halt_logged=false;
+    try {
     while (running_) {
         const ::engine::Tick tick=generator_->next();
         auto incoming_order=std::make_shared<::engine::Order>(tick.order_id,tick.symbol,tick.side,
@@ -112,6 +114,15 @@ void Engine::run_loop() {
             logger_->info("Trade: "+trade->symbol()+" @ "+std::to_string(trade->price())+" x "+std::to_string(trade->quantity()));
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(config_.tick_interval_ms));
+    }
+    } catch (const std::exception &error) {
+        logger_->error(std::string("engine_loop_fatal; stopping engine fail-closed: ") + error.what());
+        running_.store(false);
+        server_->stop();
+    } catch (...) {
+        logger_->error("engine_loop_fatal; stopping engine after unknown failure");
+        running_.store(false);
+        server_->stop();
     }
     logger_->info("Engine loop stopped");
 }
