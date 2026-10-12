@@ -9,6 +9,11 @@
 namespace engine
 {
 
+    MatchingEngine::MatchingEngine(std::uint64_t initial_trade_sequence)
+        : trade_sequence_(initial_trade_sequence)
+    {
+    }
+
     std::string MatchingEngine::next_trade_id(
         const std::string &taker_order_id,
         const std::string &maker_order_id) const
@@ -18,7 +23,8 @@ namespace engine
          * pair matches again whenever a partially filled order trades
          * with the same counterparty, and order identifiers repeat
          * across engine restarts. The sequence number makes every trade
-         * identifier unique for the lifetime of the engine.
+         * identifier unique for the lifetime of the engine. Runtime callers
+         * restore the initial sequence from the durable trade journal.
          */
         std::ostringstream trade_id;
 
