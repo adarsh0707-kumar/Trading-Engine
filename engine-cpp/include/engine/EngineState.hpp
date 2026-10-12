@@ -4,6 +4,7 @@
 #include "orderbook/BookSnapshot.hpp"
 #include "orderbook/OrderBook.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -16,7 +17,7 @@ namespace engine_runtime
 class EngineState
 {
 public:
-    explicit EngineState(const std::string &symbol);
+    explicit EngineState(const std::string &symbol, std::uint64_t initial_trade_sequence = 0);
 
     ::engine::OrderBook &order_book();
     const ::engine::OrderBook &order_book() const;
