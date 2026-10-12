@@ -1776,7 +1776,7 @@ The dashboard WebSocket test suite covers subscription registration and idempote
 
 # Phase 5.14 — Full Runtime Integration Validation
 
-**Status:** 🚧 In Progress — analytics tests pass (483 passed locally), read-only runtime smoke checks pass, and deterministic analytics-client reconnect regression coverage is merged (PR #140); full live-path validation remains outstanding
+**Status:** 🚧 In Progress — live runtime smoke validation passed on 2026-10-12, and the Gateway full-stack integration test passed (1 test, 11 assertions). Remaining exit criteria are a fresh trade/risk event proven through the running Compose stack and browser-level WebSocket recovery validation.
 
 Validate the dashboard against the real backend stack rather than mocks alone.
 
@@ -1809,6 +1809,20 @@ The script checks:
 - Dashboard HTTP response is non-empty.
 - Analytics Prometheus metrics endpoint responds with content.
 - PostgreSQL accepts connections and a read-only `SELECT 1` succeeds.
+
+### Validation evidence — 2026-10-12
+
+- `bash scripts/validate-runtime.sh`: exit code **0**. Gateway health/readiness, market snapshot, recent trades, dashboard HTTP, analytics Prometheus metrics, and PostgreSQL readiness plus read-only `SELECT 1` all passed.
+- `docker compose ps -a`: all five services (gateway, engine, analytics, dashboard, PostgreSQL) reported healthy.
+- Gateway metrics at validation time: `gateway_ready 1`, `gateway_engine_connected 1`, `gateway_analytics_connected 1`, `gateway_engine_connection_failures_total 0`, and `gateway_analytics_errors_total 0`.
+- `cd gateway-node && bun test tests/full-stack.integration.test.ts`: **1 pass, 0 failures, 11 assertions**. The isolated integration test exercises Engine TRADE handling, analytics update/risk events, REST routes, and WebSocket consumers; it is not proof that a new event traversed the running Compose stack.
+- The initial stale host-port forwarding was cleared, after which the gateway became healthy and readiness returned HTTP 200 with both dependencies connected.
+
+### Remaining Phase 5.14 exit criteria
+
+- [ ] Demonstrate a fresh trade and corresponding analytics/risk event through the running Compose stack, with observable downstream delivery.
+- [ ] Verify browser-level WebSocket disconnect/reconnect and subscription restoration against the running stack.
+- [ ] Record the resulting evidence and confirm the final dashboard/browser acceptance checks.
 
 Optional URL overrides:
 
@@ -2156,7 +2170,7 @@ Planned:
 | 5.11 | Responsive UI & Dashboard Production Polish | ✅ Implementation complete for current scope |
 | 5.12 | Halted-State Market Data | ✅ Complete — PR #132 |
 | 5.13 | Data Integrity & Observability | ✅ Complete — PRs #133 and #134 |
-| 5.14 | Full Runtime Integration Validation | 🚧 In Progress — live-path evidence outstanding |
+| 5.14 | Full Runtime Integration Validation | 🚧 In Progress — runtime smoke and isolated integration tests pass; live event/browser E2E remain |
 | 5 | React Dashboard | 🚧 In Progress |
 | 6 | Historical Analytics | ⏳ Planned |
 | 7 | Authentication & Security | ⏳ Planned |
