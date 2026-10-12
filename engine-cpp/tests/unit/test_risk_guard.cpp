@@ -247,6 +247,45 @@ void test_duplicate_trade_ids_are_rejected_during_replay()
     std::filesystem::remove(journal);
 }
 
+void test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay()
+{
+    const auto path = std::filesystem::temp_directory_path() / "risk-guard-snapshot-covered-duplicate.snapshot";
+    const auto journal = std::filesystem::path(path.string() + ".trades.log");
+    std::filesystem::remove(path);
+    std::filesystem::remove(journal);
+    RiskGuardConfig config{100, 100000.0, 1000.0, 500.0, 10000.0, path.string()};
+    {
+        RiskGuard guard(config);
+        guard.record_trade("SIM", engine::Side::BUY, 1, 100.0, "trade-covered", "taker-1", "maker-1");
+        CHECK(guard.position() == 1);
+        CHECK(guard.journal_sequence() == 1);
+    }
+    {
+        const std::string body = R"(2 "trade-covered" "SIM" SELL 1 100 1791645644276 "taker-2" "maker-2")";
+        std::ofstream output(journal, std::ios::app);
+        output << body << ' ' << journal_checksum(body) << '\\n';
+    }
+    {
+        std::ifstream input(path);
+        std::string state;
+        std::getline(input, state);
+        const auto last_space = state.rfind(' ');
+        CHECK(last_space != std::string::npos);
+        state.replace(last_space + 1, std::string::npos, "2");
+        std::ofstream output(path, std::ios::trunc);
+        output << state << '\\n';
+    }
+
+    {
+        RiskGuard restored(config);
+        CHECK(restored.position() == 1);
+        CHECK(restored.journal_sequence() == 2);
+        CHECK(restored.replayed_trade_count() == 0);
+    }
+    std::filesystem::remove(path);
+    std::filesystem::remove(journal);
+}
+
 void test_duplicate_trade_id_is_rejected_before_append()
 {
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-duplicate-live.snapshot";
@@ -348,6 +387,7 @@ int main()
     test_state_restores_position_pnl_and_halt_after_restart();
     test_trade_journal_replays_records_after_stale_snapshot();
     test_duplicate_trade_ids_are_rejected_during_replay();
+    test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay();
     test_duplicate_trade_id_is_rejected_before_append();
     test_journal_write_failure_does_not_apply_risk_trade();
     test_corrupt_trade_journal_fails_closed();
