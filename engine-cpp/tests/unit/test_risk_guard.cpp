@@ -231,7 +231,7 @@ void test_duplicate_trade_ids_are_rejected_during_replay()
         CHECK(guard.journal_sequence() == 1);
     }
     {
-        const std::string body = "2 \\\"trade-duplicate\\\" \\\"SIM\\\" SELL 1 100 1791645644276 \\\"taker-2\\\" \\\"maker-2\\\"";
+        const std::string body = R"(2 "trade-duplicate" "SIM" SELL 1 100 1791645644276 "taker-2" "maker-2")";
         std::ofstream output(journal, std::ios::app);
         output << body << ' ' << journal_checksum(body) << '\n';
     }
