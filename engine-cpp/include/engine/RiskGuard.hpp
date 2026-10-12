@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdint>
 #include <string>
+#include <unordered_set>
 
 namespace trading { namespace engine_runtime {
 struct RiskGuardConfig {
@@ -60,5 +61,6 @@ private:
     std::string halt_reason_;
     std::uint64_t journal_sequence_{0};
     std::uint64_t replayed_trade_count_{0};
+    std::unordered_set<std::string> trade_ids_;
 };
 } } // namespace trading::engine_runtime
