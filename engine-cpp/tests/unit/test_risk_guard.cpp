@@ -269,6 +269,7 @@ void test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay()
         std::ifstream input(path);
         std::string state;
         std::getline(input, state);
+        input.close();
         const auto last_space = state.rfind(' ');
         CHECK(last_space != std::string::npos);
         state.replace(last_space + 1, std::string::npos, "2");
