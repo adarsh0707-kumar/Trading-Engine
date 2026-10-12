@@ -14,6 +14,8 @@ namespace engine
     class MatchingEngine
     {
     public:
+        explicit MatchingEngine(std::uint64_t initial_trade_sequence = 0);
+
         MatchResult match(
             OrderBook &order_book,
             const std::shared_ptr<Order> &incoming_order) const;
