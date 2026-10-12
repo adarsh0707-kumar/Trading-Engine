@@ -258,6 +258,7 @@ void RiskGuard::replay_trade_journal() {
     if (last_sequence < snapshot_sequence)
         throw std::runtime_error("trade journal is behind the risk snapshot; refusing startup");
     journal_sequence_ = last_sequence;
+    synthetic_trade_sequence_ = last_sequence;
     trade_ids_ = std::move(trade_ids);
 }
 
@@ -305,9 +306,14 @@ void RiskGuard::record_trade(const std::string &symbol, ::engine::Side side, std
     if (projected > config_.max_position || projected < -config_.max_position)
         throw std::logic_error("executed trade would violate max_position");
 
-    const std::string canonical_trade_id = trade_id.empty()
-        ? "risk-trade-" + std::to_string(journal_sequence_ + 1)
-        : trade_id;
+    std::string canonical_trade_id = trade_id;
+    if (canonical_trade_id.empty()) {
+        synthetic_trade_sequence_ = std::max(synthetic_trade_sequence_, journal_sequence_);
+        do {
+            ++synthetic_trade_sequence_;
+            canonical_trade_id = "risk-trade-" + std::to_string(synthetic_trade_sequence_);
+        } while (trade_ids_.count(canonical_trade_id) != 0);
+    }
     if (trade_ids_.count(canonical_trade_id) != 0)
         throw std::logic_error("trade ID has already been recorded");
 
@@ -316,6 +322,7 @@ void RiskGuard::record_trade(const std::string &symbol, ::engine::Side side, std
     trade_ids_.insert(canonical_trade_id);
     apply_trade(symbol, side, quantity, price);
     journal_sequence_ = sequence;
+    synthetic_trade_sequence_ = std::max(synthetic_trade_sequence_, sequence);
     save_state();
 }
 
