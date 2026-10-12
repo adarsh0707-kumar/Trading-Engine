@@ -13,6 +13,7 @@
 #include <string>
 #include <system_error>
 #include <vector>
+#include <unordered_set>
 #ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
@@ -215,6 +216,7 @@ void RiskGuard::replay_trade_journal() {
     std::ifstream in(path);
     if (!in) throw std::runtime_error("cannot read durable trade journal; refusing startup");
     std::string line;
+    std::unordered_set<std::string> trade_ids;
     std::uint64_t expected_sequence = 1;
     while (std::getline(in, line)) {
         if (line.empty()) throw std::runtime_error("trade journal contains an empty record; refusing startup");
@@ -237,10 +239,12 @@ void RiskGuard::replay_trade_journal() {
             throw std::runtime_error("trade journal record is malformed; refusing startup");
         std::string extra;
         if (record >> extra) throw std::runtime_error("trade journal record has trailing data; refusing startup");
-        if (sequence != expected_sequence++ || symbol.empty() || quantity <= 0 ||
+        if (sequence != expected_sequence++ || trade_id.empty() || symbol.empty() || quantity <= 0 ||
             !std::isfinite(price) || price <= 0 || timestamp_ms < 0 ||
             (side_text != "BUY" && side_text != "SELL"))
             throw std::runtime_error("trade journal sequence or fields are invalid; refusing startup");
+        if (!trade_ids.insert(trade_id).second)
+            throw std::runtime_error("trade journal contains duplicate trade ID; refusing startup");
 
         if (sequence > snapshot_sequence) {
             apply_trade(symbol, side_text == "BUY" ? ::engine::Side::BUY : ::engine::Side::SELL, quantity, price);
@@ -253,6 +257,7 @@ void RiskGuard::replay_trade_journal() {
     if (last_sequence < snapshot_sequence)
         throw std::runtime_error("trade journal is behind the risk snapshot; refusing startup");
     journal_sequence_ = last_sequence;
+    trade_ids_ = std::move(trade_ids);
 }
 
 RiskDecision RiskGuard::check_order(const ::engine::Order &order) const {
@@ -299,8 +304,15 @@ void RiskGuard::record_trade(const std::string &symbol, ::engine::Side side, std
     if (projected > config_.max_position || projected < -config_.max_position)
         throw std::logic_error("executed trade would violate max_position");
 
+    const std::string canonical_trade_id = trade_id.empty()
+        ? "risk-trade-" + std::to_string(journal_sequence_ + 1)
+        : trade_id;
+    if (trade_ids_.count(canonical_trade_id) != 0)
+        throw std::logic_error("trade ID has already been recorded");
+
     const std::uint64_t sequence = append_trade_journal(
-        symbol, side, quantity, price, trade_id, taker_order_id, maker_order_id);
+        symbol, side, quantity, price, canonical_trade_id, taker_order_id, maker_order_id);
+    trade_ids_.insert(canonical_trade_id);
     apply_trade(symbol, side, quantity, price);
     journal_sequence_ = sequence;
     save_state();
