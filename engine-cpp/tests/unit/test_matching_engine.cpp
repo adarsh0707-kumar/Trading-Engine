@@ -1378,7 +1378,7 @@ int main()
     test_trade_records_buyer_and_seller_for_sell_taker();
 
     std::cout
-        << "All MatchingEngine Phase 1.13 tests passed (37/37)"
+        << "All MatchingEngine Phase 1.13 tests passed (38/38)"
         << std::endl;
 
     return 0;
