@@ -1,3 +1,21 @@
+# 2026-10-12 — Phase 5.14 — Dashboard WebSocket Recovery Regression Coverage
+
+**Status:** Automated client-level regression coverage added; Phase 5.14 runtime integration remains in progress.
+
+- Extended `dashboard-react/src/services/websocket.test.ts` to verify restoration of all supported Gateway event subscriptions after reconnect.
+- Added regression coverage that stale close callbacks from obsolete sockets do not create duplicate reconnects or corrupt the active connection state.
+- Added coverage that a manual disconnect cancels a pending reconnect timer.
+- Tests use the existing fake WebSocket fixture and Bun test runner; they do not connect to the live simulation or prove browser/runtime persistence.
+- Existing WebSocket tests already cover URL setup, event parsing, subscription idempotency, reconnect restoration for a subset of events, stale message handling, and manual disconnect.
+
+Run from `dashboard-react/`:
+
+```bash
+bun test src/services/websocket.test.ts
+```
+
+---
+
 # 2026-10-11 — Phase 5.14 — Analytics Disconnect/Recovery Regression Coverage
 
 **Status:** ✅ Merged in PR #140 (merge commit `a36d757ad6e051c074e092593f97396ab1564494`).
