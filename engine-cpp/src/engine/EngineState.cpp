@@ -5,8 +5,8 @@ namespace trading
 namespace engine_runtime
 {
 
-EngineState::EngineState(const std::string &symbol)
-    : order_book_(symbol)
+EngineState::EngineState(const std::string &symbol, std::uint64_t initial_trade_sequence)
+    : order_book_(symbol), matching_engine_(initial_trade_sequence)
 {
 }
 
