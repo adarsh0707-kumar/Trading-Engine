@@ -1359,6 +1359,7 @@ int main()
     test_partially_filled_order_rests_after_existing_orders();
 
     test_trade_ids_are_unique_across_matches();
+    test_trade_sequence_can_resume_after_restart();
 
     test_trade_records_buyer_and_seller_for_buy_taker();
     test_trade_records_buyer_and_seller_for_sell_taker();
