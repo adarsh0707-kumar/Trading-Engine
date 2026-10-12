@@ -244,8 +244,9 @@ void RiskGuard::replay_trade_journal() {
             !std::isfinite(price) || price <= 0 || timestamp_ms < 0 ||
             (side_text != "BUY" && side_text != "SELL"))
             throw std::runtime_error("trade journal sequence or fields are invalid; refusing startup");
-        if (!trade_ids.insert(trade_id).second)
-            throw std::runtime_error("trade journal contains duplicate trade ID; refusing startup");
+        const bool duplicate_trade_id = !trade_ids.insert(trade_id).second;
+        if (duplicate_trade_id && sequence > snapshot_sequence)
+            throw std::runtime_error("trade journal contains duplicate trade ID after snapshot; refusing startup");
 
         if (sequence > snapshot_sequence) {
             apply_trade(symbol, side_text == "BUY" ? ::engine::Side::BUY : ::engine::Side::SELL, quantity, price);
