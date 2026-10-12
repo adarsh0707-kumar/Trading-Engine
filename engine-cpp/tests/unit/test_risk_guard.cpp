@@ -233,7 +233,7 @@ void test_duplicate_trade_ids_are_rejected_during_replay()
     {
         const std::string body = "2 \\\"trade-duplicate\\\" \\\"SIM\\\" SELL 1 100 1791645644276 \\\"taker-2\\\" \\\"maker-2\\\"";
         std::ofstream output(journal, std::ios::app);
-        output << body << ' ' << journal_checksum(body) << '\\n';
+        output << body << ' ' << journal_checksum(body) << '\n';
     }
 
     bool rejected_duplicate = false;
@@ -353,6 +353,6 @@ int main()
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (15/15)\n";
+    std::cout << "RiskGuard tests passed (18/18)\n";
     return 0;
 }
