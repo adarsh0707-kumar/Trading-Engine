@@ -1768,13 +1768,7 @@ Risk UI updates
 
 ---
 
-### Phase 5.14 — Dashboard WebSocket Recovery Regression Coverage
-
-**Status:** Automated client-level recovery coverage expanded; full runtime integration remains in progress.
-
-The dashboard WebSocket test suite covers subscription registration and idempotency, unexpected disconnect/reconnect, restoration of subscriptions after a replacement socket opens, ignoring stale callbacks from obsolete sockets, and manual disconnect suppression of pending reconnects. These are fake-socket tests and do not establish browser-level delivery or recovery against the running Docker Compose stack.
-
-# Phase 5.14 — Full Runtime Integration Validation
+## Phase 5.14 — Full Runtime Integration Validation
 
 **Status:** 🚧 In Progress — analytics tests pass (483 passed locally), read-only runtime smoke checks pass, and deterministic analytics-client reconnect regression coverage is merged (PR #140); full live-path validation remains outstanding
 
