@@ -288,4 +288,91 @@ describe("Gateway WebSocket client", () => {
     expect(client.getState()).toBe("closed");
     expect(states.at(-1)).toBe("closed");
   });
+
+  test("restores every supported event subscription exactly once after reconnect", async () => {
+    resetSockets();
+    const client = createGatewayWebSocketClient({
+      reconnectInitialDelayMs: 1,
+      reconnectMaxDelayMs: 1,
+      maxReconnectAttempts: 2,
+      webSocketFactory: (url) => new FakeWebSocket(url),
+    });
+    client.subscribe(["TRADE", "MARKET_DATA", "ANALYTICS_UPDATE", "RISK_EVENT"]);
+    client.connect();
+
+    const first = FakeWebSocket.instances[0];
+    first?.open();
+    expect(first?.sent).toEqual([
+      JSON.stringify({
+        action: "subscribe",
+        events: ["TRADE", "MARKET_DATA", "ANALYTICS_UPDATE", "RISK_EVENT"],
+      }),
+    ]);
+
+    first?.remoteClose();
+    await Bun.sleep(5);
+    const second = FakeWebSocket.instances[1];
+    expect(second).toBeDefined();
+    second?.open();
+
+    expect(second?.sent).toEqual([
+      JSON.stringify({
+        action: "subscribe",
+        events: ["TRADE", "MARKET_DATA", "ANALYTICS_UPDATE", "RISK_EVENT"],
+      }),
+    ]);
+    expect(client.getState()).toBe("open");
+  });
+
+  test("ignores obsolete close callbacks without scheduling duplicate reconnects", async () => {
+    resetSockets();
+    const states: string[] = [];
+    const client = createGatewayWebSocketClient({
+      reconnectInitialDelayMs: 1,
+      reconnectMaxDelayMs: 1,
+      maxReconnectAttempts: 3,
+      webSocketFactory: (url) => new FakeWebSocket(url),
+      onStateChange: (state) => states.push(state),
+    });
+
+    client.connect();
+    const first = FakeWebSocket.instances[0];
+    first?.open();
+    first?.remoteClose();
+    await Bun.sleep(5);
+
+    const second = FakeWebSocket.instances[1];
+    expect(second).toBeDefined();
+    second?.open();
+    const stateCountBeforeStaleClose = states.length;
+
+    // Simulate a callback already queued by the old socket before replacement.
+    first?.remoteClose();
+    await Bun.sleep(5);
+
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    expect(client.getState()).toBe("open");
+    expect(states.slice(stateCountBeforeStaleClose)).toEqual([]);
+  });
+
+  test("manual disconnect cancels a pending reconnect timer", async () => {
+    resetSockets();
+    const client = createGatewayWebSocketClient({
+      reconnectInitialDelayMs: 20,
+      reconnectMaxDelayMs: 20,
+      webSocketFactory: (url) => new FakeWebSocket(url),
+    });
+
+    client.connect();
+    const first = FakeWebSocket.instances[0];
+    first?.open();
+    first?.remoteClose();
+    expect(client.getState()).toBe("reconnecting");
+
+    client.disconnect();
+    await Bun.sleep(30);
+
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(client.getState()).toBe("closed");
+  });
 });
