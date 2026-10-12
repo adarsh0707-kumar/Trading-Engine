@@ -61,6 +61,7 @@ private:
     std::string halt_reason_;
     std::uint64_t journal_sequence_{0};
     std::uint64_t replayed_trade_count_{0};
+    std::uint64_t synthetic_trade_sequence_{0};
     std::unordered_set<std::string> trade_ids_;
 };
 } } // namespace trading::engine_runtime
