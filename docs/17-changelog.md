@@ -1,3 +1,23 @@
+# 2026-10-12 — Phase 5.14 — Live Runtime Smoke Validation
+
+**Status:** Runtime smoke validation passed; full Phase 5.14 exit criteria remain in progress.
+
+- `bash scripts/validate-runtime.sh` passed with exit code 0: gateway health/readiness, market snapshot, recent trades, dashboard HTTP, analytics metrics, and PostgreSQL read-only readiness check all succeeded.
+- All five Docker Compose services reported healthy after recovery of the gateway's stale host-port forwarding.
+- Live gateway metrics showed readiness and engine/analytics connections up (`1`), with engine connection failures and analytics errors at `0` at the time of sampling.
+- `gateway-node/tests/full-stack.integration.test.ts` passed: **1 test, 0 failures, 11 assertions**. Its isolated fixture covers a TRADE event, analytics update/risk event, REST routes, and WebSocket consumers; it is not evidence of a fresh event traversing the running Compose stack.
+- Remaining work: validate fresh trade/risk event delivery and browser-level WebSocket recovery against the running stack. The read-only smoke script explicitly does not test a new trade, risk event, or browser recovery.
+
+Commands used from the repository root:
+
+```bash
+bash scripts/validate-runtime.sh
+cd gateway-node
+bun test tests/full-stack.integration.test.ts
+```
+
+---
+
 # 2026-10-12 — Phase 5.14 — Dashboard WebSocket Recovery Regression Coverage
 
 **Status:** Automated client-level regression coverage added; Phase 5.14 runtime integration remains in progress.
