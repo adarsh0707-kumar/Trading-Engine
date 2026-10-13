@@ -10,6 +10,7 @@ static volatile std::sig_atomic_t running=1;
 static void signalHandler(int) { running=0; }
 int main() {
     std::signal(SIGINT,signalHandler);
+    std::signal(SIGTERM,signalHandler);
     trading::engine_runtime::EngineConfig config;
     config.risk_state_file_path="./data/risk-state.snapshot";
     if(const char *v=std::getenv("ENGINE_BIND_ADDRESS");v&&*v) config.bind_address=v;
