@@ -1,3 +1,18 @@
+# 2026-10-14 — Phase 5.14 — Graceful Shutdown and Recovery Checkpoint
+
+**Status:** Graceful-shutdown fix merged and locally validated; production recovery remains pending.
+
+- PR #146 merged SIGINT/SIGTERM handling for the C++ engine (merge commit `9627490`). Local C++ validation passed **16/16 CTest tests**; PR CI passed **22/22 checks**.
+- `docker compose build engine` succeeded, producing image `sha256:bfdb714219c324b306e568e92ad21351dee9e83c0f7fa92313251eab4207bb8e`.
+- The existing production engine container remains stopped (exit **137**) and references the older image `sha256:d0f58d6e48db1cb1442a308b7ab845a33d6532075ec30f3d1b3b25a92996d5d5`. Building the image alone did not replace or start the container; the exit-137 cause remains unconfirmed.
+- The production `risk-state.snapshot` and `trades.log` are byte-for-byte identical to the verified backup, and the backup SHA-256 manifest passes.
+- The disposable recovery probe exited **0**, logged the persisted `max_drawdown` halt, and reconciled journal sequence 18. This does not prove live Compose trade delivery, PostgreSQL persistence, or browser reconnect recovery.
+- Production was not started or replaced. The persisted halt and risk files were not reset or modified; no risk-limit change or halt-resume action was performed.
+
+**Phase 5.14 remains in progress.** Continue with a reviewed, explicitly approved engine-only recovery plan, then collect live event, persistence, and browser-recovery evidence before marking the phase complete.
+
+---
+
 # 2026-10-12 — C++ Trade Journal Restart Safety
 
 **Status:** Implementation submitted for CI validation; existing runtime incident remains unresolved until its duplicate journal ID is reconciled.
