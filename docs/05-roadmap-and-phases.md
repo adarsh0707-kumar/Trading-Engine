@@ -17,7 +17,7 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest merged implementation milestones:** Phase 5.14 analytics PostgreSQL connection-recovery hardening (PR #138), pytest warning cleanup (PR #139), and deterministic Gateway Analytics TCP-client reconnect regression coverage (PR #140; merge commit `a36d757ad6e051c074e092593f97396ab1564494`)
+**Latest merged implementation milestones:** Phase 5.14 analytics PostgreSQL connection-recovery hardening (PR #138), pytest warning cleanup (PR #139), deterministic Gateway Analytics TCP-client reconnect regression coverage (PR #140; merge commit `a36d757ad6e051c074e092593f97396ab1564494`), and C++ engine SIGINT/SIGTERM graceful-shutdown handling (PR #146; merge commit `9627490`).
 
 **Current milestone:** Phase 5.14 — Full Runtime Integration Validation
 
@@ -1817,6 +1817,16 @@ The script checks:
 - Gateway metrics at validation time: `gateway_ready 1`, `gateway_engine_connected 1`, `gateway_analytics_connected 1`, `gateway_engine_connection_failures_total 0`, and `gateway_analytics_errors_total 0`.
 - `cd gateway-node && bun test tests/full-stack.integration.test.ts`: **1 pass, 0 failures, 11 assertions**. The isolated integration test exercises Engine TRADE handling, analytics update/risk events, REST routes, and WebSocket consumers; it is not proof that a new event traversed the running Compose stack.
 - The initial stale host-port forwarding was cleared, after which the gateway became healthy and readiness returned HTTP 200 with both dependencies connected.
+
+### Validation evidence — 2026-10-14 — Graceful-shutdown recovery checkpoint
+
+- PR #146 merged the C++ engine SIGINT/SIGTERM shutdown handling; merge commit: `9627490`.
+- Local C++ validation passed: **16/16 CTest tests**. PR CI was green across **22/22 checks**.
+- `docker compose build engine` completed successfully and produced image `sha256:bfdb714219c324b306e568e92ad21351dee9e83c0f7fa92313251eab4207bb8e`.
+- The existing production container `trading-engine-engine-1` remains stopped with exit code **137** and still references the older image `sha256:d0f58d6e48db1cb1442a308b7ab845a33d6532075ec30f3d1b3b25a92996d5d5`. The build did not replace or start that container; the cause of exit 137 has not been established.
+- The production `risk-state.snapshot` and `trades.log` match the verified backup byte-for-byte. The backup manifest passes SHA-256 verification.
+- A disposable recovery probe using a copy of the persisted state exited cleanly (**exit 0**) and logged the persisted `max_drawdown` halt with journal sequence 18. This is isolated recovery evidence, not proof of live-stack trade delivery, PostgreSQL persistence, or browser recovery.
+- **Safety boundary:** production remains stopped; no production container replacement/start, risk-state reset, risk-limit change, or halt-resume action was performed. Preserve the active halt and persisted files during the remaining recovery work.
 
 ### Remaining Phase 5.14 exit criteria
 
