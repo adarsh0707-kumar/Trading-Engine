@@ -41,13 +41,13 @@ The initial socket transport can later be replaced by Protobuf/gRPC or a message
 
 ## 3. Service Responsibilities
 
-| Service | Main responsibility | Suggested technology |
-|---|---|---|
-| Engine | Orders, book, matching, event generation | C++17 |
-| Analytics | Indicators and risk | Python 3 |
-| Gateway | REST, WebSocket, routing, fan-out | TypeScript + Bun + Fastify + ws |
-| Dashboard | Visualization and controls | React/TypeScript |
-| Orchestration | Network and lifecycle | Docker Compose |
+| Service       | Main responsibility                      | Suggested technology            |
+| ------------- | ---------------------------------------- | ------------------------------- |
+| Engine        | Orders, book, matching, event generation | C++17                           |
+| Analytics     | Indicators and risk                      | Python 3                        |
+| Gateway       | REST, WebSocket, routing, fan-out        | TypeScript + Bun + Fastify + ws |
+| Dashboard     | Visualization and controls               | React/TypeScript                |
+| Orchestration | Network and lifecycle                    | Docker Compose                  |
 
 ---
 
@@ -127,7 +127,7 @@ and buy price >= best ask:
 
     reduce both quantities
 
-    remove fully consumed orders
+    remove fully consumed orders.
 ```
 
 For a sell:
@@ -142,7 +142,7 @@ and sell price <= best bid:
 
     reduce both quantities
 
-    remove fully consumed orders
+    remove fully consumed orders.
 ```
 
 The algorithm must preserve deterministic ordering.
@@ -474,10 +474,8 @@ The C++ matching engine is intentionally treated as stateful. Horizontal scaling
 
 **Reason:** simple multi-service startup and reproducibility.
 
-
 ### ADR-007 — Bun for the Node Gateway
 
 **Decision:** Use Bun as the runtime and package manager for gateway-node, with TypeScript as the implementation language.
 
 **Reason:** Bun provides one fast toolchain for installing dependencies, running TypeScript, executing tests, and running the gateway. This keeps local development and CI consistent while avoiding a separate npm-based workflow.
-
