@@ -187,7 +187,8 @@ void ClientConnection::receiveLoop()
                         payload);
 
                 if (message.type ==
-                    serialization::MessageType::HEARTBEAT)
+                        serialization::MessageType::HEARTBEAT &&
+                    message.payload == "OK")
                 {
                     markHeartbeatAck();
                 }

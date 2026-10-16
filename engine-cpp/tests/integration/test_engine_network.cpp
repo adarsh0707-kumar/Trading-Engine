@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
+#include <poll.h>
 #include <thread>
 #include <vector>
 
@@ -207,6 +208,29 @@ static void test_heartbeat()
     CHECK(
         response.payload ==
         "OK");
+
+    // An acknowledgement must not trigger another heartbeat response.
+    Message acknowledgement;
+    acknowledgement.type = MessageType::HEARTBEAT;
+    acknowledgement.requestId = "heartbeat-1";
+    acknowledgement.payload = "OK";
+
+    const std::string acknowledgementJson =
+        JsonSerializer::serialize(acknowledgement);
+
+    const auto acknowledgementFrame =
+        Protocol::frame(acknowledgementJson);
+
+    CHECK(sendAll(clientFd, acknowledgementFrame));
+
+    pollfd descriptor{};
+    descriptor.fd = clientFd;
+    descriptor.events = POLLIN;
+
+    const int pollResult =
+        ::poll(&descriptor, 1, 150);
+
+    CHECK(pollResult == 0);
 
     ::close(clientFd);
 

@@ -291,13 +291,17 @@ export function createEngineEventClient(
           emitHealthEvent("heartbeat");
           scheduleLivenessTimeout(nextSocket);
 
-          if (socket !== nextSocket) return;
-          nextSocket.write(
-            heartbeatResponse(
-              message.requestId,
-              message.timestamp,
-            ),
-          );
+          // PING is a request; OK is an acknowledgement.
+          // Never answer an acknowledgement, or the peers echo forever.
+          if (message.payload === "PING") {
+            if (socket !== nextSocket) return;
+            nextSocket.write(
+              heartbeatResponse(
+                message.requestId,
+                message.timestamp,
+              ),
+            );
+          }
           continue;
         }
 
