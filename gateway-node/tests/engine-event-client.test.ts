@@ -280,6 +280,55 @@ describe("engine event client", () => {
     expect(client.isConnected()).toBe(false);
   });
 
+  test("does not reply to HEARTBEAT acknowledgements", async () => {
+    let responses = 0;
+
+    const server = createServer((socket) => {
+      socket.on("data", () => {
+        responses += 1;
+      });
+
+      socket.write(
+        frame(
+          JSON.stringify({
+            type: "HEARTBEAT",
+            request_id: "heartbeat-ack-1",
+            timestamp: "2026-10-02T12:00:00.000Z",
+            payload: "OK",
+          }),
+        ),
+      );
+    });
+
+    servers.push(server);
+
+    await new Promise<void>((resolve) => {
+      server.listen(0, "127.0.0.1", () => resolve());
+    });
+
+    const address = server.address();
+
+    if (address === null || typeof address === "string") {
+      throw new Error("Test server did not expose an address");
+    }
+
+    const client = createEngineEventClient({
+      host: "127.0.0.1",
+      port: address.port,
+      connectTimeoutMs: 1000,
+      reconnectInitialDelayMs: 10,
+      reconnectMaxDelayMs: 20,
+      reconnectMaxAttempts: 1,
+      onEvent: () => {},
+    });
+
+    client.start();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    client.stop();
+
+    expect(responses).toBe(0);
+  });
+
   test("stops reconnecting after the configured attempt limit", async () => {
     let connecting = 0;
 

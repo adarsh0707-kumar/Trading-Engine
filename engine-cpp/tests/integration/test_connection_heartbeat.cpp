@@ -134,7 +134,7 @@ static void test_heartbeat_sent_and_acked()
     response.type =
         serialization::MessageType::HEARTBEAT;
 
-    response.payload = "PONG";
+    response.payload = "OK";
 
     const std::string json =
         serialization::JsonSerializer::serialize(

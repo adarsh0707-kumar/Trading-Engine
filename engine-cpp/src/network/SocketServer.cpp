@@ -359,23 +359,26 @@ void SocketServer::handleMessage(
 
     case serialization::MessageType::HEARTBEAT:
     {
-        serialization::Message response;
+        // OK acknowledges our PING. It must not trigger another reply.
+        // Only PING requests receive an OK response.
+        if (message.payload == "PING")
+        {
+            serialization::Message response;
 
-        response.type =
-            serialization::MessageType::HEARTBEAT;
+            response.type =
+                serialization::MessageType::HEARTBEAT;
 
-        response.requestId =
-            message.requestId;
+            response.requestId =
+                message.requestId;
 
-        response.timestamp =
-            message.timestamp;
+            response.timestamp =
+                message.timestamp;
 
-        response.payload =
-            "OK";
+            response.payload =
+                "OK";
 
-        client->markHeartbeatAck();
-
-        client->sendMessage(response);
+            client->sendMessage(response);
+        }
 
         break;
     }
