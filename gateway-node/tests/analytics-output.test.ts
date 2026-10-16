@@ -214,6 +214,23 @@ describe("analytics output protocol", () => {
     expect(provider.getAnalytics()?.riskStatus).toBe("unknown");
   });
 
+  test("does not create a snapshot when a risk event arrives before analytics data", () => {
+    const provider = createAnalyticsProvider();
+
+    expect(provider.getAnalytics()).toBeNull();
+
+    provider.updateRiskEvent(riskEventForSymbol("SIM"));
+
+    expect(provider.getAnalytics()).toBeNull();
+
+    provider.updateAnalytics(analyticsUpdateForSymbol("SIM"));
+
+    expect(provider.getAnalytics()).toMatchObject({
+      symbol: "SIM",
+      riskStatus: "breached",
+    });
+  });
+
   test("stores the latest analytics snapshot and applies its symbol risk event", () => {
     const provider = createAnalyticsProvider();
     provider.updateAnalytics(analyticsUpdateForSymbol("SIM"));
