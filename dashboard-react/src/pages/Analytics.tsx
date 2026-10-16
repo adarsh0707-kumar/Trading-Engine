@@ -22,11 +22,6 @@ export default function Analytics() {
 
       {state === "loading" && latest === null ? (
         <div className="state-message">Loading analytics…</div>
-      ) : state === "waiting" && latest === null ? (
-        <div className="state-message analytics-state-waiting">
-          <span>Waiting for the first analytics snapshot. The service is connected, but no trade-derived analytics update has arrived yet.</span>
-          <button type="button" onClick={() => void refresh()}>Retry</button>
-        </div>
       ) : state === "error" && latest === null ? (
         <div className="state-message state-error analytics-state-error"><span>{error ?? "Analytics data is unavailable"}</span><button type="button" onClick={() => void refresh()}>Retry</button></div>
       ) : (

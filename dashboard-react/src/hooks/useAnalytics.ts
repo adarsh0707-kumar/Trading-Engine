@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createGatewayApiClient, GatewayApiError } from "../services/api";
+import { createGatewayApiClient } from "../services/api";
 import { createGatewayWebSocketClient, type GatewayWebSocketEvent } from "../services/websocket";
 import type { GatewayWebSocketState } from "../types/websocket";
 import type { AnalyticsPoint, AnalyticsSnapshot, RiskStatus } from "../types/analytics";
@@ -10,12 +10,11 @@ export interface AnalyticsHistoryPoint extends AnalyticsPoint { readonly eventId
 export interface AnalyticsData {
   readonly latest: AnalyticsSnapshot | null;
   readonly history: readonly AnalyticsHistoryPoint[];
-  readonly state: "loading" | "ready" | "waiting" | "error";
+  readonly state: "loading" | "ready" | "error";
   readonly error: string | null;
   readonly websocketState: GatewayWebSocketState;
   readonly refresh: () => Promise<void>;
 }
-export function isAnalyticsDataNotReady(error: unknown): boolean { return error instanceof GatewayApiError && error.code === "DATA_NOT_READY"; }
 function errorMessage(error: unknown): string { return error instanceof Error ? error.message : "Gateway request failed"; }
 function isFiniteNumber(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value); }
 function normalizeSnapshot(snapshot: AnalyticsSnapshot): AnalyticsHistoryPoint { return { ...snapshot, eventId: "snapshot-" + snapshot.timestamp }; }
@@ -52,16 +51,8 @@ export function useAnalytics(): AnalyticsData {
       setHistory((current) => current.length === 0 ? [point] : current);
       setState("ready");
     } catch (reason) {
-      if (hasData.current) {
-        setState("ready");
-        setError(errorMessage(reason));
-      } else if (isAnalyticsDataNotReady(reason)) {
-        setState("waiting");
-        setError(null);
-      } else {
-        setState("error");
-        setError(errorMessage(reason));
-      }
+      setState(hasData.current ? "ready" : "error");
+      setError(errorMessage(reason));
     }
   }, [api]);
 

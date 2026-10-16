@@ -5,7 +5,6 @@ import type {
   AnalyticsProvider,
   AnalyticsSnapshot,
 } from "../../src/analytics/analytics.types.ts";
-import type { StatusProvider } from "../../src/status/status.types.ts";
 
 interface ErrorResponse {
   readonly error: {
@@ -20,7 +19,7 @@ interface AnalyticsResponse {
 }
 
 describe("GET /api/v1/analytics", () => {
-  test("returns dependency unavailable when analytics is disconnected", async () => {
+  test("returns dependency unavailable when analytics data is unavailable", async () => {
     const gateway = createGatewayServer();
 
     const response = await gateway.app.inject({
@@ -34,31 +33,6 @@ describe("GET /api/v1/analytics", () => {
 
     expect(body.error.code).toBe("DEPENDENCY_UNAVAILABLE");
     expect(body.error.message).toBe("Required dependency is unavailable");
-    expect(body.error.request_id).toBeTruthy();
-
-    await gateway.stop();
-  });
-
-
-  test("returns data not ready when analytics is connected but has no snapshot", async () => {
-    const statusProvider: StatusProvider = {
-      getStatus: () => ({
-        gateway: "ok",
-        engine: "connected",
-        analytics: "connected",
-      }),
-    };
-    const gateway = createGatewayServer(process.env, { statusProvider });
-
-    const response = await gateway.app.inject({
-      method: "GET",
-      url: "/api/v1/analytics",
-    });
-
-    expect(response.statusCode).toBe(503);
-    const body = response.json() as ErrorResponse;
-    expect(body.error.code).toBe("DATA_NOT_READY");
-    expect(body.error.message).toBe("Analytics is waiting for its first data snapshot");
     expect(body.error.request_id).toBeTruthy();
 
     await gateway.stop();

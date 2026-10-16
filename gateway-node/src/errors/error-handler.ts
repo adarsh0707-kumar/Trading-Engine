@@ -23,8 +23,6 @@ function getPublicErrorMessage(
       return "Resource not found";
     case "CONFLICT":
       return "Request conflicts with the current state";
-    case "DATA_NOT_READY":
-      return "Analytics is waiting for its first data snapshot";
     case "DEPENDENCY_UNAVAILABLE":
       return "Required dependency is unavailable";
     case "RATE_LIMITED":
