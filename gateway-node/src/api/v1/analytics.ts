@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 
-import { dataNotReady } from "../../errors/api-error.ts";
+import { dataNotReady, dependencyUnavailable } from "../../errors/api-error.ts";
 import type { AnalyticsProvider } from "../../analytics/analytics.types.ts";
 import {
   analyticsResponseSchema,
@@ -9,6 +9,7 @@ import {
 
 export interface AnalyticsRouteOptions {
   readonly analyticsProvider: AnalyticsProvider;
+  readonly isAnalyticsConnected: () => boolean;
 }
 
 export async function registerAnalyticsRoute(
@@ -28,7 +29,10 @@ export async function registerAnalyticsRoute(
     const analytics = options.analyticsProvider.getAnalytics();
 
     if (analytics === null) {
-      throw dataNotReady("Analytics snapshot has not been published yet");
+      if (options.isAnalyticsConnected()) {
+        throw dataNotReady("Analytics snapshot has not been published yet");
+      }
+      throw dependencyUnavailable("Analytics service is unavailable");
     }
 
     return {
