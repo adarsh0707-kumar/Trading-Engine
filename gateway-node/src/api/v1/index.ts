@@ -50,6 +50,7 @@ export async function registerV1Routes(
   }
   await registerAnalyticsRoute(app, {
     analyticsProvider,
+    isAnalyticsConnected: () => statusProvider.getStatus().analytics === "connected",
   });
   await registerEngineRoutes(app, {
     engineProvider,
