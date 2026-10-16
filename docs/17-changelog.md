@@ -1,3 +1,19 @@
+# 2026-10-16 — Heartbeat Echo-Loop Fix and Runtime Validation
+
+**Status:** Heartbeat fix merged and runtime behavior validated; Phase 5.14 remains in progress for separate analytics/browser-recovery follow-up.
+
+- PR #147 merged as `191f9f5` (fix commit `345d2f9`). The engine and Gateway now treat `HEARTBEAT` payload `PING` as a request and `OK` as an acknowledgement. Only `PING` receives an `OK` reply; an `OK` acknowledgement does not trigger another response.
+- Regression coverage verifies that the Gateway does not reply to heartbeat acknowledgements and the C++ network server does not echo an `OK` acknowledgement.
+- Validation reported before merge: Gateway focused tests **8 passed**; full Gateway suite **208 passed, 1 skipped, 0 failed**; focused C++ heartbeat/network CTest **2/2 passed**; full C++ suite **16/16 passed**. PR CI was reported green.
+- Post-merge runtime observation used two read-only `docker stats --no-stream` samples 15 seconds apart. Engine CPU was **0.71% → 0.55%** and Gateway CPU **2.68% → 1.64%**. Engine network counters changed from **782 kB / 2.63 MB** to **794 kB / 2.67 MB**; Gateway changed from **2.64 MB / 805 kB** to **2.68 MB / 816 kB**. This is consistent with normal activity rather than the prior heartbeat storm, but the short observation is not proof against every intermittent loop.
+- Gateway readiness returned HTTP **200** with Gateway, engine, and analytics dependencies reported healthy/connected. Runtime ports in this validation session were Gateway host port **8081** and dashboard host port **5174**.
+- The persistent risk halt remains active with reason `max_drawdown`. The risk-state and PostgreSQL volumes were preserved; no halt reset, risk-limit change, or test trade was performed.
+- Separate follow-up: `GET /api/v1/analytics` still returned **503** because no analytics snapshot was initialized. Analytics metrics showed no processed trades or published snapshots at the time of diagnosis. The Gateway forwards `TRADE` events to analytics, not `MARKET_DATA`; do not generate trades or clear the risk halt merely to change this response. Decide separately whether an uninitialized analytics state should remain a dependency-style 503 or become an explicit empty/uninitialized response.
+
+**Phase 5.14 remains in progress.** The heartbeat regression is closed; do not treat this check as proof of fresh trade delivery, persisted analytics updates, or browser-level WebSocket recovery.
+
+---
+
 # 2026-10-14 — Phase 5.14 — Graceful Shutdown and Recovery Checkpoint
 
 **Status:** Graceful-shutdown fix merged and locally validated; production recovery remains pending.
