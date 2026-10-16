@@ -19,7 +19,7 @@ interface AnalyticsResponse {
 }
 
 describe("GET /api/v1/analytics", () => {
-  test("returns dependency unavailable when analytics data is unavailable", async () => {
+  test("returns data not ready when the first analytics snapshot is unavailable", async () => {
     const gateway = createGatewayServer();
 
     const response = await gateway.app.inject({
@@ -31,8 +31,8 @@ describe("GET /api/v1/analytics", () => {
 
     const body = response.json() as ErrorResponse;
 
-    expect(body.error.code).toBe("DEPENDENCY_UNAVAILABLE");
-    expect(body.error.message).toBe("Required dependency is unavailable");
+    expect(body.error.code).toBe("DATA_NOT_READY");
+    expect(body.error.message).toBe("Analytics is waiting for its first data snapshot");
     expect(body.error.request_id).toBeTruthy();
 
     await gateway.stop();
