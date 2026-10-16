@@ -94,8 +94,9 @@ The project is intended to demonstrate:
 - Phase 4 — Gateway: ✅ Complete
 - Phase 5.10 — Loading, Error, and Stale-Data UX: ✅ Complete
 - Phase 5.11 — Dashboard production polish: ✅ Complete for current milestone scope
-- Phase 5.12 — Halted-State Market Data: ✅ Merged
-- Phase 5.13 — Data Integrity & Observability: ⏳ Next
+- Phase 5.12 — Halted-State Market Data: ✅ Complete — PR #132
+- Phase 5.13 — Data Integrity & Observability: ✅ Complete — PRs #133 and #134
+- Phase 5.14 — Full Runtime Integration Validation: 🚧 In progress; runtime smoke checks and isolated integration tests pass, while live trade/risk-event delivery and browser-level WebSocket recovery remain outstanding
 
 ## Documentation Rule
 
