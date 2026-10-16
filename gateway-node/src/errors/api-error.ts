@@ -40,6 +40,10 @@ export function conflict(message: string): ApiError {
   return new ApiError(409, "CONFLICT", message);
 }
 
+export function dataNotReady(message: string): ApiError {
+  return new ApiError(503, "DATA_NOT_READY", message);
+}
+
 export function dependencyUnavailable(message: string): ApiError {
   return new ApiError(503, "DEPENDENCY_UNAVAILABLE", message);
 }
