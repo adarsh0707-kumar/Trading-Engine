@@ -16,6 +16,7 @@ export const apiErrorSchema = {
             "FORBIDDEN",
             "NOT_FOUND",
             "CONFLICT",
+            "DATA_NOT_READY",
             "DEPENDENCY_UNAVAILABLE",
             "INTERNAL_ERROR",
           ],
