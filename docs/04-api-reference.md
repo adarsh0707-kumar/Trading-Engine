@@ -241,21 +241,37 @@ warning
 breached
 ```
 
-If analytics data is unavailable:
+Analytics has two distinct unavailable states:
 
-```http
-503 Service Unavailable
-```
+**1. The Analytics service is disconnected**
+
+The Gateway returns `503 Service Unavailable` with `DEPENDENCY_UNAVAILABLE`:
 
 ```json
 {
   "error": {
     "code": "DEPENDENCY_UNAVAILABLE",
-    "message": "Analytics data is unavailable",
+    "message": "Analytics service is unavailable",
     "request_id": "<request-id>"
   }
 }
 ```
+
+**2. Analytics is connected, but its first snapshot has not arrived**
+
+The Gateway returns `503 Service Unavailable` with `DATA_NOT_READY`:
+
+```json
+{
+  "error": {
+    "code": "DATA_NOT_READY",
+    "message": "Analytics is waiting for its first data snapshot",
+    "request_id": "<request-id>"
+  }
+}
+```
+
+The dashboard treats `DATA_NOT_READY` as a waiting state rather than a fatal analytics error. A `RISK_EVENT` received before the first `ANALYTICS_UPDATE` may update risk-status tracking, but it must not fabricate an analytics snapshot. The analytics endpoint remains not-ready until a real analytics snapshot is published. Once a snapshot exists, the latest applicable risk status is included in the response.
 
 ---
 
