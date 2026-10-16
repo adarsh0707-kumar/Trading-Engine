@@ -1,3 +1,36 @@
+# 2026-10-16 — Analytics HTTP 503 Source Investigation and Safe Follow-up Plan
+
+**Status:** Source-level cause identified; no runtime changes performed. The API contract decision and full live integration evidence remain open.
+
+## Findings from the current `main` source
+
+- `gateway-node/src/analytics/analytics.provider.ts` initializes its in-memory `snapshot` to `null`. It only creates a snapshot when `updateAnalytics()` receives an `ANALYTICS_UPDATE` message. `updateRiskEvent()` updates risk status but does not create a first analytics snapshot when one does not exist.
+- `gateway-node/src/api/v1/analytics.ts` calls `getAnalytics()`; when it returns `null`, the route throws `dependencyUnavailable("Analytics data is unavailable")`, producing HTTP **503**. This behavior is explicit in the current route, not evidence by itself of a broken TCP connection.
+- `gateway-node/src/server.ts` forwards engine `TRADE` events to the analytics client. Market-data events do not initialize the analytics provider. The readiness response reports connection state; a connected analytics socket does not guarantee that an analytics snapshot has been received.
+- `analytics-py/src/analytics/main.py` processes parsed `Trade` messages through the streaming processor, persistence path, and analytics publisher. Other event types are recorded as ignored by this pipeline. Therefore, with no accepted trade processed and published, the Gateway has no initial snapshot to serve.
+- Existing runtime evidence recorded in this changelog: Gateway readiness returned **200** and reported engine and analytics connected; `GET /api/v1/analytics` returned **503**; the sampled analytics metrics showed zero received messages, processed trades, and published analytics updates. This evidence is consistent with an uninitialized snapshot. It does not prove why no trade was received at that sample, nor does TCP readiness prove end-to-end event delivery.
+
+## Contract decision needed
+
+Do not change the endpoint response solely to make the status code green. Decide whether “no analytics snapshot has ever been published” is:
+1. an expected not-yet-initialized state (keep **503**, but expose a clear machine-readable reason), or
+2. a valid empty state (return a documented **200** response with an explicit state such as `initialized: false`, without fabricating numeric analytics values).
+
+Whichever contract is selected must be reflected consistently in the response schema, API tests, dashboard handling, and API documentation. Do not silently synthesize a zero-valued trading snapshot: zero values could be mistaken for real portfolio/market analytics.
+
+## Safe validation plan (no runtime mutation)
+
+1. Capture the current read-only evidence without restarting/rebuilding containers: `GET /api/ready`, `GET /api/v1/analytics` including response body/status, analytics `/metrics`, Gateway metrics, and recent Gateway/analytics logs. For the current local runtime use Gateway host port **8081** and metrics port **9101**; dashboard is on **5174**. Keep credentials and environment secrets out of pasted logs.
+2. Compare counters across two time-separated read-only samples: `gateway_engine_trade_events_total`, `gateway_analytics_trades_sent_total`, `gateway_analytics_trade_send_failures_total`, `gateway_analytics_updates_total`, `gateway_analytics_connected`, plus analytics processed-trade/published-update counters. Interpret counters as cumulative; use deltas, not just absolute values. A zero delta while no trades are occurring is inconclusive, not a failure by itself.
+3. Add or run isolated tests for the existing provider/route contract: no snapshot, risk event before first snapshot, first analytics update, and update after initialization. These tests must use fixtures and must not connect to the live engine or write production persistence.
+4. For end-to-end event delivery, use a disposable isolated test stack and synthetic fixture data with its own temporary database/volumes and ports, or an existing deterministic integration fixture. Verify TRADE receipt, analytics publication, Gateway snapshot initialization, REST response, and WebSocket event delivery. Do not send a test trade to the current runtime.
+5. Validate dashboard WebSocket reconnect/subscription restoration using its fake WebSocket tests and/or a disposable browser test. Do not restart the live services just to collect this evidence.
+6. Preserve the active `max_drawdown` halt, risk-state volume, and PostgreSQL volume. Do not clear state, edit risk limits, truncate journals, resume trading, or create trades in the live runtime.
+
+**Phase 5.14 remains in progress.** The heartbeat fix is closed. The analytics 503 is explained by the current uninitialized-provider path, but the product/API contract decision, safe end-to-end delivery evidence, persistence evidence, and browser-level recovery evidence remain outstanding. No runtime action or trade was performed for this investigation.
+
+---
+
 # 2026-10-16 — Heartbeat Echo-Loop Fix and Runtime Validation
 
 **Status:** Heartbeat fix merged and runtime behavior validated; Phase 5.14 remains in progress for separate analytics/browser-recovery follow-up.
