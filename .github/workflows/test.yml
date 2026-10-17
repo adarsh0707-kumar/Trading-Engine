@@ -118,6 +118,18 @@ jobs:
         working-directory: dashboard-react
         run: bun run build
 
+      - name: Install Playwright test runner
+        working-directory: dashboard-react
+        run: npm install --no-save --no-package-lock @playwright/test@1.56.1
+
+      - name: Install Chromium for browser tests
+        working-directory: dashboard-react
+        run: npx playwright install --with-deps chromium
+
+      - name: Dashboard browser WebSocket recovery test
+        working-directory: dashboard-react
+        run: npx playwright test --config=playwright.config.ts
+
   runtime-integration:
     runs-on: ubuntu-latest
 
