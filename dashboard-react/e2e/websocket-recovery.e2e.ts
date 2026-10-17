@@ -41,16 +41,28 @@ test("reconnects after a gateway WebSocket drop and restores live updates", asyn
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(page.locator(".hero-badge")).toContainText("WS OPEN");
-  await expect.poll(() => sockets.length).toBe(1);
-  await expect.poll(() => clientMessages.filter((message) => message === subscribeMessage).length).toBe(1);
 
-  sockets[0]!.close();
+  // React StrictMode can open and clean up an initial development socket.
+  // Wait for every socket seen so far to have sent its subscription before
+  // dropping the current socket, rather than assuming exactly one initial connection.
+  await expect.poll(() => sockets.length).toBeGreaterThan(0);
+  await expect.poll(
+    () => clientMessages.filter((message) => message === subscribeMessage).length,
+  ).toBeGreaterThanOrEqual(sockets.length);
 
-  await expect.poll(() => sockets.length, { timeout: 10_000 }).toBe(2);
-  await expect.poll(() => clientMessages.filter((message) => message === subscribeMessage).length).toBe(2);
+  const initialSocketCount = sockets.length;
+  const initialSubscriptionCount = clientMessages.filter(
+    (message) => message === subscribeMessage,
+  ).length;
+  sockets[initialSocketCount - 1]!.close();
+
+  await expect.poll(() => sockets.length, { timeout: 10_000 }).toBeGreaterThan(initialSocketCount);
+  await expect.poll(
+    () => clientMessages.filter((message) => message === subscribeMessage).length,
+  ).toBeGreaterThan(initialSubscriptionCount);
   await expect(page.locator(".hero-badge")).toContainText("WS OPEN");
 
-  sockets[1]!.send(JSON.stringify({
+  sockets[sockets.length - 1]!.send(JSON.stringify({
     type: "MARKET_DATA",
     eventId: "market-after-reconnect",
     requestId: "request-after-reconnect",
