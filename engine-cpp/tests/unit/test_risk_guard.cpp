@@ -11,12 +11,55 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <system_error>
 
 using trading::engine_runtime::RiskGuard;
 using trading::engine_runtime::RiskGuardConfig;
 
 namespace
 {
+class ScopedTempDirectory
+{
+public:
+    ScopedTempDirectory()
+    {
+        const auto stamp = std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+
+        for (unsigned int attempt = 0; attempt < 100; ++attempt)
+        {
+            path_ = std::filesystem::temp_directory_path() /
+                ("risk-guard-recovery-" + std::to_string(stamp) + "-" +
+                 std::to_string(attempt));
+
+            std::error_code error;
+            if (std::filesystem::create_directory(path_, error))
+                return;
+
+            if (error && error != std::errc::file_exists)
+                throw std::filesystem::filesystem_error(
+                    "cannot create isolated risk-guard test directory",
+                    path_, error);
+        }
+
+        throw std::runtime_error("cannot allocate unique test directory");
+    }
+
+    ~ScopedTempDirectory()
+    {
+        std::error_code ignored;
+        std::filesystem::remove_all(path_, ignored);
+    }
+
+    const std::filesystem::path &path() const noexcept { return path_; }
+
+    ScopedTempDirectory(const ScopedTempDirectory &) = delete;
+    ScopedTempDirectory &operator=(const ScopedTempDirectory &) = delete;
+
+private:
+    std::filesystem::path path_;
+};
+
 std::uint64_t journal_checksum(const std::string &text)
 {
     std::uint64_t value = 14695981039346656037ULL;
@@ -329,6 +372,77 @@ void test_journal_write_failure_does_not_apply_risk_trade()
     std::filesystem::remove_all(journal);
 }
 
+void test_snapshot_save_failure_recovers_journaled_trade()
+{
+    ScopedTempDirectory temp;
+    const auto snapshot = temp.path() / "risk-state.snapshot";
+    const auto journal = temp.path() / "trades.log";
+    RiskGuardConfig config{
+        100, 100000.0, 1000.0, 500.0, 10000.0,
+        snapshot.string(), journal.string()
+    };
+
+    {
+        RiskGuard guard(config);
+        CHECK(guard.position() == 0);
+        CHECK(guard.journal_sequence() == 0);
+
+        // Block snapshot replacement without blocking the sibling journal.
+        std::filesystem::remove(snapshot);
+        CHECK(std::filesystem::create_directory(snapshot));
+
+        bool expected_save_failure = false;
+        try
+        {
+            guard.record_trade(
+                "SIM", engine::Side::BUY, 1, 100.0,
+                "trade-snapshot-failure", "taker-failure", "maker-failure");
+        }
+        catch (const std::runtime_error &error)
+        {
+            expected_save_failure =
+                std::string(error.what()).find(
+                    "cannot atomically replace risk-state snapshot") !=
+                std::string::npos;
+        }
+
+        CHECK(expected_save_failure);
+        // The journal append and in-memory risk update preceded snapshot save.
+        CHECK(guard.position() == 1);
+        CHECK(guard.journal_sequence() == 1);
+    }
+
+    // Remove only the deliberate obstruction; preserve the journal.
+    std::filesystem::remove_all(snapshot);
+    CHECK(std::filesystem::exists(journal));
+
+    {
+        std::ifstream input(journal);
+        std::string line;
+        std::size_t records = 0;
+        while (std::getline(input, line))
+            ++records;
+        CHECK(records == 1);
+    }
+
+    {
+        RiskGuard recovered(config);
+        CHECK(recovered.position() == 1);
+        CHECK(recovered.journal_sequence() == 1);
+        CHECK(recovered.replayed_trade_count() == 1);
+    }
+
+    // Recovery must not append a second copy of the original trade.
+    {
+        std::ifstream input(journal);
+        std::string line;
+        std::size_t records = 0;
+        while (std::getline(input, line))
+            ++records;
+        CHECK(records == 1);
+    }
+}
+
 void test_corrupt_trade_journal_fails_closed()
 {
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-journal-corrupt.snapshot";
@@ -391,9 +505,10 @@ int main()
     test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay();
     test_duplicate_trade_id_is_rejected_before_append();
     test_journal_write_failure_does_not_apply_risk_trade();
+    test_snapshot_save_failure_recovers_journaled_trade();
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (18/18)\n";
+    std::cout << "RiskGuard tests passed (19/19)\n";
     return 0;
 }
