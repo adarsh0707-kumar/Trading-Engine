@@ -5,7 +5,7 @@ A polyglot trading **simulation platform** built from the socket layer up: a C++
 The project focuses on the engineering problems behind real-time trading infrastructure — order-book correctness, price-time matching, framed TCP protocols, service boundaries, backpressure, resilience, observability, and live browser updates.
 
 > **Status:** Active development  
-> **Current focus:** Phase 5.14 — runtime integration validation  
+> **Current focus:** Phase 5.14 — runtime integration validation.
 > **Latest analytics test run:** 483 passed on Python 3.14.7 with the dedicated `trading_engine_test` database configured.  
 > **Important:** This is a simulation. It does not connect to an exchange or execute real financial trades.
 
