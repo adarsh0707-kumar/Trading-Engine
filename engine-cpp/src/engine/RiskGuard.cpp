@@ -24,6 +24,9 @@
 #include <unistd.h>
 #endif
 
+#include <atomic>
+#include <chrono>
+
 namespace trading { namespace engine_runtime {
 namespace {
 constexpr int STATE_VERSION = 2;
@@ -102,27 +105,172 @@ void RiskGuard::load_state() {
 
 void RiskGuard::save_state() const {
     if (config_.state_file_path.empty()) return;
+
     const std::filesystem::path path(config_.state_file_path);
-    if (!path.parent_path().empty()) std::filesystem::create_directories(path.parent_path());
-    const std::filesystem::path temp(path.string() + ".tmp");
-    {
-        std::ofstream out(temp, std::ios::trunc);
-        if (!out) throw std::runtime_error("cannot open temporary risk-state file");
-        out << STATE_VERSION << ' ' << position_ << ' '
-            << std::setprecision(std::numeric_limits<double>::max_digits10)
-            << average_entry_price_ << ' ' << realized_pnl_ << ' ' << mark_price_ << ' '
-            << peak_equity_ << ' ' << day_start_equity_ << ' ' << utc_day_ << ' '
-            << (halted_ ? 1 : 0) << ' ' << (halt_reason_.empty() ? "-" : halt_reason_) << ' '
-            << journal_sequence_ << '\n';
-        out.flush();
-        if (!out) throw std::runtime_error("failed to flush risk-state snapshot");
+    if (!path.parent_path().empty())
+        std::filesystem::create_directories(path.parent_path());
+
+    std::ostringstream snapshot;
+    snapshot << STATE_VERSION << ' ' << position_ << ' '
+             << std::setprecision(std::numeric_limits<double>::max_digits10)
+             << average_entry_price_ << ' ' << realized_pnl_ << ' ' << mark_price_ << ' '
+             << peak_equity_ << ' ' << day_start_equity_ << ' ' << utc_day_ << ' '
+             << (halted_ ? 1 : 0) << ' '
+             << (halt_reason_.empty() ? "-" : halt_reason_) << ' '
+             << journal_sequence_ << '\n';
+
+    const std::string data = snapshot.str();
+
+    // O_EXCL prevents this process from truncating another writer's temporary
+    // file. It does not provide locking or make concurrent writers safe.
+    static std::atomic<std::uint64_t> temp_sequence{0};
+    std::filesystem::path temp;
+    int fd = -1;
+
+    for (int attempt = 0; attempt < 100; ++attempt) {
+        const auto nonce =
+            std::chrono::steady_clock::now().time_since_epoch().count();
+        temp = path.string() + ".tmp." + std::to_string(nonce) + "." +
+               std::to_string(temp_sequence.fetch_add(1));
+
+#ifdef _WIN32
+        fd = ::_open(
+            temp.string().c_str(),
+            _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY,
+            _S_IREAD | _S_IWRITE);
+#else
+        fd = ::open(temp.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
+#endif
+        if (fd >= 0) break;
+
+        const int open_errno = errno;
+        if (open_errno == EEXIST) continue;
+
+        throw std::runtime_error(
+            "cannot create temporary risk-state file: " +
+            std::string(std::strerror(open_errno)));
     }
+
+    if (fd < 0)
+        throw std::runtime_error(
+            "could not allocate a unique temporary risk-state filename");
+
+    auto close_fd = [&]() {
+        if (fd < 0) return 0;
+
+        const int descriptor = fd;
+        fd = -1;
+#ifdef _WIN32
+        return ::_close(descriptor);
+#else
+        return ::close(descriptor);
+#endif
+    };
+
+    auto remove_temp = [&]() {
+        std::error_code ignored;
+        std::filesystem::remove(temp, ignored);
+    };
+
+    auto fail_before_rename = [&](const std::string& message,
+                                  int saved_errno) -> void {
+        (void)close_fd();
+        remove_temp();
+        throw std::runtime_error(
+            message + ": " + std::string(std::strerror(saved_errno)));
+    };
+
+    std::size_t written = 0;
+    while (written < data.size()) {
+#ifdef _WIN32
+        const auto remaining = data.size() - written;
+        const auto chunk = static_cast<unsigned int>(
+            std::min<std::size_t>(remaining, 0x7fffffffU));
+        const auto count = ::_write(fd, data.data() + written, chunk);
+#else
+        const auto count = ::write(fd, data.data() + written, data.size() - written);
+#endif
+        if (count < 0) {
+            const int write_errno = errno;
+            if (write_errno == EINTR) continue;
+            fail_before_rename("failed to write risk-state snapshot",
+                               write_errno);
+        }
+
+        if (count == 0) {
+            (void)close_fd();
+            remove_temp();
+            throw std::runtime_error(
+                "failed to write risk-state snapshot: write returned zero");
+        }
+
+        written += static_cast<std::size_t>(count);
+    }
+
+    int sync_result = 0;
+#ifdef _WIN32
+    sync_result = ::_commit(fd);
+#else
+    do {
+        sync_result = ::fsync(fd);
+    } while (sync_result != 0 && errno == EINTR);
+#endif
+    if (sync_result != 0) {
+        const int sync_errno = errno;
+        fail_before_rename("failed to sync risk-state snapshot", sync_errno);
+    }
+
+    if (close_fd() != 0) {
+        const int saved_errno = errno;
+        remove_temp();
+        throw std::runtime_error(
+            "failed to close risk-state snapshot: " +
+            std::string(std::strerror(saved_errno)));
+    }
+
     std::error_code error;
     std::filesystem::rename(temp, path, error);
     if (error) {
-        std::filesystem::remove(temp);
-        throw std::runtime_error("cannot atomically replace risk-state snapshot: " + error.message());
+        remove_temp();
+        throw std::runtime_error(
+            "cannot atomically replace risk-state snapshot: " + error.message());
     }
+
+#ifndef _WIN32
+    // Rename has already made the new snapshot visible. Failures below mean
+    // that persistence across a sudden system crash could not be confirmed.
+    const auto parent = path.parent_path().empty()
+        ? std::filesystem::path(".")
+        : path.parent_path();
+
+    const int directory_fd = ::open(parent.c_str(), O_RDONLY | O_DIRECTORY);
+    if (directory_fd < 0) {
+        const int saved_errno = errno;
+        throw std::runtime_error(
+            "snapshot replaced, but cannot open risk-state directory for sync: " +
+            std::string(std::strerror(saved_errno)));
+    }
+
+    int directory_sync_result = 0;
+    do {
+        directory_sync_result = ::fsync(directory_fd);
+    } while (directory_sync_result != 0 && errno == EINTR);
+    const int directory_sync_errno =
+        directory_sync_result != 0 ? errno : 0;
+    const int directory_close_result = ::close(directory_fd);
+    const int directory_close_errno =
+        directory_close_result != 0 ? errno : 0;
+
+    if (directory_sync_result != 0)
+        throw std::runtime_error(
+            "snapshot replaced, but risk-state directory durability is unconfirmed: " +
+            std::string(std::strerror(directory_sync_errno)));
+
+    if (directory_close_result != 0)
+        throw std::runtime_error(
+            "snapshot replaced and directory synced, but directory close failed: " +
+            std::string(std::strerror(directory_close_errno)));
+#endif
 }
 
 std::uint64_t RiskGuard::append_trade_journal(
