@@ -52,6 +52,27 @@ std::uint16_t Engine::port() const { return server_->port(); }
 void Engine::run_loop() {
     logger_->info("Engine loop started");
     bool risk_halt_logged=false;
+    const auto log_risk_halt = [this](const std::string &event) {
+        const auto &diagnostics = risk_guard_.halt_diagnostics();
+        std::ostringstream message;
+        message << std::setprecision(17);
+        if (diagnostics.triggered) {
+            message << event
+                    << " reason=" << diagnostics.reason
+                    << " trigger_timestamp_ms=" << diagnostics.timestamp_ms
+                    << " trigger_equity=" << diagnostics.equity
+                    << " trigger_drawdown=" << diagnostics.drawdown
+                    << " trigger_daily_loss=" << diagnostics.daily_loss;
+        } else {
+            message << event
+                    << " trigger_diagnostics=unavailable"
+                    << " reason=" << risk_guard_.halt_reason()
+                    << " current_equity=" << risk_guard_.equity()
+                    << " current_drawdown=" << risk_guard_.drawdown()
+                    << " current_daily_loss=" << risk_guard_.daily_loss();
+        }
+        logger_->error(message.str());
+    };
     try {
     while (running_) {
         const ::engine::Tick tick=generator_->next();
@@ -75,8 +96,7 @@ void Engine::run_loop() {
         if (risk_guard_.is_halted()) {
             risk_halted_.store(true);
             if (!risk_halt_logged) {
-                logger_->error("risk_halt_active reason="+risk_guard_.halt_reason()+" equity="+std::to_string(risk_guard_.equity())+
-                    " drawdown="+std::to_string(risk_guard_.drawdown())+" daily_loss="+std::to_string(risk_guard_.daily_loss()));
+                log_risk_halt("risk_halt_active");
                 risk_halt_logged=true;
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(config_.tick_interval_ms)); continue;
@@ -98,8 +118,7 @@ void Engine::run_loop() {
             if (risk_guard_.is_halted()) {
                 risk_halted_.store(true);
                 if (!risk_halt_logged) {
-                    logger_->error("risk_halt_triggered reason="+risk_guard_.halt_reason()+" equity="+std::to_string(risk_guard_.equity())+
-                        " drawdown="+std::to_string(risk_guard_.drawdown())+" daily_loss="+std::to_string(risk_guard_.daily_loss()));
+                    log_risk_halt("risk_halt_triggered");
                     risk_halt_logged=true;
                 }
             }
