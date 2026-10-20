@@ -168,9 +168,18 @@ void test_drawdown_halts_at_exact_threshold_and_stays_latched()
     CHECK(guard.is_halted());
     CHECK(guard.halt_reason() == "max_drawdown");
     CHECK(guard.drawdown() == 100.0);
+    const auto diagnostics = guard.halt_diagnostics();
+    CHECK(diagnostics.triggered);
+    CHECK(diagnostics.reason == "max_drawdown");
+    CHECK(diagnostics.timestamp_ms > 0);
+    CHECK(diagnostics.equity == 9900.0);
+    CHECK(diagnostics.drawdown == 100.0);
+    CHECK(diagnostics.daily_loss == 100.0);
     CHECK(!guard.check_order(*make_order("B3", engine::Side::BUY, 90.0, 1)).allowed);
     guard.update_mark_price(110.0);
     CHECK(guard.is_halted());
+    CHECK(guard.halt_diagnostics().timestamp_ms == diagnostics.timestamp_ms);
+    CHECK(guard.halt_diagnostics().equity == diagnostics.equity);
 }
 
 void test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover()
@@ -184,10 +193,34 @@ void test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollov
     guard.update_mark_price(90.0, before_midnight);
     CHECK(guard.is_halted());
     CHECK(guard.halt_reason() == "max_daily_loss");
+    const auto diagnostics = guard.halt_diagnostics();
+    CHECK(diagnostics.triggered);
+    CHECK(diagnostics.reason == "max_daily_loss");
+    CHECK(diagnostics.equity == 9900.0);
+    CHECK(diagnostics.daily_loss == 100.0);
     guard.update_mark_price(90.0, before_midnight + std::chrono::seconds{1});
     CHECK(guard.is_halted());
     CHECK(guard.halt_reason() == "max_daily_loss");
     CHECK(guard.daily_loss() == 0.0);
+    CHECK(guard.halt_diagnostics().timestamp_ms == diagnostics.timestamp_ms);
+    CHECK(guard.halt_diagnostics().daily_loss == 100.0);
+}
+
+void test_trade_trigger_captures_diagnostics()
+{
+    RiskGuard guard(RiskGuardConfig{100, 100000.0, 10000.0, 100.0, 10000.0});
+    guard.update_mark_price(100.0);
+    guard.record_trade("SIM", engine::Side::BUY, 10, 100.0);
+    CHECK(!guard.is_halted());
+    guard.record_trade("SIM", engine::Side::SELL, 10, 90.0);
+    CHECK(guard.is_halted());
+    CHECK(guard.halt_reason() == "max_daily_loss");
+    const auto &diagnostics = guard.halt_diagnostics();
+    CHECK(diagnostics.triggered);
+    CHECK(diagnostics.reason == "max_daily_loss");
+    CHECK(diagnostics.timestamp_ms > 0);
+    CHECK(diagnostics.equity == 9900.0);
+    CHECK(diagnostics.daily_loss == 100.0);
 }
 
 void test_state_restores_position_pnl_and_halt_after_restart()
@@ -208,6 +241,7 @@ void test_state_restores_position_pnl_and_halt_after_restart()
         RiskGuard restored(config);
         CHECK(restored.is_halted());
         CHECK(restored.halt_reason() == "max_drawdown");
+        CHECK(!restored.halt_diagnostics().triggered);
         CHECK(restored.position() == 10);
         CHECK(restored.equity() == 9900.0);
         CHECK(!restored.check_order(*make_order("B4", engine::Side::BUY, 90.0, 1)).allowed);
@@ -499,6 +533,7 @@ int main()
     test_realized_and_unrealized_pnl_when_reducing_and_reversing_position();
     test_drawdown_halts_at_exact_threshold_and_stays_latched();
     test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover();
+    test_trade_trigger_captures_diagnostics();
     test_state_restores_position_pnl_and_halt_after_restart();
     test_trade_journal_replays_records_after_stale_snapshot();
     test_duplicate_trade_ids_are_rejected_during_replay();
@@ -509,6 +544,6 @@ int main()
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (19/19)\n";
+    std::cout << "RiskGuard tests passed (20/20)\n";
     return 0;
 }
