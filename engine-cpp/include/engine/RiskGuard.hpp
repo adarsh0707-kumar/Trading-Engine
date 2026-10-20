@@ -22,6 +22,16 @@ struct RiskDecision {
     std::int64_t projected_position{0};
     double projected_position_value{0.0};
 };
+
+struct RiskHaltDiagnostics {
+    bool triggered{false};
+    std::string reason;
+    std::int64_t timestamp_ms{0};
+    double equity{0.0};
+    double drawdown{0.0};
+    double daily_loss{0.0};
+};
+
 class RiskGuard {
 public:
     explicit RiskGuard(const RiskGuardConfig &config);
@@ -34,13 +44,15 @@ public:
     std::int64_t position() const noexcept;
     bool is_halted() const noexcept;
     const std::string &halt_reason() const noexcept;
+    const RiskHaltDiagnostics &halt_diagnostics() const noexcept;
     double equity() const noexcept;
     double drawdown() const noexcept;
     double daily_loss() const noexcept;
     std::uint64_t journal_sequence() const noexcept;
     std::uint64_t replayed_trade_count() const noexcept;
 private:
-    void evaluate_limits() noexcept;
+    void evaluate_limits(std::chrono::system_clock::time_point now,
+                         bool capture_diagnostics = true) noexcept;
     void roll_daily_window(std::chrono::system_clock::time_point now) noexcept;
     void load_state();
     void save_state() const;
@@ -48,7 +60,9 @@ private:
     std::uint64_t append_trade_journal(const std::string &symbol, ::engine::Side side, std::int64_t quantity,
                                        double price, const std::string &trade_id,
                                        const std::string &taker_order_id, const std::string &maker_order_id);
-    void apply_trade(const std::string &symbol, ::engine::Side side, std::int64_t quantity, double price);
+    void apply_trade(const std::string &symbol, ::engine::Side side,
+                     std::int64_t quantity, double price,
+                     bool capture_diagnostics = true);
     RiskGuardConfig config_;
     std::int64_t position_{0};
     double average_entry_price_{0.0};
@@ -59,6 +73,7 @@ private:
     std::int64_t utc_day_{-1};
     bool halted_{false};
     std::string halt_reason_;
+    RiskHaltDiagnostics halt_diagnostics_;
     std::uint64_t journal_sequence_{0};
     std::uint64_t replayed_trade_count_{0};
     std::uint64_t synthetic_trade_sequence_{0};
