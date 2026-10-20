@@ -397,7 +397,8 @@ void RiskGuard::replay_trade_journal() {
             throw std::runtime_error("trade journal contains duplicate trade ID after snapshot; refusing startup");
 
         if (sequence > snapshot_sequence) {
-            apply_trade(symbol, side_text == "BUY" ? ::engine::Side::BUY : ::engine::Side::SELL, quantity, price);
+            apply_trade(symbol, side_text == "BUY" ? ::engine::Side::BUY : ::engine::Side::SELL,
+                        quantity, price, false);
             journal_sequence_ = sequence;
             ++replayed_trade_count_;
         }
@@ -440,7 +441,7 @@ void RiskGuard::update_mark_price(double price, std::chrono::system_clock::time_
     if (!std::isfinite(price) || price <= 0) throw std::invalid_argument("mark price must be finite and positive");
     roll_daily_window(now);
     mark_price_ = price;
-    evaluate_limits();
+    evaluate_limits(now);
     save_state();
 }
 
@@ -475,7 +476,9 @@ void RiskGuard::record_trade(const std::string &symbol, ::engine::Side side, std
     save_state();
 }
 
-void RiskGuard::apply_trade(const std::string &symbol, ::engine::Side side, std::int64_t quantity, double price) {
+void RiskGuard::apply_trade(const std::string &symbol, ::engine::Side side,
+                             std::int64_t quantity, double price,
+                             bool capture_diagnostics) {
     if (symbol.empty() || quantity <= 0 || !std::isfinite(price) || price <= 0)
         throw std::runtime_error("trade journal contains an invalid trade");
     const std::int64_t signed_quantity = side == ::engine::Side::BUY ? quantity : -quantity;
@@ -499,7 +502,7 @@ void RiskGuard::apply_trade(const std::string &symbol, ::engine::Side side, std:
     }
     position_ = next_position;
     mark_price_ = price;
-    evaluate_limits();
+    evaluate_limits(std::chrono::system_clock::now(), capture_diagnostics);
 }
 
 void RiskGuard::resume_after_operator_authorization(bool authorized) {
@@ -507,6 +510,7 @@ void RiskGuard::resume_after_operator_authorization(bool authorized) {
     if (!halted_) return;
     halted_ = false;
     halt_reason_.clear();
+    halt_diagnostics_ = RiskHaltDiagnostics{};
     peak_equity_ = equity();
     day_start_equity_ = equity();
     const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(
@@ -522,22 +526,43 @@ void RiskGuard::roll_daily_window(std::chrono::system_clock::time_point now) noe
     else if (day != utc_day_) { utc_day_ = day; day_start_equity_ = equity(); }
 }
 
-void RiskGuard::evaluate_limits() noexcept {
+void RiskGuard::evaluate_limits(std::chrono::system_clock::time_point now,
+                                bool capture_diagnostics) noexcept {
     const double current_equity = equity();
     peak_equity_ = std::max(peak_equity_, current_equity);
+
+    std::string trigger_reason;
     if (!halted_ && peak_equity_ - current_equity >= config_.max_drawdown) {
-        halted_ = true;
-        halt_reason_ = "max_drawdown";
+        trigger_reason = "max_drawdown";
+    } else if (!halted_ &&
+               day_start_equity_ - current_equity >= config_.max_daily_loss) {
+        trigger_reason = "max_daily_loss";
     }
-    if (!halted_ && day_start_equity_ - current_equity >= config_.max_daily_loss) {
-        halted_ = true;
-        halt_reason_ = "max_daily_loss";
+
+    if (trigger_reason.empty()) return;
+
+    halted_ = true;
+    halt_reason_ = trigger_reason;
+
+    if (capture_diagnostics) {
+        const auto timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            now.time_since_epoch()).count();
+        halt_diagnostics_.triggered = true;
+        halt_diagnostics_.reason = trigger_reason;
+        halt_diagnostics_.timestamp_ms = timestamp_ms;
+        halt_diagnostics_.equity = current_equity;
+        halt_diagnostics_.drawdown = peak_equity_ - current_equity;
+        halt_diagnostics_.daily_loss =
+            std::max(0.0, day_start_equity_ - current_equity);
     }
 }
 
 std::int64_t RiskGuard::position() const noexcept { return position_; }
 bool RiskGuard::is_halted() const noexcept { return halted_; }
 const std::string &RiskGuard::halt_reason() const noexcept { return halt_reason_; }
+const RiskHaltDiagnostics &RiskGuard::halt_diagnostics() const noexcept {
+    return halt_diagnostics_;
+}
 double RiskGuard::equity() const noexcept {
     const double unrealized = position_ == 0 || mark_price_ <= 0 ? 0 :
         static_cast<double>(position_) * (mark_price_ - average_entry_price_);
