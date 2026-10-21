@@ -295,6 +295,57 @@ void test_trade_journal_replays_records_after_stale_snapshot()
     std::filesystem::remove(journal);
 }
 
+void test_replay_that_crosses_risk_threshold_restores_halt_without_live_diagnostics()
+{
+    ScopedTempDirectory temp;
+    const auto snapshot = temp.path() / "risk-state.snapshot";
+    const auto journal = temp.path() / "trades.log";
+    RiskGuardConfig config{
+        100, 100000.0, 1000.0, 100.0, 10000.0,
+        snapshot.string(), journal.string()
+    };
+
+    {
+        RiskGuard guard(config);
+        guard.record_trade("SIM", engine::Side::BUY, 10, 100.0,
+                           "replay-buy", "taker-buy", "maker-buy");
+        guard.record_trade("SIM", engine::Side::SELL, 10, 90.0,
+                           "replay-sell", "taker-sell", "maker-sell");
+        CHECK(guard.is_halted());
+        CHECK(guard.halt_reason() == "max_daily_loss");
+    }
+
+    // Simulate a stale but valid snapshot while preserving both durable journal records.
+    const auto now_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto utc_day = now_seconds / 86400;
+    {
+        std::ofstream stale(snapshot, std::ios::trunc);
+        stale << "2 0 0 0 0 10000 10000 " << utc_day << " 0 - 0\n";
+    }
+
+    {
+        RiskGuard recovered(config);
+        CHECK(recovered.is_halted());
+        CHECK(recovered.halt_reason() == "max_daily_loss");
+        CHECK(!recovered.halt_diagnostics().triggered);
+        CHECK(recovered.position() == 0);
+        CHECK(recovered.equity() == 9900.0);
+        CHECK(recovered.journal_sequence() == 2);
+        CHECK(recovered.replayed_trade_count() == 2);
+    }
+
+    // Replay recovery must retain the halt and must not append duplicate trades.
+    {
+        std::ifstream input(journal);
+        std::string line;
+        std::size_t records = 0;
+        while (std::getline(input, line))
+            ++records;
+        CHECK(records == 2);
+    }
+}
+
 void test_duplicate_trade_ids_are_rejected_during_replay()
 {
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-duplicate-id.snapshot";
@@ -536,6 +587,7 @@ int main()
     test_trade_trigger_captures_diagnostics();
     test_state_restores_position_pnl_and_halt_after_restart();
     test_trade_journal_replays_records_after_stale_snapshot();
+    test_replay_that_crosses_risk_threshold_restores_halt_without_live_diagnostics();
     test_duplicate_trade_ids_are_rejected_during_replay();
     test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay();
     test_duplicate_trade_id_is_rejected_before_append();
@@ -544,6 +596,6 @@ int main()
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (20/20)\n";
+    std::cout << "RiskGuard tests passed (21/21)\n";
     return 0;
 }
