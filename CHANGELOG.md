@@ -4,6 +4,10 @@
 
 ### Phase 5.14 — Runtime Integration Validation — In Progress
 
+- Merged PR #156 (`180d033aaede7c06ac78f7a248f5e86cf5f65b23`): added risk-halt diagnostics and regression coverage for a halt triggered during trade-journal replay.
+- PR #156 CI completed with 22 successful checks, including Debug/Release C++ builds and engine tests.
+- Local runtime risk-state recovery remains **unverified**. Preserve snapshot/journal evidence; do not infer recovery from CI success or delete/reset persistent data.
+
 - Merged analytics PostgreSQL connection-recovery hardening in PR #138.
 - Merged the analytics pytest empty-match warning fix in PR #139.
 - Verified the analytics suite locally: 483 tests passed on Python 3.14.7 with `TRADING_ENGINE_TEST_DATABASE_URL` pointed at the dedicated `trading_engine_test` database.
