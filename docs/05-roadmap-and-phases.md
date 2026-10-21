@@ -17,7 +17,7 @@ The project is developed incrementally across the C++ matching engine, TCP trans
 
 **Overall Status:** 🚧 In Progress — Phase 5 is now the active product-development milestone.
 
-**Latest merged implementation milestones:** Phase 5.14 analytics PostgreSQL connection-recovery hardening (PR #138), pytest warning cleanup (PR #139), deterministic Gateway Analytics TCP-client reconnect regression coverage (PR #140; merge commit `a36d757ad6e051c074e092593f97396ab1564494`), C++ engine SIGINT/SIGTERM graceful-shutdown handling (PR #146; merge commit `9627490`), and explicit analytics snapshot-readiness errors (PR #148; current main merge commit `e0eb010`). The Gateway now distinguishes a disconnected Analytics service (`DEPENDENCY_UNAVAILABLE`) from a connected service that has not published its first snapshot (`DATA_NOT_READY`).
+**Latest merged implementation milestones:** Phase 5.14 analytics PostgreSQL connection-recovery hardening (PR #138), pytest warning cleanup (PR #139), deterministic Gateway Analytics TCP-client reconnect regression coverage (PR #140; merge commit `a36d757ad6e051c074e092593f97396ab1564494`), C++ engine SIGINT/SIGTERM graceful-shutdown handling (PR #146; merge commit `9627490`), explicit analytics snapshot-readiness errors (PR #148; merge commit `e0eb010`), and risk-halt diagnostics plus journal-replay regression coverage (PR #156; merge commit `180d033aaede7c06ac78f7a248f5e86cf5f65b23`). PR #156 adds coverage for restoring a halt when journal replay crosses the configured risk threshold; this is code/test evidence, not proof that the local Docker incident has recovered.
 
 **Current milestone:** Phase 5.14 — Full Runtime Integration Validation
 
