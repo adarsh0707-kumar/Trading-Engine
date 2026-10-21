@@ -230,14 +230,14 @@ Implemented:
 
 ### Phase 3.10 Breakdown
 
-| Sub-phase | Area | Status |
-| --- | --- | --- |
-| 3.10.1 | Service lifecycle hardening | ✅ Complete |
-| 3.10.2 | Configuration validation | ✅ Complete |
-| 3.10.3 | Resource cleanup | ✅ Complete |
-| 3.10.4 | Backpressure handling | ✅ Complete |
-| 3.10.5 | Failure recovery | ✅ Complete |
-| 3.10.6 | Operational logging | ✅ Complete |
+| Sub-phase | Area                        | Status      |
+| --------- | --------------------------- | ----------- |
+| 3.10.1    | Service lifecycle hardening | ✅ Complete |
+| 3.10.2    | Configuration validation    | ✅ Complete |
+| 3.10.3    | Resource cleanup            | ✅ Complete |
+| 3.10.4    | Backpressure handling       | ✅ Complete |
+| 3.10.5    | Failure recovery            | ✅ Complete |
+| 3.10.6    | Operational logging         | ✅ Complete |
 
 ### Phase 3 Validation
 
@@ -258,21 +258,21 @@ Phase 4 builds the browser-facing application gateway between the completed C++/
 
 ## Phase 4 Technology Contract
 
-| Area | Decision |
-| --- | --- |
-| Language | TypeScript |
-| Runtime | Bun |
-| Package manager | Bun |
-| HTTP framework | Fastify |
-| WebSocket transport | ws |
-| Validation | Zod |
-| Testing | Bun test |
-| Logging | Pino |
-| Metrics | Prometheus-compatible metrics |
-| Configuration | Typed environment configuration |
+| Area                      | Decision                                      |
+| ------------------------- | --------------------------------------------- |
+| Language                  | TypeScript                                    |
+| Runtime                   | Bun                                           |
+| Package manager           | Bun                                           |
+| HTTP framework            | Fastify                                       |
+| WebSocket transport       | ws                                            |
+| Validation                | Zod                                           |
+| Testing                   | Bun test                                      |
+| Logging                   | Pino                                          |
+| Metrics                   | Prometheus-compatible metrics                 |
+| Configuration             | Typed environment configuration               |
 | Upstream engine transport | TCP client using the existing engine protocol |
-| External client transport | REST + WebSocket |
-| Wire format | Existing JSON contracts / schemas |
+| External client transport | REST + WebSocket                              |
+| Wire format               | Existing JSON contracts / schemas             |
 
 Bun is the standard development and execution environment for gateway-node. npm is not the default package manager for Phase 4.
 
@@ -336,16 +336,16 @@ Implemented:
 
 Initial application surface:
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| GET | /api/v1/status | Engine/analytics connection status |
-| GET | /api/v1/market | Current market state |
-| GET | /api/v1/orderbook | Current order-book snapshot |
-| GET | /api/v1/trades | Recent trades |
-| GET | /api/v1/analytics | Latest analytics state |
-| POST | /api/v1/engine/start | Simulation control |
-| POST | /api/v1/engine/stop | Simulation control |
-| POST | /api/v1/engine/reset | Simulation reset |
+| Method | Endpoint             | Purpose                            |
+| ------ | -------------------- | ---------------------------------- |
+| GET    | /api/v1/status       | Engine/analytics connection status |
+| GET    | /api/v1/market       | Current market state               |
+| GET    | /api/v1/orderbook    | Current order-book snapshot        |
+| GET    | /api/v1/trades       | Recent trades                      |
+| GET    | /api/v1/analytics    | Latest analytics state             |
+| POST   | /api/v1/engine/start | Simulation control                 |
+| POST   | /api/v1/engine/stop  | Simulation control                 |
+| POST   | /api/v1/engine/reset | Simulation reset                   |
 
 Historical query APIs remain deferred to Phase 6 unless a minimal read-through contract is required earlier.
 
@@ -587,8 +587,6 @@ Environment variables:
 
 Future 4.8.x work can provide the concrete credential verifier/identity-provider adapter and route-level authorization policy without changing the Gateway's core request boundary.
 
-
-
 ## Phase 4.8.5 — Rate-Limit Boundary
 
 **Status:** ✅ Complete
@@ -607,12 +605,12 @@ Implemented:
 
 Default boundary:
 
-| Setting | Default |
-| --- | ---: |
-| Enabled | true |
-| Maximum requests | 120 |
-| Window | 60 seconds |
-| Maximum retained clients | 10,000 |
+| Setting                  |    Default |
+| ------------------------ | ---------: |
+| Enabled                  |       true |
+| Maximum requests         |        120 |
+| Window                   | 60 seconds |
+| Maximum retained clients |     10,000 |
 
 Environment variables:
 
@@ -622,8 +620,6 @@ Environment variables:
 - RATE_LIMIT_MAX_CLIENTS
 
 The limiter is intentionally in-process for the current single-gateway simulation. A shared store can be introduced later if horizontally scaled gateway instances require a distributed rate-limit boundary.
-
-
 
 **Status:** 🚧 In Progress
 
@@ -648,7 +644,6 @@ Extend structured operational logging and metrics across gateway HTTP, engine, a
 
 **Phase 4.9 exit status:** Complete
 
-
 ## Phase 4.10 — Testing & Integration Validation
 
 **Status:** Complete
@@ -656,6 +651,7 @@ Extend structured operational logging and metrics across gateway HTTP, engine, a
 Phase 4.10 closes the gap between isolated service regression suites and the complete multi-service runtime.
 
 Completed:
+
 - Dedicated Gateway contract integration test.
 - Real C++ Engine runtime container.
 - Real Python Analytics runtime container.
@@ -691,6 +687,7 @@ The production-like local runtime is now defined by the root docker-compose.yml:
               WebSocket /ws
 
 Validation:
+
 - docker compose up -d --build
 - cd gateway-node && bun test tests/runtime-stack.integration.test.ts
 - docker compose down -v
@@ -718,6 +715,7 @@ Phase 4 exit criteria are satisfied:
 - [X] Phase 4 documentation and exit evidence are recorded.
 
 **Phase 4 overall status:** Complete
+
 # Phase 5 — React Dashboard
 
 **Status:** 🚧 In Progress — next milestone
@@ -945,11 +943,11 @@ Phase 5 uses a fixed visual language so dashboard implementation does not repeat
 
 The Phase 5 dashboard uses **only these three colors**. No blue, green, red, amber, gray, or additional brand colors may be introduced.
 
-| Color | Hex | Usage |
-| --- | --- | --- |
-| Cream | `#F8F4E7` | Primary application background, light canvas, readable contrast |
-| Chocolate Brown | `#4E342E` | Dark surfaces, primary text, deep states |
-| Burnt Orange | `#CC5500` | Brand accent, active states, actions, highlights |
+| Color           | Hex         | Usage                                                           |
+| --------------- | ----------- | --------------------------------------------------------------- |
+| Cream           | `#F8F4E7` | Primary application background, light canvas, readable contrast |
+| Chocolate Brown | `#4E342E` | Dark surfaces, primary text, deep states                        |
+| Burnt Orange    | `#CC5500` | Brand accent, active states, actions, highlights                |
 
 Opacity variants of these same three colors are allowed for glass, borders, shadows, gradients, and depth.
 
@@ -1022,14 +1020,14 @@ No hardcoded environment-specific Gateway URL should exist in components.
 
 ### API responsibilities
 
-| Client | Endpoint | Responsibility |
-| --- | --- | --- |
-| status | /api/v1/status | Overall service status |
-| engine status | /api/v1/status/engine | Engine health/liveness |
-| market | /api/v1/market | Current market state |
-| orderbook | /api/v1/orderbook | Initial book snapshot |
-| trades | /api/v1/trades | Recent trades |
-| analytics | /api/v1/analytics | Latest analytics/risk state |
+| Client        | Endpoint              | Responsibility              |
+| ------------- | --------------------- | --------------------------- |
+| status        | /api/v1/status        | Overall service status      |
+| engine status | /api/v1/status/engine | Engine health/liveness      |
+| market        | /api/v1/market        | Current market state        |
+| orderbook     | /api/v1/orderbook     | Initial book snapshot       |
+| trades        | /api/v1/trades        | Recent trades               |
+| analytics     | /api/v1/analytics     | Latest analytics/risk state |
 
 ### Failure handling
 
@@ -1298,7 +1296,6 @@ The current implementation uses a request/response snapshot path: Gateway → C+
 - [X] Market Summary derives Bid, Ask, and Spread from the live order-book snapshot.
 
 ---
-
 
 ### Phase 5.6 completion evidence
 
@@ -1833,6 +1830,7 @@ The script checks:
 - [ ] Demonstrate a fresh trade and corresponding analytics/risk event through the running Compose stack, with observable downstream delivery.
 - [ ] Verify browser-level WebSocket disconnect/reconnect and subscription restoration against the running stack.
 - [ ] Record the resulting evidence and confirm the final dashboard/browser acceptance checks.
+
 - **Risk-state recovery incident (2026-10-16 → 2026-10-18):** diagnosed and closed. The pre-`96d6867` snapshot durability gap produced a NUL snapshot that persisted for ~2 days and caused repeated fail-closed startup; the current running image contains `96d6867`. See `docs/incident-2026-10-16-risk-snapshot-nul.md`. This resolves the "Local runtime risk-state recovery remains unverified" note in `CHANGELOG.md` but does not close the Phase 5.14 exit criteria (live trade delivery, browser reconnect, and dependency-failure recovery remain outstanding).
 
 Optional URL overrides:
@@ -1922,6 +1920,8 @@ Gateway
 - [ ] Dependency failure states are visible.
 - [ ] Recovery returns the dashboard to live state.
 - [ ] Runtime validation passes without bypassing Gateway.
+- [X] Verify browser-level WebSocket disconnect/reconnect and subscription restoration against the running stack.
+  Evidence: `dashboard-react/e2e/websocket-recovery.e2e.ts` via `bun run test:e2e` against the running Compose stack, 2026-10-21: 1 test passed in 2.5s (real Chromium, real gateway WebSocket).
 
 ---
 
@@ -2142,52 +2142,52 @@ Planned:
 
 # Overall Progress Summary
 
-| Phase | Component | Status |
-| --- | --- | --- |
-| 1 | C++ Order Book & Matching Engine | ✅ Complete |
-| 2 | C++ TCP Transport | ✅ Complete |
-| 3.1 | Analytics Foundation | ✅ Complete |
-| 3.2 | Domain Models | ✅ Complete |
-| 3.3 | Technical Indicators | ✅ Complete |
-| 3.4 | Socket Ingestion | ✅ Complete |
-| 3.5 | Streaming Analytics | ✅ Complete |
-| 3.6 | Risk Analytics | ✅ Complete |
-| 3.7 | Risk Limits & Risk Events | ✅ Complete |
-| 3.8 | PostgreSQL Persistence & Observability | ✅ Complete |
-| 3.9 | Metrics & Observability | ✅ Complete |
-| 3.10 | Analytics Service Hardening | ✅ Complete |
-| 4.1 | Gateway Foundation & Architecture | ✅ Complete |
-| 4.2 | Gateway Configuration & Runtime Hardening | ✅ Complete |
-| 4.3 | Gateway HTTP API | ✅ Complete |
-| 4.4 | Engine Protocol & Event Normalization | ✅ Complete |
-| 4.5 | WebSocket Gateway | ✅ Complete |
-| 4.6 | Python Analytics Integration | ✅ Complete |
-| 4.7 | Error Handling, Resilience & Backpressure | ✅ Complete |
-| 4.8 | Security Boundaries & Input Hardening | ✅ Complete |
-| 4.9 | Operational Logging & Metrics | Complete |
-| 4.10 | Testing & Integration Validation | ✅ Complete |
-| 4.11 | Phase Integration & Exit Criteria | ✅ Complete |
-| 5.0 | Dashboard Repository Inspection & Baseline | ✅ Complete |
-| 5.1 | Dashboard Foundation & Application Shell | ✅ Complete |
-| 5.2 | Gateway REST Client & Typed API Models | ✅ Complete |
-| 5.3 | WebSocket Client, Protocol & Reconnection | ✅ Complete |
-| 5.4 | Dashboard Layout & Navigation | ✅ Complete |
-| 5.5 | Live Market Data & Recent Trades | ✅ Complete |
-| 5.6 | Order Book Visualization | ✅ Complete |
-| 5.7 | Analytics Charts & Indicator Views | ✅ Complete |
-| 5.8 | Portfolio, P&L & Risk Dashboard | ✅ Complete |
-| 5.9 | Engine, Analytics & System Status | ✅ Implementation complete |
-| 5.10 | Loading, Error & Stale-Data UX | ✅ Implementation complete — PR #120 |
-| 5.11 | Responsive UI & Dashboard Production Polish | ✅ Implementation complete for current scope |
-| 5.12 | Halted-State Market Data | ✅ Complete — PR #132 |
-| 5.13 | Data Integrity & Observability | ✅ Complete — PRs #133 and #134 |
-| 5.14 | Full Runtime Integration Validation | 🚧 In Progress — runtime smoke and isolated integration tests pass; live event/browser E2E remain |
-| 5 | React Dashboard | 🚧 In Progress |
-| 6 | Historical Analytics | ⏳ Planned |
-| 7 | Authentication & Security | ⏳ Planned |
-| 8 | Platform Observability | ⏳ Planned |
-| 9 | Deployment & Infrastructure | ⏳ Planned |
-| 10 | Performance & Production Hardening | ⏳ Planned |
+| Phase | Component                                   | Status                                                                                             |
+| ----- | ------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| 1     | C++ Order Book & Matching Engine            | ✅ Complete                                                                                        |
+| 2     | C++ TCP Transport                           | ✅ Complete                                                                                        |
+| 3.1   | Analytics Foundation                        | ✅ Complete                                                                                        |
+| 3.2   | Domain Models                               | ✅ Complete                                                                                        |
+| 3.3   | Technical Indicators                        | ✅ Complete                                                                                        |
+| 3.4   | Socket Ingestion                            | ✅ Complete                                                                                        |
+| 3.5   | Streaming Analytics                         | ✅ Complete                                                                                        |
+| 3.6   | Risk Analytics                              | ✅ Complete                                                                                        |
+| 3.7   | Risk Limits & Risk Events                   | ✅ Complete                                                                                        |
+| 3.8   | PostgreSQL Persistence & Observability      | ✅ Complete                                                                                        |
+| 3.9   | Metrics & Observability                     | ✅ Complete                                                                                        |
+| 3.10  | Analytics Service Hardening                 | ✅ Complete                                                                                        |
+| 4.1   | Gateway Foundation & Architecture           | ✅ Complete                                                                                        |
+| 4.2   | Gateway Configuration & Runtime Hardening   | ✅ Complete                                                                                        |
+| 4.3   | Gateway HTTP API                            | ✅ Complete                                                                                        |
+| 4.4   | Engine Protocol & Event Normalization       | ✅ Complete                                                                                        |
+| 4.5   | WebSocket Gateway                           | ✅ Complete                                                                                        |
+| 4.6   | Python Analytics Integration                | ✅ Complete                                                                                        |
+| 4.7   | Error Handling, Resilience & Backpressure   | ✅ Complete                                                                                        |
+| 4.8   | Security Boundaries & Input Hardening       | ✅ Complete                                                                                        |
+| 4.9   | Operational Logging & Metrics               | Complete                                                                                           |
+| 4.10  | Testing & Integration Validation            | ✅ Complete                                                                                        |
+| 4.11  | Phase Integration & Exit Criteria           | ✅ Complete                                                                                        |
+| 5.0   | Dashboard Repository Inspection & Baseline  | ✅ Complete                                                                                        |
+| 5.1   | Dashboard Foundation & Application Shell    | ✅ Complete                                                                                        |
+| 5.2   | Gateway REST Client & Typed API Models      | ✅ Complete                                                                                        |
+| 5.3   | WebSocket Client, Protocol & Reconnection   | ✅ Complete                                                                                        |
+| 5.4   | Dashboard Layout & Navigation               | ✅ Complete                                                                                        |
+| 5.5   | Live Market Data & Recent Trades            | ✅ Complete                                                                                        |
+| 5.6   | Order Book Visualization                    | ✅ Complete                                                                                        |
+| 5.7   | Analytics Charts & Indicator Views          | ✅ Complete                                                                                        |
+| 5.8   | Portfolio, P&L & Risk Dashboard             | ✅ Complete                                                                                        |
+| 5.9   | Engine, Analytics & System Status           | ✅ Implementation complete                                                                         |
+| 5.10  | Loading, Error & Stale-Data UX              | ✅ Implementation complete — PR #120                                                              |
+| 5.11  | Responsive UI & Dashboard Production Polish | ✅ Implementation complete for current scope                                                       |
+| 5.12  | Halted-State Market Data                    | ✅ Complete — PR #132                                                                             |
+| 5.13  | Data Integrity & Observability              | ✅ Complete — PRs #133 and #134                                                                   |
+| 5.14  | Full Runtime Integration Validation         | 🚧 In Progress — runtime smoke and isolated integration tests pass; live event/browser E2E remain |
+| 5     | React Dashboard                             | 🚧 In Progress                                                                                     |
+| 6     | Historical Analytics                        | ⏳ Planned                                                                                         |
+| 7     | Authentication & Security                   | ⏳ Planned                                                                                         |
+| 8     | Platform Observability                      | ⏳ Planned                                                                                         |
+| 9     | Deployment & Infrastructure                 | ⏳ Planned                                                                                         |
+| 10    | Performance & Production Hardening          | ⏳ Planned                                                                                         |
 
 ---
 
