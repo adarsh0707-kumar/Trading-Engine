@@ -1833,6 +1833,7 @@ The script checks:
 - [ ] Demonstrate a fresh trade and corresponding analytics/risk event through the running Compose stack, with observable downstream delivery.
 - [ ] Verify browser-level WebSocket disconnect/reconnect and subscription restoration against the running stack.
 - [ ] Record the resulting evidence and confirm the final dashboard/browser acceptance checks.
+- **Risk-state recovery incident (2026-10-16 → 2026-10-18):** diagnosed and closed. The pre-`96d6867` snapshot durability gap produced a NUL snapshot that persisted for ~2 days and caused repeated fail-closed startup; the current running image contains `96d6867`. See `docs/incident-2026-10-16-risk-snapshot-nul.md`. This resolves the "Local runtime risk-state recovery remains unverified" note in `CHANGELOG.md` but does not close the Phase 5.14 exit criteria (live trade delivery, browser reconnect, and dependency-failure recovery remain outstanding).
 
 Optional URL overrides:
 
