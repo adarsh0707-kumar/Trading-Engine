@@ -587,6 +587,7 @@ int main()
     test_trade_trigger_captures_diagnostics();
     test_state_restores_position_pnl_and_halt_after_restart();
     test_trade_journal_replays_records_after_stale_snapshot();
+    test_replay_that_crosses_risk_threshold_restores_halt_without_live_diagnostics();
     test_duplicate_trade_ids_are_rejected_during_replay();
     test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay();
     test_duplicate_trade_id_is_rejected_before_append();
@@ -595,6 +596,6 @@ int main()
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (20/20)\n";
+    std::cout << "RiskGuard tests passed (21/21)\n";
     return 0;
 }
