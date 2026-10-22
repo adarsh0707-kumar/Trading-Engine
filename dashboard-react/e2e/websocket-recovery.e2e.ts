@@ -1,5 +1,14 @@
 import { expect, test, type WebSocketRoute } from "@playwright/test";
 
+// The WebSocket recovery test requires a running Docker Compose stack
+// (dashboard on 127.0.0.1:5173, gateway on 127.0.0.1:8080).  CI does not
+// start the stack for this test; skip it there rather than fail.
+test.skip(
+  !!process.env.CI,
+  "Requires a running Docker Compose stack; not available in CI",
+);
+
+
 test("reconnects after a gateway WebSocket drop and restores live updates", async ({ page }) => {
   const sockets: WebSocketRoute[] = [];
   const clientMessages: Array<{ socket: WebSocketRoute; message: string }> = [];
