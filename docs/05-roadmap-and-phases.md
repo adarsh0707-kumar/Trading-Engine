@@ -538,7 +538,7 @@ Phase 4.7 establishes bounded failure handling, recovery, liveness monitoring, a
 - Added `gateway_engine_liveness_failures_total` Prometheus telemetry.
 - Added liveness recovery and continuous-heartbeat coverage.
 
-### Phase 4.7 — Known Issue: Gateway Does Not Auto-Recover from a Prolonged Engine Outage (observed 2026-10-22)
+### Phase 4.7 — Known Issue: Gateway Did Not Auto-Recover from a Container Recreation During Phase 5.14 Acceptance (observed 2026-10-22)
 
 **Status:** Open — discovered during Phase 5.14 runtime validation
 
@@ -562,6 +562,9 @@ The unit and integration test coverage for Phase 4.7.4 exercises bounded reconne
 - Reproduce the bug: stop the live engine, wait 30s, restart it, observe gateway logs and metrics.
 - Identify the code path that transitions the client to `disconnected` without incrementing `gateway_engine_reconnect_attempts_total` or `gateway_engine_connection_failures_total` (the observed evidence from 2026-10-22 was both counters at 0 while the client reported `disconnected` with `reconnectAttempts: 0`).
 - Fix the root cause. If the fix is clean, remove the self-heal; if the self-heal is cheap and the fix complex, keep both as defense-in-depth.
+
+
+**Update (2026-10-22):** A plain engine stop/start (30 seconds of downtime) was verified to auto-recover — the gateway reconnects on its own within ~10 seconds, no gateway restart needed. The Known Issue therefore applies specifically to the container-recreation scenario observed during B2, not to all prolonged outages.
 
 Do not treat the self-heal as proof the root cause is fixed. The self-heal addresses the visible symptom; the underlying state-transition defect is still present.
 
