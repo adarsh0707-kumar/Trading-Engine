@@ -556,6 +556,15 @@ The unit and integration test coverage for Phase 4.7.4 exercises bounded reconne
 
 **Follow-up:** investigate `gateway-node/src/engine/engine-event-client.ts` reconnection behavior under prolonged (>=30s) engine unavailability against the running Compose stack. Not part of Phase 5.14 exit criteria; not blocking the closed incident. Tracked separately so the Phase 4.7 milestone's "Complete" status can be re-validated if the finding turns out to be a defect rather than a tuning gap.
 
+**Follow-up (2026-10-22):** symptom mitigated by defensive self-heal (commits `4e6542c` and the diagnostic follow-up). The self-heal reconnects from the "disconnected with no pending timer" state within 5 seconds and emits `engine_event_client_error` when it fires, making the mitigation observable. Root cause **not yet established**. A dedicated diagnostic session is required:
+
+- Instrument `gateway-node/src/engine/engine-event-client.ts` to log every `emitState` call, every `scheduleReconnect` call (including which guard fired, if any), every `handleClose` call (including the guard result), and every `socket` assign/unassign.
+- Reproduce the bug: stop the live engine, wait 30s, restart it, observe gateway logs and metrics.
+- Identify the code path that transitions the client to `disconnected` without incrementing `gateway_engine_reconnect_attempts_total` or `gateway_engine_connection_failures_total` (the observed evidence from 2026-10-22 was both counters at 0 while the client reported `disconnected` with `reconnectAttempts: 0`).
+- Fix the root cause. If the fix is clean, remove the self-heal; if the self-heal is cheap and the fix complex, keep both as defense-in-depth.
+
+Do not treat the self-heal as proof the root cause is fixed. The self-heal addresses the visible symptom; the underlying state-transition defect is still present.
+
 ### Phase 4.7.5 — Analytics Backpressure & Graceful Degradation
 
 **Status:** ✅ Complete
