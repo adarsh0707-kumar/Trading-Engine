@@ -93,6 +93,7 @@ export function createEngineEventClient(
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let connectTimer: ReturnType<typeof setTimeout> | undefined;
   let livenessTimer: ReturnType<typeof setTimeout> | undefined;
+  let selfHealTimer: ReturnType<typeof setInterval> | undefined;
   let running = false;
   let connected = false;
   let reconnectAttempts = 0;
@@ -132,6 +133,21 @@ export function createEngineEventClient(
     }
 
     clearLivenessTimer();
+  };
+
+  const selfHealTick = (): void => {
+    if (!running) return;
+    if (state !== "disconnected") return;
+    if (socket !== undefined) return;
+    if (reconnectTimer !== undefined) return;
+    if (connectTimer !== undefined) return;
+    if (
+      options.reconnectMaxAttempts > 0 &&
+      reconnectAttempts >= options.reconnectMaxAttempts
+    ) {
+      return;
+    }
+    scheduleReconnect();
   };
 
   const emitState = (nextState: EngineClientState): void => {
@@ -420,6 +436,9 @@ export function createEngineEventClient(
     running = true;
     reconnectAttempts = 0;
     clearTimers();
+    if (selfHealTimer === undefined) {
+      selfHealTimer = setInterval(selfHealTick, 5000);
+    }
     connect();
   };
 
@@ -475,6 +494,10 @@ export function createEngineEventClient(
 
     running = false;
     clearTimers();
+    if (selfHealTimer !== undefined) {
+      clearInterval(selfHealTimer);
+      selfHealTimer = undefined;
+    }
     reconnectAttempts = 0;
     disconnect();
   };

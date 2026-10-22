@@ -451,3 +451,56 @@ test("classifies connection and protocol failures without disabling reconnect", 
 
   expect(protocolErrors.some((error) => (error as { category?: string }).category === "protocol")).toBe(true);
 });
+
+test("self-heal reconnects when client is disconnected without a pending timer", async () => {
+  let connections = 0;
+
+  const server = createServer((socket) => {
+    connections += 1;
+    if (connections === 1) {
+      socket.destroy();
+      return;
+    }
+    socket.write(frame(tradeMessage()));
+  });
+  servers.push(server);
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    throw new Error("Test server did not expose an address");
+  }
+
+  const events: unknown[] = [];
+  const client = createEngineEventClient({
+    host: "127.0.0.1",
+    port: address.port,
+    connectTimeoutMs: 500,
+    reconnectInitialDelayMs: 10,
+    reconnectMaxDelayMs: 20,
+    reconnectMaxAttempts: 3,
+    onEvent: (event) => events.push(event),
+  });
+
+  client.start();
+
+  await new Promise<void>((resolve) => {
+    const deadline = Date.now() + 8000;
+    const check = (): void => {
+      if (events.length >= 1 || Date.now() >= deadline) {
+        resolve();
+        return;
+      }
+      setTimeout(check, 50);
+    };
+    check();
+  });
+
+  client.stop();
+
+  expect(connections).toBeGreaterThanOrEqual(2);
+  expect(events.length).toBeGreaterThanOrEqual(1);
+});
