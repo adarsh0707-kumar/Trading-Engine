@@ -538,6 +538,24 @@ Phase 4.7 establishes bounded failure handling, recovery, liveness monitoring, a
 - Added `gateway_engine_liveness_failures_total` Prometheus telemetry.
 - Added liveness recovery and continuous-heartbeat coverage.
 
+### Phase 4.7 — Known Issue: Gateway Does Not Auto-Recover from a Prolonged Engine Outage (observed 2026-10-22)
+
+**Status:** Open — discovered during Phase 5.14 runtime validation
+
+During Phase 5.14 acceptance work on 2026-10-22, the running engine container was stopped for approximately 30 seconds to allow a scratch-volume test, then restarted. The live engine restarted cleanly and returned to its persisted halt state; however, the gateway's engine event client did not reconnect on its own. `GET /api/v1/status` continued to return `{"gateway":"ok","engine":"disconnected","analytics":"connected"}`, and no further engine-connection log lines appeared in the gateway's log stream after the initial disconnect. The gateway's HTTP layer remained healthy throughout.
+
+The unit and integration test coverage for Phase 4.7.4 exercises bounded reconnect/backoff for isolated engine disconnects. The observed behavior indicates that at least one of the following is true:
+
+- the retry budget is exhausted before a 30-second outage can be recovered, or
+- the client enters a terminal disconnected state without further retry, or
+- the client's DNS/socket state is stale after the engine container is recreated with the same hostname.
+
+**Workaround (verified):** `docker compose restart gateway` restores the engine connection immediately after restart; `GET /api/v1/status` returns `{"engine":"connected"}` on the next poll.
+
+**Not yet established:** whether this is a retry-budget tuning issue (recoverable by increasing retries), a client state-machine bug (recoverable by fixing the terminal-state path), or a container-network/DNS effect (recoverable by adding explicit re-resolution). The gateway logs at the time of the disconnect show no error and no further connection attempts, which is consistent with the client having entered a terminal state silently.
+
+**Follow-up:** investigate `gateway-node/src/engine/engine-event-client.ts` reconnection behavior under prolonged (>=30s) engine unavailability against the running Compose stack. Not part of Phase 5.14 exit criteria; not blocking the closed incident. Tracked separately so the Phase 4.7 milestone's "Complete" status can be re-validated if the finding turns out to be a defect rather than a tuning gap.
+
 ### Phase 4.7.5 — Analytics Backpressure & Graceful Degradation
 
 **Status:** ✅ Complete
@@ -1831,6 +1849,8 @@ The script checks:
 - [x] Verify browser-level WebSocket disconnect/reconnect and subscription restoration against the running stack.
   Evidence: `dashboard-react/e2e/websocket-recovery.e2e.ts` via `bun run test:e2e` against the running Compose stack, 2026-10-21: 1 test passed in 2.5s (real Chromium, real gateway WebSocket).
 - [ ] Record the resulting evidence and confirm the final dashboard/browser acceptance checks.
+
+**Note on remaining criteria:** The two remaining Phase 5.14 criteria (fresh trade + PostgreSQL persistence) are currently **not blocked by missing engine capability** — the engine generates trades correctly, as demonstrated by the 2026-10-22 scratch-engine run that produced 17 trades and self-halted. They are blocked by the gateway-side engine reconnect gap documented under Phase 4.7's Known Issue. A corrected B2 test (scratch engine with `--network-alias engine` + explicit gateway restart before and after the test window) would close both criteria once the reconnect behavior is understood.
 
 - **Risk-state recovery incident (2026-10-16 → 2026-10-18):** diagnosed and closed. The pre-`96d6867` snapshot durability gap produced a NUL snapshot that persisted for ~2 days and caused repeated fail-closed startup; the current running image contains `96d6867`. See `docs/incident-2026-10-16-risk-snapshot-nul.md`. This resolves the "Local runtime risk-state recovery remains unverified" note in `CHANGELOG.md` but does not close the Phase 5.14 exit criteria (live trade delivery, browser reconnect, and dependency-failure recovery remain outstanding).
 
