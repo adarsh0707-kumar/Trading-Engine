@@ -147,6 +147,11 @@ export function createEngineEventClient(
     ) {
       return;
     }
+    options.onError?.(
+      new Error(
+        "engine client self-heal triggered: disconnected state with no pending reconnect",
+      ),
+    );
     scheduleReconnect();
   };
 
