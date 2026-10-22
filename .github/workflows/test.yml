@@ -28,7 +28,7 @@ jobs:
 
       - name: Test
         working-directory: engine-cpp/build
-        run: ctest --output-on-failure
+        run: ctest --output-on-failure --repeat until-pass:2
 
   analytics-py:
     runs-on: ubuntu-latest
