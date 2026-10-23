@@ -349,6 +349,7 @@ void SocketServer::handleMessage(
     switch (message.type)
     {
     case serialization::MessageType::BOOK_SNAPSHOT:
+    case serialization::MessageType::TRADE_HISTORY:
     {
         if (messageHandler_)
         {
