@@ -149,6 +149,48 @@ describe("live trading state", () => {
     ]);
   });
 
+
+  test("deduplicates live trades that are also returned by history reconciliation", () => {
+    const state = createLiveTradingState();
+    const event = createTradeEvent();
+
+    state.onTrade(event);
+    state.onTrade(event);
+
+    const trades = state.getTrades();
+    expect(trades).not.toBeNull();
+    if (trades === null) throw new Error("Trade history unexpectedly unavailable");
+    expect(trades.trades).toHaveLength(1);
+    expect(trades.trades[0]?.tradeId).toBe("trade-1");
+  });
+
+
+  test("reconciled older trades do not overwrite newer market data", () => {
+    const state = createLiveTradingState();
+    state.onMarketData({
+      type: "MARKET_DATA",
+      eventId: "market-new",
+      requestId: "market-new",
+      timestamp: "2026-10-23T15:00:00.000Z",
+      payload: { symbol: "SIM", price: 110, sequence: 50 },
+    });
+    state.onTrade(createTradeEvent({
+      eventId: "trade-old",
+      tradeId: "trade-old",
+      requestId: "trade-old",
+      timestamp: "2026-10-23T14:00:00.000Z",
+    }));
+
+    expect(state.getMarket()).toMatchObject({
+      lastPrice: 110,
+      timestamp: "2026-10-23T15:00:00.000Z",
+    });
+    const trades = state.getTrades();
+    expect(trades).not.toBeNull();
+    if (trades === null) throw new Error("Trade history unexpectedly unavailable");
+    expect(trades.trades[0]?.tradeId).toBe("trade-old");
+  });
+
   test("rejects an invalid maximum trade count", () => {
     expect(() => createLiveTradingState(0)).toThrow(
       "maxTrades must be a positive integer",

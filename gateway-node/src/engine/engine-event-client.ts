@@ -59,6 +59,11 @@ export interface EngineEventClient {
     readonly timestamp: string;
     readonly payload: string;
   }>;
+  readonly requestTradeHistory: (limit?: number, timeoutMs?: number) => Promise<{
+    readonly requestId: string;
+    readonly timestamp: string;
+    readonly payload: string;
+  }>;
 }
 
 function toError(value: unknown): Error {
@@ -102,6 +107,18 @@ export function createEngineEventClient(
   let lastMessageAt: number | null = null;
   let lastHeartbeatAt: number | null = null;
   const pendingSnapshots = new Map<
+    string,
+    {
+      readonly resolve: (value: {
+        readonly requestId: string;
+        readonly timestamp: string;
+        readonly payload: string;
+      }) => void;
+      readonly reject: (error: Error) => void;
+      readonly timer: ReturnType<typeof setTimeout>;
+    }
+  >();
+  const pendingTradeHistories = new Map<
     string,
     {
       readonly resolve: (value: {
@@ -224,6 +241,11 @@ export function createEngineEventClient(
       pending.reject(error);
       pendingSnapshots.delete(requestId);
     }
+    for (const [requestId, pending] of pendingTradeHistories) {
+      clearTimeout(pending.timer);
+      pending.reject(error);
+      pendingTradeHistories.delete(requestId);
+    }
   };
 
   const disconnect = (): void => {
@@ -342,6 +364,30 @@ export function createEngineEventClient(
               timestamp: message.timestamp,
               payload: message.payload,
             });
+          }
+          continue;
+        }
+
+        if (message.type === "TRADE_HISTORY") {
+          const pending = pendingTradeHistories.get(message.requestId);
+          if (pending !== undefined) {
+            clearTimeout(pending.timer);
+            pendingTradeHistories.delete(message.requestId);
+            pending.resolve({
+              requestId: message.requestId,
+              timestamp: message.timestamp,
+              payload: message.payload,
+            });
+          }
+          continue;
+        }
+
+        if (message.type === "ERROR") {
+          const pending = pendingTradeHistories.get(message.requestId);
+          if (pending !== undefined) {
+            clearTimeout(pending.timer);
+            pendingTradeHistories.delete(message.requestId);
+            pending.reject(new Error(message.payload || "Engine request failed"));
           }
           continue;
         }
@@ -492,6 +538,45 @@ export function createEngineEventClient(
     });
   };
 
+  const requestTradeHistory = (
+    limit = 100,
+    timeoutMs = 2000,
+  ): Promise<{ readonly requestId: string; readonly timestamp: string; readonly payload: string }> => {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      return Promise.reject(new Error("Trade history limit must be between 1 and 100"));
+    }
+    if (!connected || socket === undefined) {
+      return Promise.reject(new Error("Engine is not connected"));
+    }
+
+    const requestId = `trades-${randomUUID()}`;
+    const timestamp = new Date().toISOString();
+    const activeSocket = socket;
+
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        pendingTradeHistories.delete(requestId);
+        reject(new TimeoutFailure(
+          `Engine trade history request timed out after ${timeoutMs}ms`,
+        ));
+      }, timeoutMs);
+
+      pendingTradeHistories.set(requestId, { resolve, reject, timer });
+      try {
+        activeSocket.write(frame(JSON.stringify({
+          type: "TRADE_HISTORY",
+          request_id: requestId,
+          timestamp,
+          payload: String(limit),
+        })));
+      } catch (error) {
+        clearTimeout(timer);
+        pendingTradeHistories.delete(requestId);
+        reject(toError(error));
+      }
+    });
+  };
+
   const stop = (): void => {
     if (!running && socket === undefined) {
       return;
@@ -513,6 +598,7 @@ export function createEngineEventClient(
     isConnected: () => connected,
     getState: () => state,
     requestOrderBook,
+    requestTradeHistory,
     getHealth: () => ({
       state,
       connectedAt,

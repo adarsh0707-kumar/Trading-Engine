@@ -130,6 +130,26 @@ describe("gateway websocket end-to-end", () => {
   test("delivers a live C++-protocol TRADE to a subscribed WebSocket client", async () => {
     engineServer = createServer((socket) => {
       socket.write(helloMessage());
+      let engineBuffer = Buffer.alloc(0);
+      socket.on("data", (chunk) => {
+        engineBuffer = Buffer.concat([engineBuffer, Buffer.from(chunk)]);
+        while (engineBuffer.length >= 4) {
+          const size = engineBuffer.readUInt32BE(0);
+          if (engineBuffer.length < size + 4) return;
+          const message = JSON.parse(
+            engineBuffer.subarray(4, size + 4).toString("utf8"),
+          ) as { type?: string; request_id?: string; timestamp?: string };
+          engineBuffer = engineBuffer.subarray(size + 4);
+          if (message.type === "TRADE_HISTORY") {
+            socket.write(frame(JSON.stringify({
+              type: "TRADE_HISTORY",
+              request_id: message.request_id,
+              timestamp: message.timestamp,
+              payload: "[]",
+            })));
+          }
+        }
+      });
 
       setTimeout(() => {
         socket.write(tradeMessage());

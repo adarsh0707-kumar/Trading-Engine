@@ -258,7 +258,31 @@ void Engine::run_loop() {
     logger_->info("Engine loop stopped");
 }
 void Engine::handle_book_snapshot(std::shared_ptr<network::ClientConnection> client,const serialization::Message &request) {
-    if (!client || request.type!=serialization::MessageType::BOOK_SNAPSHOT) return;
+    if (!client) return;
+    if (request.type == serialization::MessageType::TRADE_HISTORY) {
+        std::size_t limit = 0;
+        try {
+            const auto parsed_limit = std::stoul(request.payload);
+            if (parsed_limit < 1 || parsed_limit > 100) return;
+            limit = static_cast<std::size_t>(parsed_limit);
+        } catch (...) {
+            return;
+        }
+        serialization::Message response;
+        response.type = serialization::MessageType::TRADE_HISTORY;
+        response.requestId = request.requestId;
+        response.timestamp = utils::Time::iso8601();
+        try {
+            response.payload = risk_guard_.trade_history_json(limit);
+        } catch (const std::exception &error) {
+            logger_->error(std::string("trade_history_request_failed: ") + error.what());
+            response.type = serialization::MessageType::ERROR;
+            response.payload = "Trade history is unavailable";
+        }
+        client->sendMessage(response);
+        return;
+    }
+    if (request.type != serialization::MessageType::BOOK_SNAPSHOT) return;
     const ::engine::BookSnapshot snapshot=state_->snapshot();
     serialization::Message response; response.type=serialization::MessageType::BOOK_SNAPSHOT;
     response.requestId=request.requestId; response.timestamp=utils::Time::iso8601();

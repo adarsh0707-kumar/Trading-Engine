@@ -17,6 +17,7 @@ enum class MessageType : std::uint8_t
     TRADE = 4,
     MARKET_DATA = 5,
     BOOK_SNAPSHOT = 6,
+    TRADE_HISTORY = 9,
     ERROR = 7,
     SHUTDOWN = 8
 };

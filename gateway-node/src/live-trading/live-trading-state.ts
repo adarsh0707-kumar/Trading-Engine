@@ -27,6 +27,7 @@ export function createLiveTradingState(
 
   let market: MarketState | null = null;
   let trades: Trade[] = [];
+  const seenTradeIds = new Set<string>();
 
   return {
     onMarketData(event: NormalizedMarketDataEvent): void {
@@ -41,13 +42,20 @@ export function createLiveTradingState(
 
     onTrade(event: NormalizedTradeEvent): void {
       const { payload } = event;
+      if (seenTradeIds.has(event.tradeId)) return;
+      seenTradeIds.add(event.tradeId);
 
-      market = {
-        symbol: payload.symbol,
-        lastPrice: payload.price,
-        lastQuantity: payload.quantity,
-        timestamp: event.timestamp,
-      };
+      if (
+        market === null ||
+        Date.parse(event.timestamp) >= Date.parse(market.timestamp)
+      ) {
+        market = {
+          symbol: payload.symbol,
+          lastPrice: payload.price,
+          lastQuantity: payload.quantity,
+          timestamp: event.timestamp,
+        };
+      }
 
       const trade: Trade = {
         tradeId: event.tradeId,
@@ -58,7 +66,9 @@ export function createLiveTradingState(
         timestamp: event.timestamp,
       };
 
-      trades = [trade, ...trades].slice(0, maxTrades);
+      trades = [trade, ...trades]
+        .sort((left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp))
+        .slice(0, maxTrades);
     },
 
     getMarket(): MarketState | null {

@@ -5,6 +5,7 @@ export const ENGINE_MESSAGE_TYPES = [
   "TRADE",
   "MARKET_DATA",
   "BOOK_SNAPSHOT",
+  "TRADE_HISTORY",
   "ERROR",
   "SHUTDOWN",
 ] as const;

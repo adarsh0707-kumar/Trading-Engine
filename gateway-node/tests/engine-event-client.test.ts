@@ -123,6 +123,56 @@ describe("engine event client", () => {
     });
   });
 
+
+  test("requests bounded durable trade history from the engine", async () => {
+    let request: Record<string, unknown> | undefined;
+    const server = createServer((socket) => {
+      socket.on("data", (chunk) => {
+        const buffer = Buffer.from(chunk);
+        if (buffer.length < 4) return;
+        const size = buffer.readUInt32BE(0);
+        if (buffer.length < size + 4) return;
+        request = JSON.parse(buffer.subarray(4, size + 4).toString("utf8")) as Record<string, unknown>;
+        socket.write(frame(JSON.stringify({
+          type: "TRADE_HISTORY",
+          request_id: request.request_id,
+          timestamp: "2026-10-23T15:00:00.000Z",
+          payload: "[]",
+        })));
+      });
+    });
+    servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") throw new Error("Test server did not expose an address");
+
+    const client = createEngineEventClient({
+      host: "127.0.0.1",
+      port: address.port,
+      connectTimeoutMs: 1000,
+      reconnectInitialDelayMs: 10,
+      reconnectMaxDelayMs: 20,
+      reconnectMaxAttempts: 1,
+      onEvent: () => {},
+    });
+    try {
+      client.start();
+      const deadline = Date.now() + 1000;
+      while (!client.isConnected() && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      const response = await client.requestTradeHistory(25);
+      expect(request).toMatchObject({
+        type: "TRADE_HISTORY",
+        payload: "25",
+      });
+      expect(response.payload).toBe("[]");
+      expect(response.requestId).toBe(request?.request_id as string);
+    } finally {
+      client.stop();
+    }
+  });
+
   test("normalizes live MARKET_DATA frames without treating them as trades", async () => {
     const server = createServer((socket) => {
       socket.write(frame(JSON.stringify({
