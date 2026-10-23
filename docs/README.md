@@ -19,6 +19,7 @@ This directory contains the engineering documentation for the **Cloud-Based Algo
 | `09-testing-strategy.md` | Unit, integration, contract, E2E, performance and failure testing |
 | `10-glossary.md` | Definitions of domain and engineering terminology |
 | `11-risk-limits-and-enforcement.md` | Risk-limit defaults, event flow, runtime checks, and the distinction between risk reporting and trade enforcement |
+| `18-risk-halt-diagnostics-and-trade-history-recovery.md` | Snapshot v3 halt diagnostics, durable journal trade-history reconciliation, runtime evidence, and safe isolated validation |
 
 ## Architecture at a Glance
 
@@ -130,11 +131,8 @@ TRADE       → Gateway trade history ─┬→ WebSocket → dashboard
                                      └→ analytics → PostgreSQL
 ```
 
-Market-price updates are independent of trade execution and can continue while the engine is risk-halted. A risk halt still prevents matching and trade execution.
-
-and the engineering trade-offs involved at each boundary.
+Market-price updates are independent of trade execution and can continue while the engine is risk-halted. A risk halt still prevents matching and trade execution, and the historical trigger values for a legacy halt cannot be reconstructed when they were never persisted.
 
 ---
 
 If this project was useful to you, consider [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-yellow?logo=buy-me-a-coffee\&logoColor=white)](https://buymeacoffee.com/adarsh12kumar)
-
