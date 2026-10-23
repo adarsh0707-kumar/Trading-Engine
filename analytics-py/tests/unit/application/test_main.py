@@ -174,6 +174,45 @@ def test_injected_repositories_are_not_owned() -> None:
     assert service._owns_repositories is False
 
 
+def test_handle_connect_replays_latest_persisted_analytics() -> None:
+    """A gateway connection restores the latest persisted analytics snapshot."""
+
+    repositories = Mock()
+    latest = _processed_trade().analytics
+    repositories.analytics.get_latest.return_value = latest
+    service = _service(repositories=repositories)
+    service.publisher.publish = Mock()
+
+    service._handle_connect()
+
+    repositories.analytics.get_latest.assert_called_once_with()
+    service.publisher.publish.assert_called_once_with(latest)
+
+
+def test_handle_connect_skips_replay_when_no_snapshot_exists() -> None:
+    """A gateway connection is healthy when no analytics snapshot is persisted."""
+
+    repositories = Mock()
+    repositories.analytics.get_latest.return_value = None
+    service = _service(repositories=repositories)
+    service.publisher.publish = Mock()
+
+    service._handle_connect()
+
+    service.publisher.publish.assert_not_called()
+
+
+def test_handle_connect_does_not_require_persistence() -> None:
+    """Snapshot replay is skipped when persistence is disabled."""
+
+    service = _service()
+    service.publisher.publish = Mock()
+
+    service._handle_connect()
+
+    service.publisher.publish.assert_not_called()
+
+
 def test_persist_saves_complete_processed_trade() -> None:
     """Persistence should receive every required processed-trade value."""
 
