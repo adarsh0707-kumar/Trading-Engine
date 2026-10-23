@@ -1,4 +1,5 @@
 #include "engine/RiskGuard.hpp"
+#include "engine/RiskReductionOrder.hpp"
 
 #include "../TestCheck.hpp"
 
@@ -219,6 +220,46 @@ void test_halted_risk_guard_allows_only_bounded_reducing_orders()
     const auto reverse_short = short_guard.check_order(
         *make_order("B-REVERSE", engine::Side::BUY, 110.0, 11));
     CHECK(!reverse_short.allowed);
+}
+
+
+void test_risk_reduction_order_uses_opposing_top_level_and_caps_quantity()
+{
+    ::engine::BookSnapshot book;
+    book.bids = {{100.0, 3}, {99.0, 20}};
+    book.asks = {{101.0, 7}};
+
+    const auto reduce_long = trading::engine_runtime::make_risk_reduction_order(
+        book, 10, "S-REDUCE", "SIM", 8, 1);
+    CHECK(reduce_long != nullptr);
+    CHECK(reduce_long->side() == ::engine::Side::SELL);
+    CHECK(reduce_long->price() == 100.0);
+    CHECK(reduce_long->quantity() == 3);
+    CHECK(reduce_long->time_in_force() == ::engine::TimeInForce::IOC);
+
+    const auto reduce_short = trading::engine_runtime::make_risk_reduction_order(
+        book, -5, "B-COVER", "SIM", 4, 2);
+    CHECK(reduce_short != nullptr);
+    CHECK(reduce_short->side() == ::engine::Side::BUY);
+    CHECK(reduce_short->price() == 101.0);
+    CHECK(reduce_short->quantity() == 4);
+    CHECK(reduce_short->time_in_force() == ::engine::TimeInForce::IOC);
+}
+
+void test_risk_reduction_order_is_unavailable_without_opposing_liquidity()
+{
+    ::engine::BookSnapshot book;
+    book.asks = {{101.0, 10}};
+    CHECK(!trading::engine_runtime::make_risk_reduction_order(
+        book, 10, "S-REDUCE", "SIM", 5, 1));
+
+    book.bids = {{100.0, 10}};
+    book.asks.clear();
+    CHECK(!trading::engine_runtime::make_risk_reduction_order(
+        book, -10, "B-COVER", "SIM", 5, 2));
+
+    CHECK(!trading::engine_runtime::make_risk_reduction_order(
+        book, 0, "FLAT", "SIM", 5, 3));
 }
 
 void test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover()
@@ -622,6 +663,8 @@ int main()
     test_order_larger_than_position_limit_is_rejected();
     test_realized_and_unrealized_pnl_when_reducing_and_reversing_position();
     test_halted_risk_guard_allows_only_bounded_reducing_orders();
+    test_risk_reduction_order_uses_opposing_top_level_and_caps_quantity();
+    test_risk_reduction_order_is_unavailable_without_opposing_liquidity();
     test_drawdown_halts_at_exact_threshold_and_stays_latched();
     test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover();
     test_trade_trigger_captures_diagnostics();
@@ -636,6 +679,6 @@ int main()
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (23/23)\n";
+    std::cout << "RiskGuard tests passed (25/25)\n";
     return 0;
 }
