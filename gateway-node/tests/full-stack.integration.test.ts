@@ -131,6 +131,26 @@ describe("full gateway integration path", () => {
 
       const engineServer = createServer((socket) => {
         engineSocket = socket;
+        let engineBuffer = Buffer.alloc(0);
+        socket.on("data", (chunk) => {
+          engineBuffer = Buffer.concat([engineBuffer, Buffer.from(chunk)]);
+          while (engineBuffer.length >= 4) {
+            const size = engineBuffer.readUInt32BE(0);
+            if (engineBuffer.length < size + 4) return;
+            const message = JSON.parse(
+              engineBuffer.subarray(4, size + 4).toString("utf8"),
+            ) as { type?: string; request_id?: string; timestamp?: string };
+            engineBuffer = engineBuffer.subarray(size + 4);
+            if (message.type === "TRADE_HISTORY") {
+              socket.write(frame({
+                type: "TRADE_HISTORY",
+                request_id: message.request_id,
+                timestamp: message.timestamp,
+                payload: "[]",
+              }));
+            }
+          }
+        });
         setTimeout(() => socket.write(frame(TRADE)), 250);
       });
 
