@@ -660,6 +660,25 @@ void test_snapshot_save_failure_recovers_journaled_trade()
     }
 }
 
+
+void test_trade_history_returns_latest_bounded_journal_records()
+{
+    ScopedTempDirectory temp;
+    const auto snapshot = temp.path() / "risk.snapshot";
+    RiskGuardConfig config{100, 100000.0, 1000.0, 500.0, 10000.0, snapshot.string()};
+    RiskGuard guard(config);
+    guard.record_trade("SIM", engine::Side::BUY, 3, 100.0, "trade-1", "buy-1", "sell-1");
+    guard.record_trade("SIM", engine::Side::SELL, 2, 101.0, "trade-2", "sell-2", "buy-2");
+
+    const auto latest = guard.trade_history_json(1);
+    CHECK(latest.find("\\\"trade_id\\\":\\\"trade-2\\\"") != std::string::npos);
+    CHECK(latest.find("trade-1") == std::string::npos);
+    const auto all = guard.trade_history_json(100);
+    CHECK(all.find("trade-1") != std::string::npos);
+    CHECK(all.find("trade-2") != std::string::npos);
+    CHECK(all.find("\\\"timestamp_ms\\\"") != std::string::npos);
+}
+
 void test_corrupt_trade_journal_fails_closed()
 {
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-journal-corrupt.snapshot";
@@ -729,9 +748,10 @@ int main()
     test_duplicate_trade_id_is_rejected_before_append();
     test_journal_write_failure_does_not_apply_risk_trade();
     test_snapshot_save_failure_recovers_journaled_trade();
+    test_trade_history_returns_latest_bounded_journal_records();
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (26/26)\n";
+    std::cout << "RiskGuard tests passed (27/27)\n";
     return 0;
 }
