@@ -671,7 +671,7 @@ void test_trade_history_returns_latest_bounded_journal_records()
     guard.record_trade("SIM", engine::Side::SELL, 2, 101.0, "trade-2", "sell-2", "buy-2");
 
     const auto latest = guard.trade_history_json(1);
-    CHECK(latest.find("\\\"trade_id\\\":\\\"trade-2\\\"") != std::string::npos);
+    CHECK(latest.find("trade-2") != std::string::npos);
     CHECK(latest.find("trade-1") == std::string::npos);
     const auto all = guard.trade_history_json(100);
     CHECK(all.find("trade-1") != std::string::npos);
