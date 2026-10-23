@@ -4,10 +4,15 @@
 
 ### Phase 5.14 — Runtime Integration Validation — In Progress
 
+- Merged PR #161 (`f89dbd1`): upgraded risk snapshots to version 3 and persisted original halt-trigger diagnostics while retaining version 1/version 2 compatibility. Legacy active halts without saved diagnostic fields remain explicitly unavailable; historical trigger values must not be fabricated.
+- Merged PR #162 (`bbf84fa`): added durable engine-journal trade-history reconciliation for Gateway connect/reconnect, including live-event deduplication.
+- Deployed PR #162 from `main` on 2026-10-23. Post-deploy evidence: all five services healthy, Gateway readiness reported engine and analytics connected, `GET /api/v1/trades` returned 23 newest-first records, and Gateway logged `engine_trade_history_reconciled` with `recordCount: 23` and `outcome: "accepted"`. The journal hash remained unchanged.
+- Risk-halt diagnostics persistence across a restart for a newly triggered halt still requires focused isolated-test evidence. The current live `max_drawdown` halt predates persisted trigger diagnostics; its missing original trigger values are not recoverable reliably. Preserve the live halt, snapshot, journal, and backups; do not reset or authorize resume as part of this validation.
+
 - Merged PR #156 (`180d033aaede7c06ac78f7a248f5e86cf5f65b23`): added risk-halt diagnostics and regression coverage for a halt triggered during trade-journal replay.
 - PR #156 CI completed with 22 successful checks, including Debug/Release C++ builds and engine tests.
 - Local runtime risk-state recovery remains **unverified**. Preserve snapshot/journal evidence; do not infer recovery from CI success or delete/reset persistent data.
-- Diagnosed and closed the risk-state snapshot recovery incident (2026-10-16 → 2026-10-18). A single 114-byte NUL `risk-state.snapshot` was produced by pre-`96d6867` `save_state()` losing durability before `rename` on Docker Desktop, then persisted for ~2 days, causing repeated fail-closed startup (`risk state is corrupt or incompatible; refusing startup`). The durability fix is present in the current running engine image (verified by binary string inspection: `snapshot replaced`, `risk-state directory`, `temporary risk-state`). Current live snapshot is valid and internally consistent with the 17-record journal. See `docs/incident-2026-10-16-risk-snapshot-nul.md`.
+- Diagnosed and closed the risk-state snapshot recovery incident (2026-10-16 → 2026-10-18). A single 114-byte NUL `risk-state.snapshot` was produced by pre-`96d6867` `save_state()` losing durability before `rename` on Docker Desktop, then persisted for ~2 days, causing repeated fail-closed startup (`risk state is corrupt or incompatible; refusing startup`). The durability fix is present in the current running engine image (verified by binary string inspection: `snapshot replaced`, `risk-state directory`, `temporary risk-state`). At the time of the original incident investigation, the live snapshot was reported valid and internally consistent with the 17-record journal. See `docs/incident-2026-10-16-risk-snapshot-nul.md`.
 
 - Merged analytics PostgreSQL connection-recovery hardening in PR #138.
 - Merged the analytics pytest empty-match warning fix in PR #139.
