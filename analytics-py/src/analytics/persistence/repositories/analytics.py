@@ -22,6 +22,10 @@ class AnalyticsRepository(Protocol):
         """Return an analytics result by event identifier."""
         ...
 
+    def get_latest(self) -> AnalyticsResult | None:
+        """Return the most recent persisted analytics result."""
+        ...
+
     def list_by_symbol(
         self,
         symbol: str,
