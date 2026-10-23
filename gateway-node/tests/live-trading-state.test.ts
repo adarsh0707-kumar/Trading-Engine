@@ -149,6 +149,18 @@ describe("live trading state", () => {
     ]);
   });
 
+
+  test("deduplicates live trades that are also returned by history reconciliation", () => {
+    const state = createLiveTradingState();
+    const event = createTradeEvent();
+
+    state.onTrade(event);
+    state.onTrade(event);
+
+    expect(state.getTrades().trades).toHaveLength(1);
+    expect(state.getTrades().trades[0]?.tradeId).toBe("trade-1");
+  });
+
   test("rejects an invalid maximum trade count", () => {
     expect(() => createLiveTradingState(0)).toThrow(
       "maxTrades must be a positive integer",
