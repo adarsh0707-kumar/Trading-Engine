@@ -157,8 +157,11 @@ describe("live trading state", () => {
     state.onTrade(event);
     state.onTrade(event);
 
-    expect(state.getTrades().trades).toHaveLength(1);
-    expect(state.getTrades().trades[0]?.tradeId).toBe("trade-1");
+    const trades = state.getTrades();
+    expect(trades).not.toBeNull();
+    if (trades === null) throw new Error("Trade history unexpectedly unavailable");
+    expect(trades.trades).toHaveLength(1);
+    expect(trades.trades[0]?.tradeId).toBe("trade-1");
   });
 
 
@@ -182,7 +185,10 @@ describe("live trading state", () => {
       lastPrice: 110,
       timestamp: "2026-10-23T15:00:00.000Z",
     });
-    expect(state.getTrades().trades[0]?.tradeId).toBe("trade-old");
+    const trades = state.getTrades();
+    expect(trades).not.toBeNull();
+    if (trades === null) throw new Error("Trade history unexpectedly unavailable");
+    expect(trades.trades[0]?.tradeId).toBe("trade-old");
   });
 
   test("rejects an invalid maximum trade count", () => {
