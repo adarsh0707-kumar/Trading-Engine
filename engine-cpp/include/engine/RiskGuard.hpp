@@ -2,6 +2,7 @@
 
 #include "orderbook/Order.hpp"
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <unordered_set>
@@ -50,6 +51,7 @@ public:
     double daily_loss() const noexcept;
     std::uint64_t journal_sequence() const noexcept;
     std::uint64_t replayed_trade_count() const noexcept;
+    std::string trade_history_json(std::size_t limit = 100) const;
 private:
     void evaluate_limits(std::chrono::system_clock::time_point now,
                          bool capture_diagnostics = true) noexcept;
