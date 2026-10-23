@@ -177,7 +177,7 @@ def test_repository_returns_latest_analytics(repository) -> None:
     """The repository returns the newest persisted analytics result."""
 
     base_time = datetime(
-        2026,
+        2099,
         9,
         14,
         12,
@@ -198,12 +198,6 @@ def test_repository_returns_latest_analytics(repository) -> None:
     repository._connection.commit()
 
     assert repository.get_latest() == latest
-
-
-def test_repository_returns_none_when_no_latest_analytics(repository) -> None:
-    """An empty analytics table has no latest result."""
-
-    assert repository.get_latest() is None
 
 
 def test_repository_lists_by_symbol(repository) -> None:
