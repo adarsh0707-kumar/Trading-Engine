@@ -95,6 +95,10 @@ def test_analytics_repository_contract() -> None:
                 "parameters": ["self", "event_id"],
                 "return": AnalyticsResult | None,
             },
+            "get_latest": {
+                "parameters": ["self"],
+                "return": AnalyticsResult | None,
+            },
             "list_by_symbol": {
                 "parameters": ["self", "symbol"],
                 "return": tuple[AnalyticsResult, ...],
