@@ -467,7 +467,7 @@ std::string RiskGuard::trade_history_json(std::size_t limit) const {
               std::quoted(trade.symbol) >> trade.side >> trade.quantity >>
               trade.price >> trade.timestamp_ms >> std::quoted(trade.taker_order_id) >>
               std::quoted(trade.maker_order_id)) ||
-            trade.trade_id.empty() || trade.symbol.empty() ||
+            sequence == 0 || trade.trade_id.empty() || trade.symbol.empty() ||
             (trade.side != "BUY" && trade.side != "SELL") ||
             trade.quantity <= 0 || !std::isfinite(trade.price) ||
             trade.price <= 0 || trade.timestamp_ms < 0)
@@ -485,15 +485,15 @@ std::string RiskGuard::trade_history_json(std::size_t limit) const {
     for (std::size_t i = 0; i < recent.size(); ++i) {
         if (i) out << ',';
         const auto &trade = recent[i];
-        out << "{\\"trade_id\\":\\"" << json_escape(trade.trade_id)
-            << "\\",\\"symbol\\":\\"" << json_escape(trade.symbol)
-            << "\\",\\"taker_side\\":\\"" << trade.side
-            << "\\",\\"quantity\\":" << trade.quantity
-            << ",\\"price\\":" << std::setprecision(std::numeric_limits<double>::max_digits10) << trade.price
-            << ",\\"timestamp_ms\\":" << trade.timestamp_ms
-            << ",\\"taker_order_id\\":\\"" << json_escape(trade.taker_order_id)
-            << "\\",\\"maker_order_id\\":\\"" << json_escape(trade.maker_order_id)
-            << "\\"}";
+        out << "{\"trade_id\":\"" << json_escape(trade.trade_id)
+            << "\",\"symbol\":\"" << json_escape(trade.symbol)
+            << "\",\"taker_side\":\"" << trade.side
+            << "\",\"quantity\":" << trade.quantity
+            << ",\"price\":" << std::setprecision(std::numeric_limits<double>::max_digits10) << trade.price
+            << ",\"timestamp_ms\":" << trade.timestamp_ms
+            << ",\"taker_order_id\":\"" << json_escape(trade.taker_order_id)
+            << "\",\"maker_order_id\":\"" << json_escape(trade.maker_order_id)
+            << "\"}";
     }
     out << ']';
     return out.str();
