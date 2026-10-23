@@ -334,6 +334,27 @@ namespace
         CHECK(book.order_count() == 0);
     }
 
+void test_ioc_order_does_not_rest_unfilled_remainder()
+{
+    OrderBook book("BTC-USD");
+    book.add_order(make_order("B1", Side::BUY, 100.0, 2, 1));
+
+    auto incoming_sell = std::make_shared<Order>(
+        "S-IOC", "BTC-USD", Side::SELL, OrderType::LIMIT,
+        100.0, 5, 2, TimeInForce::IOC);
+
+    MatchingEngine matcher;
+    MatchResult result = matcher.match(book, incoming_sell);
+
+    CHECK(result.matched);
+    CHECK(result.trades.size() == 1);
+    CHECK(result.trades.front()->quantity() == 2);
+    CHECK(incoming_sell->remaining_quantity() == 3);
+    CHECK(book.order_count() == 0);
+    CHECK(book.bid_level_count() == 0);
+    CHECK(book.ask_level_count() == 0);
+}
+
     void test_empty_opposite_book_does_not_match()
     {
         OrderBook book("BTC-USD");
@@ -1341,6 +1362,7 @@ int main()
     test_fully_filled_resting_bid_removed();
 
     test_empty_opposite_book_does_not_match();
+    test_ioc_order_does_not_rest_unfilled_remainder();
     test_symbol_mismatch_is_rejected();
 
     test_buy_matches_multiple_ask_levels();
@@ -1378,7 +1400,7 @@ int main()
     test_trade_records_buyer_and_seller_for_sell_taker();
 
     std::cout
-        << "All MatchingEngine Phase 1.13 tests passed (38/38)"
+        << "All MatchingEngine Phase 1.13 tests passed (39/39)"
         << std::endl;
 
     return 0;
