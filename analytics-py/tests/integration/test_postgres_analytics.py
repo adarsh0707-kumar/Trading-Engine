@@ -173,6 +173,33 @@ def test_repository_returns_none_for_unknown_event(repository) -> None:
     ) is None
 
 
+def test_repository_returns_latest_analytics(repository) -> None:
+    """The repository returns the newest persisted analytics result."""
+
+    base_time = datetime(
+        2099,
+        9,
+        14,
+        12,
+        0,
+        tzinfo=timezone.utc,
+    )
+    older = _analytics(
+        event_id="analytics-pg-latest-001",
+        timestamp=base_time,
+    )
+    latest = _analytics(
+        event_id="analytics-pg-latest-002",
+        timestamp=base_time + timedelta(seconds=1),
+    )
+
+    repository.save(older)
+    repository.save(latest)
+    repository._connection.commit()
+
+    assert repository.get_latest() == latest
+
+
 def test_repository_lists_by_symbol(repository) -> None:
     """Analytics results are returned in timestamp order."""
 

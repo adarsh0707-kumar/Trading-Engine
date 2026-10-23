@@ -107,6 +107,41 @@ class PostgresAnalyticsRepository:
                 },
             )
 
+    def get_latest(self) -> AnalyticsResult | None:
+        """Return the most recent persisted analytics result."""
+
+        with self._connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    event_id,
+                    event_type,
+                    symbol,
+                    price,
+                    vwap,
+                    sma,
+                    ema,
+                    volatility,
+                    position,
+                    realized_pnl,
+                    unrealized_pnl,
+                    equity,
+                    peak_equity,
+                    drawdown,
+                    timestamp
+                FROM analytics_results
+                ORDER BY timestamp DESC, event_id DESC
+                LIMIT 1
+                """
+            )
+
+            row = cursor.fetchone()
+
+        if row is None:
+            return None
+
+        return self._row_to_result(row)
+
     def get_by_event_id(
         self,
         event_id: str,
