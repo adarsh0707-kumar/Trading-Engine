@@ -1,4 +1,5 @@
 #include "engine/Engine.hpp"
+#include "engine/RiskReductionOrder.hpp"
 #include "serialization/JsonSerializer.hpp"
 #include "utils/Time.hpp"
 #include <algorithm>
@@ -52,6 +53,7 @@ std::uint16_t Engine::port() const { return server_->port(); }
 void Engine::run_loop() {
     logger_->info("Engine loop started");
     bool risk_halt_logged=false;
+    bool risk_halt_reduction_blocked_logged=false;
     const auto log_risk_halt = [this](const std::string &event) {
         const auto &diagnostics = risk_guard_.halt_diagnostics();
         std::ostringstream message;
@@ -88,13 +90,6 @@ void Engine::run_loop() {
                 log_risk_halt("risk_halt_active");
                 risk_halt_logged=true;
             }
-
-            // A halted engine may submit only a bounded reducing order. IOC
-            // prevents any unfilled remainder from resting in the book.
-            incoming_order = std::make_shared<::engine::Order>(
-                tick.order_id, tick.symbol, tick.side, tick.order_type,
-                tick.price, tick.quantity, static_cast<std::int64_t>(tick.sequence),
-                ::engine::TimeInForce::IOC);
         }
 
         // Market data is independent of order matching and must remain available
@@ -109,6 +104,50 @@ void Engine::run_loop() {
             << ",\"sequence\":" << tick.sequence << "}";
         market_message.payload = market_payload.str();
         server_->broadcast(market_message);
+
+        if (risk_halted) {
+            const std::int64_t position = risk_guard_.position();
+            const ::engine::BookSnapshot book = state_->snapshot();
+            const bool has_opposing_liquidity =
+                position > 0 ? !book.bids.empty()
+                : position < 0 ? !book.asks.empty()
+                : false;
+
+            if (!has_opposing_liquidity) {
+                if (!risk_halt_reduction_blocked_logged) {
+                    const std::string reason =
+                        position == 0 ? "flat_position" : "opposite_book_empty";
+                    logger_->warn(
+                        "risk_halt_reduction_blocked reason=" + reason +
+                        " current_position=" + std::to_string(position));
+                    risk_halt_reduction_blocked_logged = true;
+                }
+                std::this_thread::sleep_for(
+                    std::chrono::milliseconds(config_.tick_interval_ms));
+                continue;
+            }
+
+            incoming_order = make_risk_reduction_order(
+                book,
+                position,
+                tick.order_id,
+                tick.symbol,
+                tick.quantity,
+                static_cast<std::int64_t>(tick.sequence));
+
+            if (!incoming_order) {
+                if (!risk_halt_reduction_blocked_logged) {
+                    logger_->warn(
+                        "risk_halt_reduction_blocked reason=reduction_order_unavailable"
+                        " current_position=" + std::to_string(position));
+                    risk_halt_reduction_blocked_logged = true;
+                }
+                std::this_thread::sleep_for(
+                    std::chrono::milliseconds(config_.tick_interval_ms));
+                continue;
+            }
+            risk_halt_reduction_blocked_logged = false;
+        }
         const RiskDecision decision=risk_guard_.check_order(*incoming_order);
         if (!decision.allowed) {
             incoming_order->reject();
@@ -118,9 +157,9 @@ void Engine::run_loop() {
             std::this_thread::sleep_for(std::chrono::milliseconds(config_.tick_interval_ms)); continue;
         }
         if (risk_halted) {
-            logger_->info("risk_halt_reducing_order_allowed order_id=" + tick.order_id +
-                " side=" + ::engine::to_string(tick.side) +
-                " quantity=" + std::to_string(tick.quantity) +
+            logger_->info("risk_halt_reducing_order_authorized order_id=" + incoming_order->order_id() +
+                " side=" + ::engine::to_string(incoming_order->side()) +
+                " quantity=" + std::to_string(incoming_order->quantity()) +
                 " current_position=" + std::to_string(risk_guard_.position()));
         }
         ::engine::MatchResult result;
