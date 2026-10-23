@@ -182,6 +182,45 @@ void test_drawdown_halts_at_exact_threshold_and_stays_latched()
     CHECK(guard.halt_diagnostics().equity == diagnostics.equity);
 }
 
+void test_halted_risk_guard_allows_only_bounded_reducing_orders()
+{
+    RiskGuard long_guard(RiskGuardConfig{100, 100000.0, 100.0, 10000.0, 10000.0});
+    long_guard.update_mark_price(100.0);
+    long_guard.record_trade("SIM", engine::Side::BUY, 10, 100.0);
+    long_guard.update_mark_price(90.0);
+    CHECK(long_guard.is_halted());
+
+    const auto reduce_long = long_guard.check_order(
+        *make_order("S-REDUCE", engine::Side::SELL, 90.0, 4));
+    CHECK(reduce_long.allowed);
+    CHECK(reduce_long.projected_position == 6);
+    CHECK(reduce_long.reason == "risk halt: risk-reducing order");
+
+    const auto reverse_long = long_guard.check_order(
+        *make_order("S-REVERSE", engine::Side::SELL, 90.0, 11));
+    CHECK(!reverse_long.allowed);
+    CHECK(reverse_long.reason == "risk halt active: max_drawdown");
+
+    const auto add_long = long_guard.check_order(
+        *make_order("B-ADD", engine::Side::BUY, 90.0, 1));
+    CHECK(!add_long.allowed);
+
+    RiskGuard short_guard(RiskGuardConfig{100, 100000.0, 100.0, 10000.0, 10000.0});
+    short_guard.update_mark_price(100.0);
+    short_guard.record_trade("SIM", engine::Side::SELL, 10, 100.0);
+    short_guard.update_mark_price(110.0);
+    CHECK(short_guard.is_halted());
+
+    const auto reduce_short = short_guard.check_order(
+        *make_order("B-COVER", engine::Side::BUY, 110.0, 10));
+    CHECK(reduce_short.allowed);
+    CHECK(reduce_short.projected_position == 0);
+
+    const auto reverse_short = short_guard.check_order(
+        *make_order("B-REVERSE", engine::Side::BUY, 110.0, 11));
+    CHECK(!reverse_short.allowed);
+}
+
 void test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover()
 {
     RiskGuard guard(RiskGuardConfig{100, 100000.0, 10000.0, 100.0, 10000.0});
@@ -582,6 +621,7 @@ int main()
     test_position_value_limit_below_at_and_above_boundary();
     test_order_larger_than_position_limit_is_rejected();
     test_realized_and_unrealized_pnl_when_reducing_and_reversing_position();
+    test_halted_risk_guard_allows_only_bounded_reducing_orders();
     test_drawdown_halts_at_exact_threshold_and_stays_latched();
     test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover();
     test_trade_trigger_captures_diagnostics();
@@ -596,6 +636,6 @@ int main()
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (21/21)\n";
+    std::cout << "RiskGuard tests passed (23/23)\n";
     return 0;
 }
