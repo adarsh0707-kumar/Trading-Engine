@@ -27,6 +27,7 @@ export function createLiveTradingState(
 
   let market: MarketState | null = null;
   let trades: Trade[] = [];
+  const seenTradeIds = new Set<string>();
 
   return {
     onMarketData(event: NormalizedMarketDataEvent): void {
@@ -41,6 +42,8 @@ export function createLiveTradingState(
 
     onTrade(event: NormalizedTradeEvent): void {
       const { payload } = event;
+      if (seenTradeIds.has(event.tradeId)) return;
+      seenTradeIds.add(event.tradeId);
 
       market = {
         symbol: payload.symbol,
