@@ -373,7 +373,11 @@ void test_state_restores_position_pnl_and_halt_after_restart()
         RiskGuard restored(config);
         CHECK(restored.is_halted());
         CHECK(restored.halt_reason() == "max_drawdown");
-        CHECK(!restored.halt_diagnostics().triggered);
+        CHECK(restored.halt_diagnostics().triggered);
+        CHECK(restored.halt_diagnostics().reason == "max_drawdown");
+        CHECK(restored.halt_diagnostics().timestamp_ms > 0);
+        CHECK(restored.halt_diagnostics().equity == 9900.0);
+        CHECK(restored.halt_diagnostics().drawdown == 100.0);
         CHECK(restored.position() == 10);
         CHECK(restored.equity() == 9900.0);
         CHECK(!restored.check_order(*make_order("B4", engine::Side::BUY, 90.0, 1)).allowed);
