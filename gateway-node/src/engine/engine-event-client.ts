@@ -382,6 +382,16 @@ export function createEngineEventClient(
           continue;
         }
 
+        if (message.type === "ERROR") {
+          const pending = pendingTradeHistories.get(message.requestId);
+          if (pending !== undefined) {
+            clearTimeout(pending.timer);
+            pendingTradeHistories.delete(message.requestId);
+            pending.reject(new Error(message.payload || "Engine request failed"));
+          }
+          continue;
+        }
+
         if (message.type !== "TRADE" && message.type !== "MARKET_DATA") {
           continue;
         }
