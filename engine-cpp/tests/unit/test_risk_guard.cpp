@@ -274,6 +274,12 @@ void test_simulated_halt_liquidity_is_non_crossing_and_uses_required_side()
     CHECK(long_liquidity->quantity() == 7);
     CHECK(long_liquidity->time_in_force() == ::engine::TimeInForce::GTC);
 
+    const auto capped_liquidity =
+        trading::engine_runtime::make_simulated_risk_halt_liquidity_order(
+            empty_book, 10, "SIM-LIQ-CAPPED", "SIM", 100, 100.0, 7);
+    CHECK(capped_liquidity != nullptr);
+    CHECK(capped_liquidity->quantity() == 10);
+
     const auto short_liquidity =
         trading::engine_runtime::make_simulated_risk_halt_liquidity_order(
             empty_book, -10, "SIM-LIQ-SHORT", "SIM", 5, 100.0, 2);
