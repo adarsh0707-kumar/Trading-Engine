@@ -522,13 +522,36 @@ class AnalyticsService:
         raise AssertionError("persistence retry loop exited unexpectedly")
 
     def _handle_connect(self) -> None:
-        """Handle a successful Gateway connection."""
+        """Handle a successful Gateway connection and restore its snapshot."""
         self.health_metrics.mark_engine_connected()
         logger.info(
             "gateway_connected host=%s port=%d",
             self.settings.gateway_host,
             self.settings.gateway_port,
         )
+
+        if self.repositories is None:
+            return
+
+        try:
+            with self._persistence_lock:
+                latest = self.repositories.analytics.get_latest()
+
+            if latest is None:
+                logger.info(
+                    "analytics_snapshot_replay_skipped reason=no_persisted_snapshot",
+                )
+                return
+
+            self.publisher.publish(latest)
+            logger.info(
+                "analytics_snapshot_replayed event_id=%s symbol=%s",
+                latest.event_id,
+                latest.symbol,
+            )
+        except Exception:
+            # A replay failure must not tear down the receiver or analytics service.
+            logger.exception("analytics_snapshot_replay_failed")
 
     def _handle_disconnect(self) -> None:
         """Handle Gateway disconnection."""
