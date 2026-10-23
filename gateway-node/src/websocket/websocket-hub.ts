@@ -337,7 +337,10 @@ export function createWebSocketHub(
       remove(client);
 
       if (client.socket.readyState === OPEN) {
+        // Do not let a peer that never completes the WebSocket close
+        // handshake keep Fastify shutdown (and test cleanup) hanging.
         client.socket.close(code, reason);
+        client.socket.terminate();
       }
     }
   };
