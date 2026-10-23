@@ -138,13 +138,25 @@ inline std::shared_ptr<::engine::Order> make_simulated_risk_halt_liquidity_order
         }
     }
 
+    const std::int64_t max_reducible =
+        position > 0
+            ? position
+            : (position == std::numeric_limits<std::int64_t>::min()
+                   ? std::numeric_limits<std::int64_t>::max()
+                   : -position);
+    const std::int64_t quantity = std::min(requested_quantity, max_reducible);
+    if (quantity <= 0)
+    {
+        return nullptr;
+    }
+
     return std::make_shared<::engine::Order>(
         order_id,
         symbol,
         side,
         ::engine::OrderType::LIMIT,
         price,
-        requested_quantity,
+        quantity,
         sequence,
         ::engine::TimeInForce::GTC);
 }
