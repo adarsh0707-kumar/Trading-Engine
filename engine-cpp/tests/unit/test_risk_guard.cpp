@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
+#include <sstream>
 #include <vector>
 
 using trading::engine_runtime::RiskGuard;
