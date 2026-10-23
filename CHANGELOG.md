@@ -11,7 +11,7 @@
 
 - Merged PR #156 (`180d033aaede7c06ac78f7a248f5e86cf5f65b23`): added risk-halt diagnostics and regression coverage for a halt triggered during trade-journal replay.
 - PR #156 CI completed with 22 successful checks, including Debug/Release C++ builds and engine tests.
-- Local runtime risk-state recovery remains **unverified**. Preserve snapshot/journal evidence; do not infer recovery from CI success or delete/reset persistent data.
+- The original snapshot-durability incident is closed and PR #162's deployed trade-history reconciliation was verified with read-only runtime evidence. Focused isolated validation of newly triggered halt-diagnostic persistence remains pending; do not infer that result from deployment health or CI success, and do not delete/reset persistent data.
 - Diagnosed and closed the risk-state snapshot recovery incident (2026-10-16 → 2026-10-18). A single 114-byte NUL `risk-state.snapshot` was produced by pre-`96d6867` `save_state()` losing durability before `rename` on Docker Desktop, then persisted for ~2 days, causing repeated fail-closed startup (`risk state is corrupt or incompatible; refusing startup`). The durability fix is present in the current running engine image (verified by binary string inspection: `snapshot replaced`, `risk-state directory`, `temporary risk-state`). At the time of the original incident investigation, the live snapshot was reported valid and internally consistent with the 17-record journal. See `docs/incident-2026-10-16-risk-snapshot-nul.md`.
 
 - Merged analytics PostgreSQL connection-recovery hardening in PR #138.
