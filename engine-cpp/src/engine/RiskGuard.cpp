@@ -49,6 +49,23 @@ std::uint64_t checksum(const std::string &text) {
 std::string side_name(::engine::Side side) {
     return side == ::engine::Side::BUY ? "BUY" : "SELL";
 }
+
+std::string json_escape(const std::string &value) {
+    std::string result;
+    for (const unsigned char c : value) {
+        switch (c) {
+        case '"': result += "\\\""; break;
+        case '\\': result += "\\\\"; break;
+        case '\n': result += "\\n"; break;
+        case '\r': result += "\\r"; break;
+        case '\t': result += "\\t"; break;
+        default:
+            if (c < 0x20) result += ' ';
+            else result += static_cast<char>(c);
+        }
+    }
+    return result;
+}
 } // namespace
 
 RiskGuard::RiskGuard(const RiskGuardConfig &config)
@@ -410,6 +427,76 @@ void RiskGuard::replay_trade_journal() {
     journal_sequence_ = last_sequence;
     synthetic_trade_sequence_ = last_sequence;
     trade_ids_ = std::move(trade_ids);
+}
+
+std::string RiskGuard::trade_history_json(std::size_t limit) const {
+    if (limit == 0) return "[]";
+    const std::string path_string = journal_path_for(config_);
+    if (path_string.empty() || !std::filesystem::exists(path_string)) return "[]";
+
+    struct JournalTrade {
+        std::string trade_id;
+        std::string symbol;
+        std::string side;
+        std::int64_t quantity;
+        double price;
+        std::int64_t timestamp_ms;
+        std::string taker_order_id;
+        std::string maker_order_id;
+    };
+    std::vector<JournalTrade> recent;
+    std::ifstream in(path_string);
+    if (!in) throw std::runtime_error("cannot read durable trade journal");
+
+    std::string line;
+    while (std::getline(in, line)) {
+        const auto split = line.rfind(' ');
+        if (line.empty() || split == std::string::npos)
+            throw std::runtime_error("durable trade journal record is malformed");
+        const std::string body = line.substr(0, split);
+        std::uint64_t recorded_checksum = 0;
+        try { recorded_checksum = std::stoull(line.substr(split + 1)); }
+        catch (...) { throw std::runtime_error("durable trade journal checksum is invalid"); }
+        if (recorded_checksum != checksum(body))
+            throw std::runtime_error("durable trade journal checksum mismatch");
+
+        std::istringstream record(body);
+        std::uint64_t sequence = 0;
+        JournalTrade trade{};
+        if (!(record >> sequence >> std::quoted(trade.trade_id) >>
+              std::quoted(trade.symbol) >> trade.side >> trade.quantity >>
+              trade.price >> trade.timestamp_ms >> std::quoted(trade.taker_order_id) >>
+              std::quoted(trade.maker_order_id)) ||
+            trade.trade_id.empty() || trade.symbol.empty() ||
+            (trade.side != "BUY" && trade.side != "SELL") ||
+            trade.quantity <= 0 || !std::isfinite(trade.price) ||
+            trade.price <= 0 || trade.timestamp_ms < 0)
+            throw std::runtime_error("durable trade journal record is invalid");
+        std::string extra;
+        if (record >> extra)
+            throw std::runtime_error("durable trade journal record has trailing data");
+        recent.push_back(std::move(trade));
+        if (recent.size() > limit) recent.erase(recent.begin());
+    }
+    if (!in.eof()) throw std::runtime_error("failed while reading durable trade journal");
+
+    std::ostringstream out;
+    out << '[';
+    for (std::size_t i = 0; i < recent.size(); ++i) {
+        if (i) out << ',';
+        const auto &trade = recent[i];
+        out << "{\\"trade_id\\":\\"" << json_escape(trade.trade_id)
+            << "\\",\\"symbol\\":\\"" << json_escape(trade.symbol)
+            << "\\",\\"taker_side\\":\\"" << trade.side
+            << "\\",\\"quantity\\":" << trade.quantity
+            << ",\\"price\\":" << std::setprecision(std::numeric_limits<double>::max_digits10) << trade.price
+            << ",\\"timestamp_ms\\":" << trade.timestamp_ms
+            << ",\\"taker_order_id\\":\\"" << json_escape(trade.taker_order_id)
+            << "\\",\\"maker_order_id\\":\\"" << json_escape(trade.maker_order_id)
+            << "\\"}";
+    }
+    out << ']';
+    return out.str();
 }
 
 RiskDecision RiskGuard::check_order(const ::engine::Order &order) const {
