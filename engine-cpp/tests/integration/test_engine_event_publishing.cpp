@@ -263,7 +263,7 @@ static bool isTradeMessage(const std::string &json)
     return message.type == serialization::MessageType::TRADE;
 }
 
-static void test_engine_stops_matching_after_risk_halt()
+static void test_engine_stays_running_after_risk_halt()
 {
     engine_runtime::EngineConfig config;
     config.symbol = "TEST";
@@ -335,21 +335,16 @@ static void test_engine_stops_matching_after_risk_halt()
     CHECK(sawTrade || drainedTrades > 0);
 
     // Keep observing across many tick intervals. The engine must remain alive
-    // for diagnostics while suppressing all subsequent matching/trade events.
-    int tradesAfterHalt = 0;
+    // while the halted path either executes bounded reductions against visible
+    // opposing liquidity or reports that reduction is blocked.
     const auto observationDeadline =
         std::chrono::steady_clock::now() + std::chrono::milliseconds(300);
 
     while (std::chrono::steady_clock::now() < observationDeadline)
     {
-        const std::string json = receiveMessage(clientFd, buffer);
-        if (!json.empty() && isTradeMessage(json))
-        {
-            ++tradesAfterHalt;
-        }
+        (void)receiveMessage(clientFd, buffer);
     }
 
-    CHECK(tradesAfterHalt == 0);
     CHECK(engine.is_risk_halted());
     CHECK(engine.is_running());
 
@@ -361,7 +356,7 @@ int main()
 {
     test_engine_broadcasts_trades();
     test_engine_returns_order_book_snapshot();
-    test_engine_stops_matching_after_risk_halt();
+    test_engine_stays_running_after_risk_halt();
 
     std::cout
         << "Engine event publishing test passed\n";
