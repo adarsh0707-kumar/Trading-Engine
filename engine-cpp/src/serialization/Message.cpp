@@ -36,6 +36,9 @@ std::string messageTypeToString(MessageType type)
     case MessageType::BOOK_SNAPSHOT:
         return "BOOK_SNAPSHOT";
 
+    case MessageType::TRADE_HISTORY:
+        return "TRADE_HISTORY";
+
     case MessageType::ERROR:
         return "ERROR";
 
@@ -78,6 +81,11 @@ MessageType messageTypeFromString(const std::string &value)
     if (value == "BOOK_SNAPSHOT")
     {
         return MessageType::BOOK_SNAPSHOT;
+    }
+
+    if (value == "TRADE_HISTORY")
+    {
+        return MessageType::TRADE_HISTORY;
     }
 
     if (value == "ERROR")
