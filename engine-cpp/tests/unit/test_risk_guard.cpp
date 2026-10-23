@@ -13,6 +13,8 @@
 #include <stdexcept>
 #include <string>
 #include <system_error>
+#include <sstream>
+#include <vector>
 
 using trading::engine_runtime::RiskGuard;
 using trading::engine_runtime::RiskGuardConfig;
@@ -373,7 +375,11 @@ void test_state_restores_position_pnl_and_halt_after_restart()
         RiskGuard restored(config);
         CHECK(restored.is_halted());
         CHECK(restored.halt_reason() == "max_drawdown");
-        CHECK(!restored.halt_diagnostics().triggered);
+        CHECK(restored.halt_diagnostics().triggered);
+        CHECK(restored.halt_diagnostics().reason == "max_drawdown");
+        CHECK(restored.halt_diagnostics().timestamp_ms > 0);
+        CHECK(restored.halt_diagnostics().equity == 9900.0);
+        CHECK(restored.halt_diagnostics().drawdown == 100.0);
         CHECK(restored.position() == 10);
         CHECK(restored.equity() == 9900.0);
         CHECK(!restored.check_order(*make_order("B4", engine::Side::BUY, 90.0, 1)).allowed);
@@ -530,11 +536,19 @@ void test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay()
         std::string state;
         std::getline(input, state);
         input.close();
-        const auto last_space = state.rfind(' ');
-        CHECK(last_space != std::string::npos);
-        state.replace(last_space + 1, std::string::npos, "2");
+        std::istringstream input_state(state);
+        std::vector<std::string> fields;
+        std::string field;
+        while (input_state >> field) fields.push_back(field);
+        CHECK(fields.size() >= 11);
+        fields[10] = "2"; // journal sequence remains field 11 as snapshot versions evolve
+        std::ostringstream updated_state;
+        for (std::size_t index = 0; index < fields.size(); ++index) {
+            if (index != 0) updated_state << ' ';
+            updated_state << fields[index];
+        }
         std::ofstream output(path, std::ios::trunc);
-        output << state << '\n';
+        output << updated_state.str() << '\n';
     }
 
     {
