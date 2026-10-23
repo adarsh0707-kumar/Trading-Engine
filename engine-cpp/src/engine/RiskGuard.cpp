@@ -415,11 +415,35 @@ void RiskGuard::replay_trade_journal() {
 RiskDecision RiskGuard::check_order(const ::engine::Order &order) const {
     RiskDecision decision;
     decision.projected_position = position_;
-    if (halted_) { decision.reason = "risk halt active: " + halt_reason_; return decision; }
     if (!order.is_valid() || !order.is_active() || !std::isfinite(order.price())) {
         decision.reason = "order is invalid or inactive";
         return decision;
     }
+
+    if (halted_) {
+        // During a halt, allow only orders that strictly reduce exposure without
+        // crossing through flat into a position on the opposite side.
+        const bool reduces_long = position_ > 0 &&
+            order.side() == ::engine::Side::SELL &&
+            order.quantity() <= position_;
+        const bool reduces_short = position_ < 0 &&
+            order.side() == ::engine::Side::BUY &&
+            order.quantity() <= -position_;
+        if (!reduces_long && !reduces_short) {
+            decision.reason = "risk halt active: " + halt_reason_;
+            return decision;
+        }
+
+        decision.projected_position = reduces_long
+            ? position_ - order.quantity()
+            : position_ + order.quantity();
+        decision.projected_position_value =
+            std::abs(static_cast<double>(decision.projected_position)) * order.price();
+        decision.allowed = true;
+        decision.reason = "risk halt: risk-reducing order";
+        return decision;
+    }
+
     const std::int64_t quantity = order.side() == ::engine::Side::BUY ? order.quantity() : -order.quantity();
     const long double projected = static_cast<long double>(position_) + quantity;
     if (projected > config_.max_position || projected < -config_.max_position) {

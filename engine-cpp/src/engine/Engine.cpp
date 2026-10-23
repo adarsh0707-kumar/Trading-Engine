@@ -81,6 +81,22 @@ void Engine::run_loop() {
         if (!incoming_order->is_valid()) { logger_->warn("Skipped invalid order: "+tick.order_id); continue; }
         risk_guard_.update_mark_price(tick.price);
 
+        const bool risk_halted = risk_guard_.is_halted();
+        if (risk_halted) {
+            risk_halted_.store(true);
+            if (!risk_halt_logged) {
+                log_risk_halt("risk_halt_active");
+                risk_halt_logged=true;
+            }
+
+            // A halted engine may submit only a bounded reducing order. IOC
+            // prevents any unfilled remainder from resting in the book.
+            incoming_order = std::make_shared<::engine::Order>(
+                tick.order_id, tick.symbol, tick.side, tick.order_type,
+                tick.price, tick.quantity, static_cast<std::int64_t>(tick.sequence),
+                ::engine::TimeInForce::IOC);
+        }
+
         // Market data is independent of order matching and must remain available
         // while risk controls halt trading.
         serialization::Message market_message;
@@ -93,14 +109,6 @@ void Engine::run_loop() {
             << ",\"sequence\":" << tick.sequence << "}";
         market_message.payload = market_payload.str();
         server_->broadcast(market_message);
-        if (risk_guard_.is_halted()) {
-            risk_halted_.store(true);
-            if (!risk_halt_logged) {
-                log_risk_halt("risk_halt_active");
-                risk_halt_logged=true;
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(config_.tick_interval_ms)); continue;
-        }
         const RiskDecision decision=risk_guard_.check_order(*incoming_order);
         if (!decision.allowed) {
             incoming_order->reject();
@@ -108,6 +116,12 @@ void Engine::run_loop() {
                 " side="+::engine::to_string(tick.side)+" quantity="+std::to_string(tick.quantity)+
                 " current_position="+std::to_string(risk_guard_.position())+" reason="+decision.reason);
             std::this_thread::sleep_for(std::chrono::milliseconds(config_.tick_interval_ms)); continue;
+        }
+        if (risk_halted) {
+            logger_->info("risk_halt_reducing_order_allowed order_id=" + tick.order_id +
+                " side=" + ::engine::to_string(tick.side) +
+                " quantity=" + std::to_string(tick.quantity) +
+                " current_position=" + std::to_string(risk_guard_.position()));
         }
         ::engine::MatchResult result;
         try { result=state_->match(incoming_order); }
