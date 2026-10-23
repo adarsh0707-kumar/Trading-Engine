@@ -114,11 +114,70 @@ void Engine::run_loop() {
                 : false;
 
             if (!has_opposing_liquidity) {
+                if (position == 0) {
+                    if (!risk_halt_reduction_blocked_logged) {
+                        logger_->warn(
+                            "risk_halt_reduction_blocked reason=flat_position"
+                            " current_position=0");
+                        risk_halt_reduction_blocked_logged = true;
+                    }
+                    std::this_thread::sleep_for(
+                        std::chrono::milliseconds(config_.tick_interval_ms));
+                    continue;
+                }
+
+                // This mock engine has no external counterparties. Seed one
+                // non-crossing GTC maker order on the required side so the
+                // normal matching engine can execute a real simulated IOC
+                // reduction. The seed itself must not generate a trade.
+                auto simulated_liquidity =
+                    make_simulated_risk_halt_liquidity_order(
+                        book,
+                        position,
+                        "SIM-LIQ-" + tick.order_id,
+                        tick.symbol,
+                        tick.quantity,
+                        tick.price,
+                        static_cast<std::int64_t>(tick.sequence));
+
+                if (!simulated_liquidity) {
+                    if (!risk_halt_reduction_blocked_logged) {
+                        logger_->warn(
+                            "risk_halt_reduction_blocked reason=simulated_liquidity_unavailable"
+                            " current_position=" + std::to_string(position));
+                        risk_halt_reduction_blocked_logged = true;
+                    }
+                    std::this_thread::sleep_for(
+                        std::chrono::milliseconds(config_.tick_interval_ms));
+                    continue;
+                }
+
+                const auto seed_result = state_->match(simulated_liquidity);
+                if (!seed_result.trades.empty()) {
+                    // The helper prices the seed away from the opposing top
+                    // level, so any match here signals a violated book invariant.
+                    logger_->error(
+                        "risk_halt_simulated_liquidity_seed_unexpected_match"
+                        " current_position=" + std::to_string(position));
+                    running_.store(false);
+                    continue;
+                }
+                logger_->info(
+                    "risk_halt_simulated_liquidity_seeded side=" +
+                    ::engine::to_string(simulated_liquidity->side()) +
+                    " price=" + std::to_string(simulated_liquidity->price()) +
+                    " quantity=" + std::to_string(simulated_liquidity->quantity()));
+            }
+
+            const ::engine::BookSnapshot reduction_book = state_->snapshot();
+            const bool reduction_liquidity_available =
+                position > 0 ? !reduction_book.bids.empty()
+                : position < 0 ? !reduction_book.asks.empty()
+                : false;
+            if (!reduction_liquidity_available) {
                 if (!risk_halt_reduction_blocked_logged) {
-                    const std::string reason =
-                        position == 0 ? "flat_position" : "opposite_book_empty";
                     logger_->warn(
-                        "risk_halt_reduction_blocked reason=" + reason +
+                        "risk_halt_reduction_blocked reason=opposite_book_empty"
                         " current_position=" + std::to_string(position));
                     risk_halt_reduction_blocked_logged = true;
                 }
@@ -128,7 +187,7 @@ void Engine::run_loop() {
             }
 
             incoming_order = make_risk_reduction_order(
-                book,
+                reduction_book,
                 position,
                 tick.order_id,
                 tick.symbol,

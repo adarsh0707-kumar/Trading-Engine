@@ -262,6 +262,58 @@ void test_risk_reduction_order_is_unavailable_without_opposing_liquidity()
         book, 0, "FLAT", "SIM", 5, 3));
 }
 
+void test_simulated_halt_liquidity_is_non_crossing_and_uses_required_side()
+{
+    ::engine::BookSnapshot empty_book;
+    const auto long_liquidity =
+        trading::engine_runtime::make_simulated_risk_halt_liquidity_order(
+            empty_book, 10, "SIM-LIQ-LONG", "SIM", 7, 100.0, 1);
+    CHECK(long_liquidity != nullptr);
+    CHECK(long_liquidity->side() == ::engine::Side::BUY);
+    CHECK(long_liquidity->price() == 100.0);
+    CHECK(long_liquidity->quantity() == 7);
+    CHECK(long_liquidity->time_in_force() == ::engine::TimeInForce::GTC);
+
+    const auto capped_liquidity =
+        trading::engine_runtime::make_simulated_risk_halt_liquidity_order(
+            empty_book, 10, "SIM-LIQ-CAPPED", "SIM", 100, 100.0, 7);
+    CHECK(capped_liquidity != nullptr);
+    CHECK(capped_liquidity->quantity() == 10);
+
+    const auto short_liquidity =
+        trading::engine_runtime::make_simulated_risk_halt_liquidity_order(
+            empty_book, -10, "SIM-LIQ-SHORT", "SIM", 5, 100.0, 2);
+    CHECK(short_liquidity != nullptr);
+    CHECK(short_liquidity->side() == ::engine::Side::SELL);
+    CHECK(short_liquidity->price() == 100.0);
+    CHECK(short_liquidity->time_in_force() == ::engine::TimeInForce::GTC);
+
+    ::engine::BookSnapshot with_asks;
+    with_asks.asks = {{101.0, 3}};
+    const auto non_crossing_bid =
+        trading::engine_runtime::make_simulated_risk_halt_liquidity_order(
+            with_asks, 10, "SIM-LIQ-BID", "SIM", 4, 100.0, 3);
+    CHECK(non_crossing_bid != nullptr);
+    CHECK(non_crossing_bid->side() == ::engine::Side::BUY);
+    CHECK(non_crossing_bid->price() == 100.99);
+    CHECK(non_crossing_bid->price() < with_asks.asks.front().price);
+
+    ::engine::BookSnapshot with_bids;
+    with_bids.bids = {{100.0, 3}};
+    const auto non_crossing_ask =
+        trading::engine_runtime::make_simulated_risk_halt_liquidity_order(
+            with_bids, -10, "SIM-LIQ-ASK", "SIM", 4, 101.0, 4);
+    CHECK(non_crossing_ask != nullptr);
+    CHECK(non_crossing_ask->side() == ::engine::Side::SELL);
+    CHECK(non_crossing_ask->price() == 100.01);
+    CHECK(non_crossing_ask->price() > with_bids.bids.front().price);
+
+    CHECK(!trading::engine_runtime::make_simulated_risk_halt_liquidity_order(
+        empty_book, 0, "SIM-LIQ-FLAT", "SIM", 1, 100.0, 5));
+    CHECK(!trading::engine_runtime::make_simulated_risk_halt_liquidity_order(
+        empty_book, 10, "SIM-LIQ-INVALID", "SIM", 1, 0.0, 6));
+}
+
 void test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover()
 {
     RiskGuard guard(RiskGuardConfig{100, 100000.0, 10000.0, 100.0, 10000.0});
@@ -665,6 +717,7 @@ int main()
     test_halted_risk_guard_allows_only_bounded_reducing_orders();
     test_risk_reduction_order_uses_opposing_top_level_and_caps_quantity();
     test_risk_reduction_order_is_unavailable_without_opposing_liquidity();
+    test_simulated_halt_liquidity_is_non_crossing_and_uses_required_side();
     test_drawdown_halts_at_exact_threshold_and_stays_latched();
     test_daily_loss_halts_at_exact_threshold_and_stays_latched_after_utc_rollover();
     test_trade_trigger_captures_diagnostics();
@@ -679,6 +732,6 @@ int main()
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
-    std::cout << "RiskGuard tests passed (25/25)\n";
+    std::cout << "RiskGuard tests passed (26/26)\n";
     return 0;
 }
