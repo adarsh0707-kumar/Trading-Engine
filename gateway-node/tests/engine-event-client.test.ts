@@ -167,7 +167,7 @@ describe("engine event client", () => {
         payload: "25",
       });
       expect(response.payload).toBe("[]");
-      expect(response.requestId).toBe(request?.request_id);
+      expect(response.requestId).toBe(request?.request_id as string);
     } finally {
       client.stop();
     }
