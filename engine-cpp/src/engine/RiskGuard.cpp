@@ -29,7 +29,7 @@
 
 namespace trading { namespace engine_runtime {
 namespace {
-constexpr int STATE_VERSION = 2;
+constexpr int STATE_VERSION = 3;
 
 std::string journal_path_for(const RiskGuardConfig &config) {
     if (!config.trade_journal_file_path.empty()) return config.trade_journal_file_path;
@@ -80,14 +80,31 @@ void RiskGuard::load_state() {
     std::string reason;
     std::uint64_t sequence = 0;
     if (!(in >> version >> position >> average >> realized >> mark >> peak >> day_start >> day >> halted >> reason) ||
-        (version != 1 && version != STATE_VERSION) || (halted != 0 && halted != 1) ||
+        (version != 1 && version != 2 && version != STATE_VERSION) || (halted != 0 && halted != 1) ||
         position > config_.max_position || position < -config_.max_position ||
         !std::isfinite(average) || average < 0 || !std::isfinite(realized) ||
         !std::isfinite(mark) || mark < 0 || !std::isfinite(peak) || peak <= 0 ||
         !std::isfinite(day_start) || day_start <= 0 || day < 0 || (halted == 1 && reason == "-"))
         throw std::runtime_error("risk state is corrupt or incompatible; refusing startup");
-    if (version == STATE_VERSION && !(in >> sequence))
+    if (version >= 2 && !(in >> sequence))
         throw std::runtime_error("risk state is missing its journal sequence; refusing startup");
+
+    RiskHaltDiagnostics diagnostics;
+    if (version >= 3) {
+        int triggered = 0;
+        std::string diagnostic_reason;
+        if (!(in >> triggered >> diagnostic_reason >> diagnostics.timestamp_ms >>
+              diagnostics.equity >> diagnostics.drawdown >> diagnostics.daily_loss) ||
+            (triggered != 0 && triggered != 1) ||
+            !std::isfinite(diagnostics.equity) ||
+            !std::isfinite(diagnostics.drawdown) || diagnostics.drawdown < 0 ||
+            !std::isfinite(diagnostics.daily_loss) || diagnostics.daily_loss < 0 ||
+            diagnostics.timestamp_ms < 0 ||
+            (triggered == 1 && (diagnostic_reason == "-" || diagnostics.timestamp_ms <= 0)))
+            throw std::runtime_error("risk state halt diagnostics are corrupt; refusing startup");
+        diagnostics.triggered = triggered == 1;
+        diagnostics.reason = diagnostic_reason == "-" ? "" : diagnostic_reason;
+    }
     std::string extra;
     if (in >> extra) throw std::runtime_error("risk state has unexpected trailing data; refusing startup");
 
@@ -101,6 +118,7 @@ void RiskGuard::load_state() {
     halted_ = halted == 1;
     halt_reason_ = reason == "-" ? "" : reason;
     journal_sequence_ = sequence;
+    halt_diagnostics_ = std::move(diagnostics);
 }
 
 void RiskGuard::save_state() const {
@@ -117,7 +135,13 @@ void RiskGuard::save_state() const {
              << peak_equity_ << ' ' << day_start_equity_ << ' ' << utc_day_ << ' '
              << (halted_ ? 1 : 0) << ' '
              << (halt_reason_.empty() ? "-" : halt_reason_) << ' '
-             << journal_sequence_ << '\n';
+             << journal_sequence_ << ' '
+             << (halt_diagnostics_.triggered ? 1 : 0) << ' '
+             << (halt_diagnostics_.reason.empty() ? "-" : halt_diagnostics_.reason) << ' '
+             << halt_diagnostics_.timestamp_ms << ' '
+             << halt_diagnostics_.equity << ' '
+             << halt_diagnostics_.drawdown << ' '
+             << halt_diagnostics_.daily_loss << '\n';
 
     const std::string data = snapshot.str();
 
