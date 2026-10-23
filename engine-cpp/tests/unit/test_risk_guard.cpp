@@ -676,7 +676,7 @@ void test_trade_history_returns_latest_bounded_journal_records()
     const auto all = guard.trade_history_json(100);
     CHECK(all.find("trade-1") != std::string::npos);
     CHECK(all.find("trade-2") != std::string::npos);
-    CHECK(all.find("\\\"timestamp_ms\\\"") != std::string::npos);
+    CHECK(all.find("\"timestamp_ms\"") != std::string::npos);
 }
 
 void test_corrupt_trade_journal_fails_closed()
