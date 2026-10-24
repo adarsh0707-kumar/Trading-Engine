@@ -1,6 +1,6 @@
 # Risk-Halt Diagnostics and Trade-History Recovery
 
-**Status as of 2026-10-23:** PRs #161 and #162 are merged. PR #162 is deployed in the local Docker runtime and its trade-history reconciliation path has been observed working. Focused isolated validation of risk-halt diagnostic persistence across restart is still pending. Phase 5.14 remains in progress.
+**Status as of 2026-10-24:** PRs #161 and #162 are merged. PR #162 is deployed in the local Docker runtime and its trade-history reconciliation path has been observed working. The isolated restart-persistence regression test passes against disposable temporary state. The existing live legacy halt still has unavailable trigger diagnostics, and Phase 5.14 remains in progress.
 
 > **Scope:** This is an educational trading simulation, not a live-exchange trading system.
 
@@ -27,7 +27,18 @@ After PR #162 was deployed from `main` at `bbf84fa`:
 - Gateway logs recorded `engine_trade_history_reconciled` with `recordCount: 23` and `outcome: "accepted"`.
 - The durable journal hash remained unchanged during deployment verification.
 
-The existing risk snapshot was version 3 and still represented a latched `max_drawdown` halt with default/unavailable diagnostic fields. That is expected for a halt created before its original trigger diagnostics were persisted. This does **not** prove that a newly triggered halt's diagnostics survive restart; that behavior needs isolated test evidence.
+The existing risk snapshot was version 3 and still represented a latched `max_drawdown` halt with default/unavailable diagnostic fields. That is expected for a halt created before its original trigger diagnostics were persisted. This does **not** prove that the live halt can recover missing historical values.
+
+## Isolated restart-persistence regression test recorded on 2026-10-24
+
+The focused test `test_state_restores_position_pnl_and_halt_after_restart` was compiled from a temporary copy of the test source and run by itself against the existing local `libengine_core.a`. The temporary copy used a unique directory under `/tmp` for its snapshot and journal, and its test runner invoked only this regression test.
+
+- Result: **PASS** — output: `Isolated restart-persistence test passed`.
+- The test exercised restoring a newly triggered `max_drawdown` halt, its diagnostic reason, positive trigger timestamp, trigger equity and drawdown, and the position/equity state.
+- The test also exercised denial of resume without authorization and successful authorization against its own isolated fixture only.
+- The repository remained clean at `b647997`; all five Docker Compose services remained healthy after the test.
+- Compilation emitted unused-function warnings because the temporary executable intentionally invoked only one test. No test failure occurred.
+- This is isolated regression evidence, not a live-volume restart test. It does not recover or validate diagnostics for the pre-existing live halt.
 
 ## Safe validation procedure
 
@@ -35,9 +46,9 @@ Run the risk tests against the repository's test harness and disposable temporar
 
 1. Confirm the repository is on the expected `main` commit and inspect the C++ test target names.
 2. Run the focused risk-guard test target, including the regression test that journal replay crossing a risk threshold restores the halt without fabricating live diagnostics.
-3. Run the test that triggers a new max-drawdown halt, destroys/recreates only its temporary `RiskGuard` instance, and asserts that the original reason, positive timestamp, trigger equity, and drawdown are restored.
+3. The isolated restart-persistence regression described above has passed using a temporary test-source copy and temporary snapshot/journal paths. Keep this distinct from live-state validation.
 4. Verify legacy version 1 and version 2 snapshot compatibility and version 3 malformed-diagnostic rejection where covered by tests.
-5. Record the exact test command, target, and pass/fail output. If coverage is missing or fails, report that before making code changes.
+5. Record exact commands and pass/fail output for each remaining check. If coverage is missing or fails, report that before making code changes.
 
 Example read-only repository inspection from the project root:
 
