@@ -8,6 +8,7 @@
 #include <iostream>
 #include <thread>
 
+#include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -62,9 +63,20 @@ bool ClientConnection::sendMessage(
     const std::vector<std::uint8_t> frame =
         Protocol::frame(json);
 
-    std::lock_guard<std::mutex> lock(sendMutex_);
+    constexpr auto sendTimeout = std::chrono::milliseconds(500);
+    const auto deadline =
+        std::chrono::steady_clock::now() + sendTimeout;
 
-    return sendAll(frame);
+    std::unique_lock<std::timed_mutex> lock(
+        sendMutex_,
+        std::defer_lock);
+
+    if (!lock.try_lock_until(deadline))
+    {
+        return false;
+    }
+
+    return sendAll(frame, deadline);
 }
 
 void ClientConnection::start(
@@ -231,20 +243,74 @@ void ClientConnection::receiveLoop()
 }
 
 bool ClientConnection::sendAll(
-    const std::vector<std::uint8_t> &data)
+    const std::vector<std::uint8_t> &data,
+    std::chrono::steady_clock::time_point deadline)
 {
     std::size_t totalSent = 0;
 
     while (totalSent < data.size())
     {
+        if (std::chrono::steady_clock::now() >= deadline)
+        {
+            return false;
+        }
+
         const ssize_t sent =
             ::send(
                 socketFd_,
                 data.data() + totalSent,
                 data.size() - totalSent,
-                MSG_NOSIGNAL);
+                MSG_DONTWAIT | MSG_NOSIGNAL);
 
-        if (sent < 0)
+        if (sent > 0)
+        {
+            totalSent +=
+                static_cast<std::size_t>(sent);
+            continue;
+        }
+
+        if (sent == 0)
+        {
+            return false;
+        }
+
+        if (errno == EINTR)
+        {
+            continue;
+        }
+
+        if (errno != EAGAIN && errno != EWOULDBLOCK)
+        {
+            return false;
+        }
+
+        const auto remaining =
+            deadline - std::chrono::steady_clock::now();
+
+        if (remaining <= std::chrono::steady_clock::duration::zero())
+        {
+            return false;
+        }
+
+        auto timeout =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                remaining);
+
+        int timeoutMs = static_cast<int>(timeout.count());
+
+        if (timeoutMs == 0)
+        {
+            timeoutMs = 1;
+        }
+
+        pollfd descriptor{};
+        descriptor.fd = socketFd_;
+        descriptor.events = POLLOUT;
+
+        const int ready =
+            ::poll(&descriptor, 1, timeoutMs);
+
+        if (ready < 0)
         {
             if (errno == EINTR)
             {
@@ -254,13 +320,11 @@ bool ClientConnection::sendAll(
             return false;
         }
 
-        if (sent == 0)
+        if (ready == 0 ||
+            (descriptor.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0)
         {
             return false;
         }
-
-        totalSent +=
-            static_cast<std::size_t>(sent);
     }
 
     return true;
