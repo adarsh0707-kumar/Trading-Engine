@@ -306,7 +306,7 @@ int main()
     test_multiple_slow_client_sends_are_bounded();
 
     std::cout
-        << "All connection heartbeat tests passed\\n";
+        << "All connection heartbeat tests passed\n";
 
     return 0;
 }
