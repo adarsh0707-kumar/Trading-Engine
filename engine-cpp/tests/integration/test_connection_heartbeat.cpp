@@ -198,10 +198,53 @@ static void test_heartbeat_timeout_disconnects()
     server.stop();
 }
 
+static void test_slow_client_send_is_bounded()
+{
+    network::SocketServer server(
+        0,
+        10000,
+        30);
+
+    CHECK(server.start());
+
+    const int clientFd =
+        connectToServer(server.port());
+
+    const std::string hello =
+        receiveMessage(clientFd, 100);
+
+    CHECK(!hello.empty());
+
+    serialization::Message largeMessage;
+    largeMessage.type =
+        serialization::MessageType::TRADE;
+    largeMessage.requestId = "slow-client-send";
+    largeMessage.payload =
+        std::string(900 * 1024, 'x');
+
+    const auto start =
+        std::chrono::steady_clock::now();
+
+    for (int i = 0; i < 32 && server.clientCount() != 0; ++i)
+    {
+        server.broadcast(largeMessage);
+    }
+
+    const auto elapsed =
+        std::chrono::steady_clock::now() - start;
+
+    CHECK(server.clientCount() == 0);
+    CHECK(elapsed < std::chrono::seconds(3));
+
+    ::close(clientFd);
+    server.stop();
+}
+
 int main()
 {
     test_heartbeat_sent_and_acked();
     test_heartbeat_timeout_disconnects();
+    test_slow_client_send_is_bounded();
 
     std::cout
         << "All connection heartbeat tests passed\n";
