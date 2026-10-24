@@ -240,14 +240,73 @@ static void test_slow_client_send_is_bounded()
     server.stop();
 }
 
+static void test_multiple_slow_client_sends_are_bounded()
+{
+    constexpr std::size_t slowClientCount = 4;
+
+    network::SocketServer server(
+        0,
+        10000,
+        30);
+
+    CHECK(server.start());
+
+    std::vector<int> clientFds;
+    clientFds.reserve(slowClientCount);
+
+    for (std::size_t i = 0; i < slowClientCount; ++i)
+    {
+        const int clientFd =
+            connectToServer(server.port());
+
+        const std::string hello =
+            receiveMessage(clientFd, 100);
+
+        CHECK(!hello.empty());
+
+        clientFds.push_back(clientFd);
+    }
+
+    CHECK(server.clientCount() == slowClientCount);
+
+    serialization::Message largeMessage;
+    largeMessage.type =
+        serialization::MessageType::TRADE;
+    largeMessage.requestId = "multiple-slow-clients";
+    largeMessage.payload =
+        std::string(900 * 1024, 'x');
+
+    const auto start =
+        std::chrono::steady_clock::now();
+
+    for (int i = 0; i < 32 && server.clientCount() != 0; ++i)
+    {
+        server.broadcast(largeMessage);
+    }
+
+    const auto elapsed =
+        std::chrono::steady_clock::now() - start;
+
+    CHECK(server.clientCount() == 0);
+    CHECK(elapsed < std::chrono::seconds(5));
+
+    for (const int clientFd : clientFds)
+    {
+        ::close(clientFd);
+    }
+
+    server.stop();
+}
+
 int main()
 {
     test_heartbeat_sent_and_acked();
     test_heartbeat_timeout_disconnects();
     test_slow_client_send_is_bounded();
+    test_multiple_slow_client_sends_are_bounded();
 
     std::cout
-        << "All connection heartbeat tests passed\n";
+        << "All connection heartbeat tests passed\\n";
 
     return 0;
 }
