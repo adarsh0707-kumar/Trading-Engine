@@ -172,19 +172,38 @@ void SocketServer::setMessageHandler(MessageHandler handler)
 void SocketServer::broadcast(
     const serialization::Message &message)
 {
-    std::lock_guard<std::mutex> lock(
-        clientsMutex_);
+    std::vector<std::shared_ptr<ClientConnection>> clients;
 
-    for (auto it = clients_.begin();
-         it != clients_.end();)
     {
-        if (!it->second->sendMessage(message))
+        std::lock_guard<std::mutex> lock(
+            clientsMutex_);
+
+        clients.reserve(clients_.size());
+
+        for (const auto &[id, client] : clients_)
         {
-            it = clients_.erase(it);
+            (void)id;
+            clients.push_back(client);
         }
-        else
+    }
+
+    for (const auto &client : clients)
+    {
+        if (client->sendMessage(message))
         {
-            ++it;
+            continue;
+        }
+
+        client->stop();
+
+        std::lock_guard<std::mutex> lock(
+            clientsMutex_);
+
+        const auto it = clients_.find(client->id());
+
+        if (it != clients_.end() && it->second == client)
+        {
+            clients_.erase(it);
         }
     }
 }
@@ -292,52 +311,80 @@ void SocketServer::heartbeatLoop()
             break;
         }
 
+        serialization::Message heartbeat;
+
+        heartbeat.type =
+            serialization::MessageType::HEARTBEAT;
+
+        heartbeat.requestId =
+            "heartbeat";
+
+        heartbeat.timestamp =
+            utils::Time::iso8601();
+
+        heartbeat.payload = "PING";
+
+        std::vector<std::shared_ptr<ClientConnection>> clients;
+
         {
             std::lock_guard<std::mutex> lock(
                 clientsMutex_);
 
-            serialization::Message heartbeat;
+            clients.reserve(clients_.size());
 
-            heartbeat.type =
-                serialization::MessageType::HEARTBEAT;
-
-            heartbeat.requestId =
-                "heartbeat";
-
-            heartbeat.timestamp =
-                utils::Time::iso8601();
-
-            heartbeat.payload = "PING";
-
-            for (auto &[id, client] : clients_)
+            for (const auto &[id, client] : clients_)
             {
                 (void)id;
-
-                client->sendMessage(heartbeat);
+                clients.push_back(client);
             }
         }
 
+        for (const auto &client : clients)
+        {
+            if (client->sendMessage(heartbeat))
+            {
+                continue;
+            }
+
+            client->stop();
+
+            std::lock_guard<std::mutex> lock(
+                clientsMutex_);
+
+            const auto it = clients_.find(client->id());
+
+            if (it != clients_.end() && it->second == client)
+            {
+                clients_.erase(it);
+            }
+        }
+
+        std::vector<std::shared_ptr<ClientConnection>> timedout;
+
         {
             std::lock_guard<std::mutex> lock(
                 clientsMutex_);
 
-            std::vector<std::uint64_t> timedout;
-
-            for (auto &[id, client] : clients_)
+            for (auto it = clients_.begin();
+                 it != clients_.end();)
             {
-                if (client->isHeartbeatTimeout(
+                if (it->second->isHeartbeatTimeout(
                         std::chrono::seconds(
                             heartbeatTimeoutSec_)))
                 {
-                    timedout.push_back(id);
+                    timedout.push_back(it->second);
+                    it = clients_.erase(it);
+                }
+                else
+                {
+                    ++it;
                 }
             }
+        }
 
-            for (std::uint64_t id : timedout)
-            {
-                clients_[id]->stop();
-                clients_.erase(id);
-            }
+        for (const auto &client : timedout)
+        {
+            client->stop();
         }
     }
 }
