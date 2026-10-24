@@ -97,7 +97,7 @@ The project is intended to demonstrate:
 - Phase 5.11 — Dashboard production polish: ✅ Complete for current milestone scope
 - Phase 5.12 — Halted-State Market Data: ✅ Complete — PR #132
 - Phase 5.13 — Data Integrity & Observability: ✅ Complete — PRs #133 and #134
-- Phase 5.14 — Full Runtime Integration Validation: 🚧 In progress; runtime smoke checks and the isolated risk-halt restart-persistence regression pass, while live trade/risk-event delivery and browser-level WebSocket recovery remain outstanding. The pre-existing live legacy halt's trigger diagnostics remain unavailable.
+- Phase 5.14 — Full Runtime Integration Validation: 🚧 In progress; runtime smoke checks, isolated risk-halt restart persistence, gateway trade/risk-event integration, and dashboard browser WebSocket reconnection tests pass. The browser test uses mocked HTTP responses and an intercepted WebSocket, so live-runtime trade/risk-event delivery remains unverified. The pre-existing live legacy halt's trigger diagnostics remain unavailable.
 
 ## Documentation Rule
 
