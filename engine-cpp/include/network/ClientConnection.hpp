@@ -67,7 +67,8 @@ private:
     void receiveLoop();
 
     bool sendAll(
-        const std::vector<std::uint8_t> &data);
+        const std::vector<std::uint8_t> &data,
+        std::chrono::steady_clock::time_point deadline);
 
     bool receiveSome();
 
@@ -76,7 +77,7 @@ private:
 
     std::atomic<bool> running_{false};
 
-    std::mutex sendMutex_;
+    std::timed_mutex sendMutex_;
 
     std::vector<std::uint8_t> receiveBuffer_;
 
