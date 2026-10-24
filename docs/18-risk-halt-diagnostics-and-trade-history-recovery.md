@@ -1,6 +1,6 @@
 # Risk-Halt Diagnostics and Trade-History Recovery
 
-**Status as of 2026-10-24:** PRs #161 and #162 are merged. PR #162 is deployed in the local Docker runtime and its trade-history reconciliation path has been observed working. The isolated restart-persistence regression test passes against disposable temporary state. The existing live legacy halt still has unavailable trigger diagnostics, and Phase 5.14 remains in progress.
+**Status as of 2026-10-24:** PRs #161 and #162 are merged. PR #162 is deployed in the local Docker runtime and its trade-history reconciliation path has been observed working. The isolated restart-persistence regression test and isolated gateway/browser WebSocket tests pass. Browser reconnection was verified with mocked HTTP responses and an intercepted WebSocket; this is not proof of live-runtime WebSocket event delivery. The existing live legacy halt still has unavailable trigger diagnostics, and Phase 5.14 remains in progress.
 
 > **Scope:** This is an educational trading simulation, not a live-exchange trading system.
 
@@ -39,6 +39,20 @@ The focused test `test_state_restores_position_pnl_and_halt_after_restart` was c
 - The repository remained clean at `b647997`; all five Docker Compose services remained healthy after the test.
 - Compilation emitted unused-function warnings because the temporary executable intentionally invoked only one test. No test failure occurred.
 - This is isolated regression evidence, not a live-volume restart test. It does not recover or validate diagnostics for the pre-existing live halt.
+
+
+
+## Isolated gateway and browser WebSocket validation recorded on 2026-10-24
+
+The following tests passed after the local checkout was fast-forwarded to GitHub `main` at `3b40ec4`:
+
+- `gateway-node/tests/websocket-e2e.test.ts`: **PASS** — 1 test, 0 failures, 3 assertions. The isolated test delivered a C++-protocol `TRADE` message to a subscribed WebSocket client.
+- `gateway-node/tests/full-stack.integration.test.ts`: **PASS** — 1 test, 0 failures, 11 assertions. The isolated integration path exercised an Engine `TRADE`, analytics update, risk event, and WebSocket consumers.
+- `dashboard-react/e2e/websocket-recovery.e2e.ts`: **PASS** — 1 browser test. It simulated a WebSocket drop, observed a replacement subscription, injected mocked `MARKET_DATA`, and verified the displayed price updated after reconnection.
+
+The browser test intercepts the WebSocket and mocks the market/trade HTTP endpoints. These results validate isolated gateway behavior and frontend reconnect handling, not delivery of a live engine or analytics risk event through the running Docker stack. The runtime browser event path remains unverified.
+
+The local runtime's read-only health checks continued to return HTTP 200 and all five containers were healthy. The live analytics response still reported `riskStatus: "unknown"` with a stale timestamp, while engine logs continued to report unavailable trigger diagnostics for the pre-existing `max_drawdown` halt. Do not infer that either live-state limitation was resolved by these isolated tests.
 
 ## Safe validation procedure
 
