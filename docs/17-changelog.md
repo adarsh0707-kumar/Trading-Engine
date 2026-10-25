@@ -1,3 +1,17 @@
+# 2026-10-25 — Risk-Halt Diagnostics Recovery Context (PR #165)
+
+**Status:** Merged to `main` as `be2651233efa9b3d13b4ca355751361aca26e8da`; GitHub Actions reported green; clean local C++ rebuild and full CTest suite passed **16/16**.
+
+- Upgraded the risk snapshot format from version 3 to version 4 while preserving compatibility with snapshot versions 1–3.
+- When startup/replay restores a latched halt with missing diagnostics, the engine now persists explicitly marked recovery-time context instead of leaving diagnostics unavailable.
+- Logs distinguish `reconstructed_recovery_context` and `recovery_*` fields from `original_trigger` and `trigger_*` fields.
+- Reconstructed values describe recovery-time state; they do **not** recover the historical trigger-time equity, drawdown, daily loss, or timestamp.
+- Regression coverage includes reconstruction persistence across restart, version-3 migration, preservation of original version-3 diagnostics, legacy compatibility, and fail-closed handling of invalid version-4 metadata.
+- Validation on merged `main` (`be26512`): clean CMake rebuild and CTest **16/16 passed**. No live risk-state reset, operator-authorized resume, or runtime restart was performed as part of this validation.
+- Phase 5.14 remains in progress; live-runtime event delivery and recovery evidence must be tracked separately from CI and isolated tests.
+
+---
+
 # 2026-10-16 — Analytics HTTP 503 Source Investigation and Safe Follow-up Plan
 
 **Status:** Source-level cause identified; no runtime changes performed. The API contract decision and full live integration evidence remain open.
