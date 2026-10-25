@@ -58,8 +58,17 @@ void Engine::run_loop() {
         const auto &diagnostics = risk_guard_.halt_diagnostics();
         std::ostringstream message;
         message << std::setprecision(17);
-        if (diagnostics.triggered) {
+        if (diagnostics.triggered && diagnostics.reconstructed) {
             message << event
+                    << " diagnostics_origin=reconstructed_recovery_context"
+                    << " reason=" << diagnostics.reason
+                    << " recovery_timestamp_ms=" << diagnostics.timestamp_ms
+                    << " recovery_equity=" << diagnostics.equity
+                    << " recovery_drawdown=" << diagnostics.drawdown
+                    << " recovery_daily_loss=" << diagnostics.daily_loss;
+        } else if (diagnostics.triggered) {
+            message << event
+                    << " diagnostics_origin=original_trigger"
                     << " reason=" << diagnostics.reason
                     << " trigger_timestamp_ms=" << diagnostics.timestamp_ms
                     << " trigger_equity=" << diagnostics.equity
