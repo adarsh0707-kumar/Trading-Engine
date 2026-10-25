@@ -26,6 +26,8 @@ struct RiskDecision {
 
 struct RiskHaltDiagnostics {
     bool triggered{false};
+    // Recovery-time context, not the original trigger-time metrics.
+    bool reconstructed{false};
     std::string reason;
     std::int64_t timestamp_ms{0};
     double equity{0.0};

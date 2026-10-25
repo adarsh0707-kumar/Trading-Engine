@@ -29,7 +29,7 @@
 
 namespace trading { namespace engine_runtime {
 namespace {
-constexpr int STATE_VERSION = 3;
+constexpr int STATE_VERSION = 4;
 
 std::string journal_path_for(const RiskGuardConfig &config) {
     if (!config.trade_journal_file_path.empty()) return config.trade_journal_file_path;
@@ -82,6 +82,21 @@ RiskGuard::RiskGuard(const RiskGuardConfig &config)
     load_state();
     replay_trade_journal();
     if (utc_day_ == -1) roll_daily_window(std::chrono::system_clock::now());
+
+    // A persisted or replay-created halt may lack original trigger metrics.
+    // Capture recovery-time context without presenting it as historical data.
+    if (halted_ && !halt_diagnostics_.triggered) {
+        const auto now = std::chrono::system_clock::now();
+        halt_diagnostics_.triggered = true;
+        halt_diagnostics_.reconstructed = true;
+        halt_diagnostics_.reason = halt_reason_;
+        halt_diagnostics_.timestamp_ms =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch()).count();
+        halt_diagnostics_.equity = equity();
+        halt_diagnostics_.drawdown = std::max(0.0, drawdown());
+        halt_diagnostics_.daily_loss = daily_loss();
+    }
     save_state();
 }
 
@@ -97,7 +112,7 @@ void RiskGuard::load_state() {
     std::string reason;
     std::uint64_t sequence = 0;
     if (!(in >> version >> position >> average >> realized >> mark >> peak >> day_start >> day >> halted >> reason) ||
-        (version != 1 && version != 2 && version != STATE_VERSION) || (halted != 0 && halted != 1) ||
+        (version != 1 && version != 2 && version != 3 && version != STATE_VERSION) || (halted != 0 && halted != 1) ||
         position > config_.max_position || position < -config_.max_position ||
         !std::isfinite(average) || average < 0 || !std::isfinite(realized) ||
         !std::isfinite(mark) || mark < 0 || !std::isfinite(peak) || peak <= 0 ||
@@ -121,6 +136,16 @@ void RiskGuard::load_state() {
             throw std::runtime_error("risk state halt diagnostics are corrupt; refusing startup");
         diagnostics.triggered = triggered == 1;
         diagnostics.reason = diagnostic_reason == "-" ? "" : diagnostic_reason;
+
+        if (version >= 4) {
+            int reconstructed = 0;
+            if (!(in >> reconstructed) ||
+                (reconstructed != 0 && reconstructed != 1) ||
+                (reconstructed == 1 && triggered != 1))
+                throw std::runtime_error(
+                    "risk state diagnostic origin is corrupt; refusing startup");
+            diagnostics.reconstructed = reconstructed == 1;
+        }
     }
     std::string extra;
     if (in >> extra) throw std::runtime_error("risk state has unexpected trailing data; refusing startup");
@@ -158,7 +183,8 @@ void RiskGuard::save_state() const {
              << halt_diagnostics_.timestamp_ms << ' '
              << halt_diagnostics_.equity << ' '
              << halt_diagnostics_.drawdown << ' '
-             << halt_diagnostics_.daily_loss << '\n';
+             << halt_diagnostics_.daily_loss << ' '
+             << (halt_diagnostics_.reconstructed ? 1 : 0) << '\n';
 
     const std::string data = snapshot.str();
 

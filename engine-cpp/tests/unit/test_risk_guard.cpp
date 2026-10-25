@@ -376,6 +376,7 @@ void test_state_restores_position_pnl_and_halt_after_restart()
         CHECK(restored.is_halted());
         CHECK(restored.halt_reason() == "max_drawdown");
         CHECK(restored.halt_diagnostics().triggered);
+        CHECK(!restored.halt_diagnostics().reconstructed);
         CHECK(restored.halt_diagnostics().reason == "max_drawdown");
         CHECK(restored.halt_diagnostics().timestamp_ms > 0);
         CHECK(restored.halt_diagnostics().equity == 9900.0);
@@ -466,11 +467,30 @@ void test_replay_that_crosses_risk_threshold_restores_halt_without_live_diagnost
         RiskGuard recovered(config);
         CHECK(recovered.is_halted());
         CHECK(recovered.halt_reason() == "max_daily_loss");
-        CHECK(!recovered.halt_diagnostics().triggered);
+        CHECK(recovered.halt_diagnostics().triggered);
+        CHECK(recovered.halt_diagnostics().reconstructed);
+        CHECK(recovered.halt_diagnostics().reason == "max_daily_loss");
+        CHECK(recovered.halt_diagnostics().timestamp_ms > 0);
+        CHECK(recovered.halt_diagnostics().equity == 9900.0);
+        CHECK(recovered.halt_diagnostics().drawdown == 100.0);
+        CHECK(recovered.halt_diagnostics().daily_loss == 100.0);
         CHECK(recovered.position() == 0);
         CHECK(recovered.equity() == 9900.0);
         CHECK(recovered.journal_sequence() == 2);
         CHECK(recovered.replayed_trade_count() == 2);
+    }
+
+    // Recovery metadata must survive another restart without replaying old records.
+    {
+        RiskGuard recovered_again(config);
+        CHECK(recovered_again.is_halted());
+        CHECK(recovered_again.halt_diagnostics().triggered);
+        CHECK(recovered_again.halt_diagnostics().reconstructed);
+        CHECK(recovered_again.halt_diagnostics().reason == "max_daily_loss");
+        CHECK(recovered_again.halt_diagnostics().equity == 9900.0);
+        CHECK(recovered_again.halt_diagnostics().daily_loss == 100.0);
+        CHECK(recovered_again.journal_sequence() == 2);
+        CHECK(recovered_again.replayed_trade_count() == 0);
     }
 
     // Replay recovery must retain the halt and must not append duplicate trades.
@@ -481,6 +501,54 @@ void test_replay_that_crosses_risk_threshold_restores_halt_without_live_diagnost
         while (std::getline(input, line))
             ++records;
         CHECK(records == 2);
+    }
+}
+
+void test_halted_v3_snapshot_gets_reconstructed_recovery_context()
+{
+    ScopedTempDirectory temp;
+    const auto snapshot = temp.path() / "risk-state.snapshot";
+    const auto journal = temp.path() / "trades.log";
+    const auto now_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto utc_day = now_seconds / 86400;
+
+    RiskGuardConfig config{
+        100, 100000.0, 1000.0, 500.0, 100000.0,
+        snapshot.string(), journal.string()
+    };
+
+    // A valid v3 snapshot with a latched halt but no trigger diagnostics.
+    {
+        std::ofstream stale(snapshot);
+        stale << "3 0 0 -1500 100 101000 100000 "
+              << utc_day << " 1 max_drawdown 0 0 - 0 0 0 0\n";
+    }
+
+    {
+        RiskGuard recovered(config);
+        CHECK(recovered.is_halted());
+        CHECK(recovered.halt_reason() == "max_drawdown");
+        const auto &d = recovered.halt_diagnostics();
+        CHECK(d.triggered);
+        CHECK(d.reconstructed);
+        CHECK(d.reason == "max_drawdown");
+        CHECK(d.timestamp_ms > 0);
+        CHECK(d.equity == 98500.0);
+        CHECK(d.drawdown == 2500.0);
+        CHECK(d.daily_loss == 1500.0);
+    }
+
+    // Version 4 persists the origin marker and recovery metrics.
+    {
+        RiskGuard restored(config);
+        CHECK(restored.is_halted());
+        CHECK(restored.halt_diagnostics().triggered);
+        CHECK(restored.halt_diagnostics().reconstructed);
+        CHECK(restored.halt_diagnostics().reason == "max_drawdown");
+        CHECK(restored.halt_diagnostics().equity == 98500.0);
+        CHECK(restored.halt_diagnostics().drawdown == 2500.0);
+        CHECK(restored.halt_diagnostics().daily_loss == 1500.0);
     }
 }
 
@@ -693,6 +761,135 @@ void test_trade_history_returns_latest_bounded_journal_records()
     CHECK(all.find("\"timestamp_ms\"") != std::string::npos);
 }
 
+void test_v3_original_halt_diagnostics_survive_v4_migration()
+{
+    ScopedTempDirectory temp;
+    const auto snapshot = temp.path() / "risk-state-v3-original.snapshot";
+    const auto journal = temp.path() / "trades.log";
+    const auto now_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto utc_day = now_seconds / 86400;
+
+    RiskGuardConfig config{
+        100, 100000.0, 1000.0, 500.0, 10000.0,
+        snapshot.string(), journal.string()
+    };
+
+    // An empty journal is valid because the snapshot sequence is zero.
+    {
+        std::ofstream journal_file(journal);
+        journal_file << "";
+    }
+
+    // v3 contains original trigger diagnostics but has no origin marker.
+    {
+        std::ofstream out(snapshot);
+        out << "3 0 0 0 100 10000 10000 " << utc_day
+            << " 1 max_drawdown 0 1 max_drawdown 123456 9900 100 100\n";
+    }
+
+    {
+        RiskGuard restored(config);
+        const auto &d = restored.halt_diagnostics();
+        CHECK(restored.is_halted());
+        CHECK(d.triggered);
+        CHECK(!d.reconstructed);
+        CHECK(d.reason == "max_drawdown");
+        CHECK(d.timestamp_ms == 123456);
+        CHECK(d.equity == 9900.0);
+        CHECK(d.drawdown == 100.0);
+        CHECK(d.daily_loss == 100.0);
+    }
+
+    // After migration to v4, the diagnostics must still be marked original.
+    {
+        RiskGuard restarted(config);
+        const auto &d = restarted.halt_diagnostics();
+        CHECK(restarted.is_halted());
+        CHECK(d.triggered);
+        CHECK(!d.reconstructed);
+        CHECK(d.reason == "max_drawdown");
+        CHECK(d.timestamp_ms == 123456);
+        CHECK(d.equity == 9900.0);
+        CHECK(d.drawdown == 100.0);
+        CHECK(d.daily_loss == 100.0);
+        CHECK(restarted.journal_sequence() == 0);
+    }
+}
+
+void test_legacy_v1_v2_snapshots_remain_compatible()
+{
+    ScopedTempDirectory temp;
+    const auto now_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto utc_day = now_seconds / 86400;
+
+    for (const int version : {1, 2}) {
+        const auto snapshot = temp.path() / ("legacy-v" + std::to_string(version) + ".snapshot");
+        const auto journal = std::filesystem::path(snapshot.string() + ".trades.log");
+
+        {
+            std::ofstream out(snapshot);
+            out << version << " 0 0 0 100 10000 10000 "
+                << utc_day << " 0 -";
+            if (version >= 2)
+                out << " 0";
+            out << '\n';
+        }
+
+        RiskGuardConfig config{
+            100, 100000.0, 1000.0, 500.0, 10000.0,
+            snapshot.string(), journal.string()
+        };
+        RiskGuard restored(config);
+        CHECK(!restored.is_halted());
+        CHECK(restored.position() == 0);
+        CHECK(restored.equity() == 10000.0);
+        CHECK(!restored.halt_diagnostics().triggered);
+        CHECK(!restored.halt_diagnostics().reconstructed);
+    }
+}
+
+void test_v4_invalid_diagnostic_origin_fails_closed()
+{
+    ScopedTempDirectory temp;
+    const auto now_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto utc_day = now_seconds / 86400;
+
+    // The final field is the v4 reconstructed-origin marker.
+    const std::vector<std::string> invalid_snapshots = {
+        // Origin marker must be 0 or 1.
+        "4 0 0 0 100 10000 10000 " + std::to_string(utc_day) +
+            " 1 max_drawdown 0 0 - 0 0 0 0 2",
+        // Reconstructed origin requires triggered diagnostics.
+        "4 0 0 0 100 10000 10000 " + std::to_string(utc_day) +
+            " 0 - 0 0 - 0 0 0 0 1"
+    };
+
+    for (std::size_t i = 0; i < invalid_snapshots.size(); ++i) {
+        const auto snapshot = temp.path() / ("invalid-v4-" + std::to_string(i) + ".snapshot");
+        const auto journal = std::filesystem::path(snapshot.string() + ".trades.log");
+        {
+            std::ofstream out(snapshot);
+            out << invalid_snapshots[i] << '\n';
+        }
+
+        RiskGuardConfig config{
+            100, 100000.0, 1000.0, 500.0, 10000.0,
+            snapshot.string(), journal.string()
+        };
+
+        bool threw = false;
+        try {
+            RiskGuard rejected(config);
+        } catch (const std::runtime_error &) {
+            threw = true;
+        }
+        CHECK(threw);
+    }
+}
+
 void test_corrupt_trade_journal_fails_closed()
 {
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-journal-corrupt.snapshot";
@@ -757,12 +954,16 @@ int main()
     test_state_restores_position_pnl_and_halt_after_restart();
     test_trade_journal_replays_records_after_stale_snapshot();
     test_replay_that_crosses_risk_threshold_restores_halt_without_live_diagnostics();
+    test_halted_v3_snapshot_gets_reconstructed_recovery_context();
     test_duplicate_trade_ids_are_rejected_during_replay();
     test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay();
     test_duplicate_trade_id_is_rejected_before_append();
     test_journal_write_failure_does_not_apply_risk_trade();
     test_snapshot_save_failure_recovers_journaled_trade();
     test_trade_history_returns_latest_bounded_journal_records();
+    test_v3_original_halt_diagnostics_survive_v4_migration();
+    test_legacy_v1_v2_snapshots_remain_compatible();
+    test_v4_invalid_diagnostic_origin_fails_closed();
     test_corrupt_trade_journal_fails_closed();
     test_corrupt_state_fails_closed();
     test_invalid_risk_configuration_is_rejected();
