@@ -476,6 +476,8 @@ The runtime integration test validates the real service path rather than a mocke
 
 The analytics service evaluates configured position, position-value, drawdown, and daily-loss limits and publishes risk states/events. The Gateway forwards accepted risk events and exposes the latest analytics state at `GET /api/v1/analytics`.
 
+The C++ engine also persists its own latched risk halt and trigger diagnostics. Snapshot version 4 can reconstruct missing diagnostic context during recovery, but those values are explicitly marked as recovery-time measurements—not historical trigger-time values. See [Risk-Halt Diagnostics and Trade-History Recovery](docs/18-risk-halt-diagnostics-and-trade-history-recovery.md) and [Risk Limits, Events, and Enforcement Boundaries](docs/11-risk-limits-and-enforcement.md).
+
 **Risk reporting is not the same as trade enforcement.** A `breached` state does not, by itself, prove that the engine rejects new orders or halts the simulation. See [Risk Limits, Events, and Enforcement Boundaries](docs/11-risk-limits-and-enforcement.md) for current defaults, runtime verification commands, and the outstanding enforcement acceptance criteria.
 
 ## Observability and reliability
