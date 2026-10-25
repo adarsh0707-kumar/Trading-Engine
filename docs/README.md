@@ -19,7 +19,8 @@ This directory contains the engineering documentation for the **Cloud-Based Algo
 | `09-testing-strategy.md` | Unit, integration, contract, E2E, performance and failure testing |
 | `10-glossary.md` | Definitions of domain and engineering terminology |
 | `11-risk-limits-and-enforcement.md` | Risk-limit defaults, event flow, runtime checks, and the distinction between risk reporting and trade enforcement |
-| `18-risk-halt-diagnostics-and-trade-history-recovery.md` | Snapshot v3 halt diagnostics, durable journal trade-history reconciliation, runtime evidence, and safe isolated validation |
+| `18-risk-halt-diagnostics-and-trade-history-recovery.md` | Snapshot v3/v4 halt diagnostics, durable journal trade-history reconciliation, runtime evidence, and safe isolated validation |
+| `19-production-deployment-and-rollback.md` | Maintenance-window deployment checklist, consistent risk-state backup, post-deployment verification, and version-aware rollback safeguards |
 
 ## Architecture at a Glance
 
