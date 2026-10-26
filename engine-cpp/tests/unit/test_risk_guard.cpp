@@ -552,6 +552,80 @@ void test_halted_v3_snapshot_gets_reconstructed_recovery_context()
     }
 }
 
+void test_halted_legacy_snapshot_with_fully_covered_journal_reconstructs_diagnostics_without_replay()
+{
+    ScopedTempDirectory temp;
+    const auto snapshot = temp.path() / "legacy-halted.snapshot";
+    const auto journal = temp.path() / "trades.log";
+    const auto now_seconds = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto utc_day = now_seconds / 86400;
+
+    RiskGuardConfig config{
+        100, 100000.0, 1000.0, 500.0, 10000.0,
+        snapshot.string(), journal.string()
+    };
+
+    // Both journal records are already reflected in this legacy v3 snapshot.
+    // Its halt is latched, but it has no persisted trigger diagnostics.
+    {
+        std::ofstream out(snapshot);
+        out << "3 0 0 -1200 40 10000 10000 " << utc_day
+            << " 1 max_drawdown 2 0 - 0 0 0 0\n";
+    }
+
+    {
+        const std::string buy_body =
+            R"(1 "covered-buy" "SIM" BUY 20 100 1791645644276 "taker-buy" "maker-buy")";
+        const std::string sell_body =
+            R"(2 "covered-sell" "SIM" SELL 20 40 1791645644277 "taker-sell" "maker-sell")";
+        std::ofstream out(journal);
+        out << buy_body << ' ' << journal_checksum(buy_body) << '\n';
+        out << sell_body << ' ' << journal_checksum(sell_body) << '\n';
+    }
+
+    {
+        RiskGuard recovered(config);
+        CHECK(recovered.is_halted());
+        CHECK(recovered.halt_reason() == "max_drawdown");
+        CHECK(recovered.position() == 0);
+        CHECK(recovered.equity() == 8800.0);
+        CHECK(recovered.journal_sequence() == 2);
+        CHECK(recovered.replayed_trade_count() == 0);
+
+        const auto &d = recovered.halt_diagnostics();
+        CHECK(d.triggered);
+        CHECK(d.reconstructed);
+        CHECK(d.reason == "max_drawdown");
+        CHECK(d.timestamp_ms > 0);
+        CHECK(d.equity == 8800.0);
+        CHECK(d.drawdown == 1200.0);
+        CHECK(d.daily_loss == 1200.0);
+    }
+
+    // A second restart must preserve the recovery marker and must not replay
+    // or append either journal record again.
+    {
+        RiskGuard restarted(config);
+        CHECK(restarted.is_halted());
+        CHECK(restarted.halt_diagnostics().triggered);
+        CHECK(restarted.halt_diagnostics().reconstructed);
+        CHECK(restarted.halt_diagnostics().reason == "max_drawdown");
+        CHECK(restarted.halt_diagnostics().equity == 8800.0);
+        CHECK(restarted.halt_diagnostics().drawdown == 1200.0);
+        CHECK(restarted.halt_diagnostics().daily_loss == 1200.0);
+        CHECK(restarted.journal_sequence() == 2);
+        CHECK(restarted.replayed_trade_count() == 0);
+    }
+
+    std::ifstream input(journal);
+    std::string line;
+    std::size_t records = 0;
+    while (std::getline(input, line))
+        ++records;
+    CHECK(records == 2);
+}
+
 void test_duplicate_trade_ids_are_rejected_during_replay()
 {
     const auto path = std::filesystem::temp_directory_path() / "risk-guard-duplicate-id.snapshot";
@@ -955,6 +1029,7 @@ int main()
     test_trade_journal_replays_records_after_stale_snapshot();
     test_replay_that_crosses_risk_threshold_restores_halt_without_live_diagnostics();
     test_halted_v3_snapshot_gets_reconstructed_recovery_context();
+    test_halted_legacy_snapshot_with_fully_covered_journal_reconstructs_diagnostics_without_replay();
     test_duplicate_trade_ids_are_rejected_during_replay();
     test_duplicate_trade_id_covered_by_snapshot_is_accepted_without_replay();
     test_duplicate_trade_id_is_rejected_before_append();
