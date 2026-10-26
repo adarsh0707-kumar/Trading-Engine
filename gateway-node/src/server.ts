@@ -356,6 +356,12 @@ export function createGatewayServer(
       );
 
       for (const event of recoveredEvents) {
+        if (
+          engineEventClient.getState() !== "connected" ||
+          analyticsClient.getState() !== "connected"
+        ) {
+          throw new Error("Connection changed during engine trade-history recovery");
+        }
         liveTradingState.onTrade(event);
         sendTradeToAnalytics(event);
       }
