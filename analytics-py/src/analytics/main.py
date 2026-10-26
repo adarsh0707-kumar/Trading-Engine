@@ -86,6 +86,7 @@ class AnalyticsService:
 
         self.parser = MessageParser()
         self.processor = StreamingProcessor(risk_limits=settings.risk_limit_config)
+        self._completed_trade_ids: set[str] = set()
 
         self._message_queue = BackpressureQueue(
             capacity=settings.backpressure_queue_capacity,
@@ -343,7 +344,19 @@ class AnalyticsService:
                     event,
                 )
 
+                if (
+                    result.trade is not event
+                    and event.trade_id in self._completed_trade_ids
+                ):
+                    logger.info(
+                        "duplicate_trade_skipped trade_id=%s event_id=%s",
+                        event.trade_id,
+                        event.event_id,
+                    )
+                    return
+
                 self._persist(result)
+                self._completed_trade_ids.add(event.trade_id)
 
                 try:
                     self.publisher.publish(result.analytics)
