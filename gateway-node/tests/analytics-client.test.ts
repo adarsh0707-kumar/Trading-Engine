@@ -170,6 +170,10 @@ describe("analytics client", () => {
     let connections = 0;
     const receivedTradeIds: string[] = [];
     const states: string[] = [];
+    let releaseReconnect!: () => void;
+    const reconnectGate = new Promise<void>((resolve) => {
+      releaseReconnect = resolve;
+    });
 
     const server = createServer((socket) => {
       const connectionNumber = ++connections;
@@ -214,6 +218,11 @@ describe("analytics client", () => {
       reconnectMaxAttempts: 5,
       maxQueueSize: 2,
       onStateChange: (state) => states.push(state),
+      onConnected: async () => {
+        if (connections >= 2) {
+          await reconnectGate;
+        }
+      },
     });
 
     const waitFor = async (
@@ -244,6 +253,11 @@ describe("analytics client", () => {
       expect(client.sendTrade(queuedTrade)).toBe(true);
       expect(client.getQueueSize()).toBe(1);
 
+      await waitFor(() => client.isConnected() && connections >= 2);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(receivedTradeIds).toHaveLength(1);
+
+      releaseReconnect();
       await waitFor(() => receivedTradeIds.length === 2);
 
       expect(receivedTradeIds).toEqual([
