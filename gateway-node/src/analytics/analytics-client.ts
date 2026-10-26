@@ -31,7 +31,8 @@ export interface AnalyticsClientOptions {
   readonly onAnalyticsUpdate?: (message: GatewayAnalyticsUpdateMessage) => void;
   readonly onRiskEvent?: (message: GatewayRiskEventMessage) => void;
   readonly onError?: (error: Error) => void;
-  readonly onStateChange?: (state: AnalyticsClientState) => void | Promise<void>;
+  readonly onStateChange?: (state: AnalyticsClientState) => void;
+  readonly onConnected?: () => Promise<void>;
   readonly onHealthEvent?: (event: {
     readonly type: "queue_overflow";
     readonly timestamp: number;
@@ -98,12 +99,10 @@ export function createAnalyticsClient(
   let inboundBuffer = Buffer.alloc(0);
   const queue: Buffer[] = [];
 
-  const emitState = (
-    nextState: AnalyticsClientState,
-  ): void | Promise<void> => {
+  const emitState = (nextState: AnalyticsClientState): void => {
     state = nextState;
     connected = nextState === "connected";
-    return options.onStateChange?.(nextState);
+    options.onStateChange?.(nextState);
   };
 
   const clearTimers = (): void => {
@@ -257,7 +256,8 @@ export function createAnalyticsClient(
       }
 
       reconnectAttempts = 0;
-      Promise.resolve(emitState("connected"))
+      emitState("connected");
+      Promise.resolve(options.onConnected?.())
         .then(() => {
           // Let connection recovery enqueue authoritative history before
           // flushing older live messages accumulated during the disconnect.
