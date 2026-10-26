@@ -340,6 +340,25 @@ class AnalyticsService:
             started_at = perf_counter()
 
             try:
+                if (
+                    not self.processor.has_processed_trade(event.trade_id)
+                    and self.processor.is_late_trade(event)
+                ):
+                    results = self._reconcile_history(incoming_trade=event)
+                    self._completed_trade_ids.update(
+                        result.trade.trade_id for result in results
+                    )
+                    self.trade_throughput_metrics.record_trade()
+                    duration_seconds = perf_counter() - started_at
+                    self.service_metrics.record_trade_success(duration_seconds)
+                    self.processing_latency_metrics.record(duration_seconds)
+                    logger.info(
+                        "chronological_reconciliation_completed trade_id=%s replayed_trades=%d",
+                        event.trade_id,
+                        len(results),
+                    )
+                    return
+
                 result = self.processor.process_trade_with_risk_events(
                     event,
                 )
@@ -534,8 +553,89 @@ class AnalyticsService:
 
         raise AssertionError("persistence retry loop exited unexpectedly")
 
+    def _reconcile_history(
+        self,
+        *,
+        incoming_trade: Trade | None = None,
+    ) -> tuple[ProcessedTrade, ...]:
+        """Rebuild derived persistence from authoritative trades atomically.
+
+        The trades table is never cleared. Analytics, position/risk snapshots,
+        and risk events are replaced in one transaction so stale derived rows
+        from a previous arrival order cannot survive a recovery.
+        """
+        if self.repositories is None:
+            known = [result.trade for result in self.processor.processed_results()]
+            if incoming_trade is not None:
+                known.append(incoming_trade)
+            results = self.processor.replay_trades(known)
+        else:
+            with self._persistence_lock:
+                history_before = self.repositories.trades.list_all()
+                try:
+                    with self.repositories.connection.transaction():
+                        existing_ids = {trade.trade_id for trade in history_before}
+                        if (
+                            incoming_trade is not None
+                            and incoming_trade.trade_id not in existing_ids
+                        ):
+                            self.repositories.trades.save(incoming_trade)
+
+                        history = self.repositories.trades.list_all()
+                        results = self.processor.replay_trades(history)
+                        with self.repositories.connection.cursor() as cursor:
+                            cursor.execute("DELETE FROM risk_events")
+                            cursor.execute("DELETE FROM analytics_results")
+                            cursor.execute("DELETE FROM positions")
+                            cursor.execute("DELETE FROM risk_state")
+
+                        for result in results:
+                            self.repositories.analytics.save(result.analytics)
+                            self.repositories.positions.save(
+                                symbol=result.trade.symbol,
+                                snapshot=result.risk_snapshot,
+                            )
+                            self.repositories.risk.save_risk_state(
+                                symbol=result.trade.symbol,
+                                snapshot=result.risk_snapshot,
+                            )
+                            for risk_event in result.risk_events:
+                                self.repositories.risk.save_event(event=risk_event)
+                except Exception:
+                    # Restore in-memory state to the last committed history if
+                    # the transaction fails; the database transaction rolls back.
+                    self.processor.replay_trades(history_before)
+                    raise
+
+        self._completed_trade_ids = {
+            result.trade.trade_id for result in results
+        }
+        latest_by_symbol: dict[str, ProcessedTrade] = {}
+        for result in results:
+            latest_by_symbol[result.trade.symbol] = result
+
+        for result in latest_by_symbol.values():
+            try:
+                self.publisher.publish(result.analytics)
+            except Exception as exc:
+                self.error_metrics.record_publish_error()
+                logger.error(
+                    "analytics_recovery_publish_failed event_id=%s symbol=%s error=%s",
+                    result.analytics.event_id,
+                    result.trade.symbol,
+                    exc,
+                )
+                raise
+
+        logger.info(
+            "chronological_history_reconciled trades=%d symbols=%d",
+            len(results),
+            len(latest_by_symbol),
+        )
+        return results
+
     def _handle_connect(self) -> None:
-        """Handle a successful Gateway connection and restore its snapshot."""
+        """Replay authoritative trade history and reconcile derived state."""
         self.health_metrics.mark_engine_connected()
         logger.info(
             "gateway_connected host=%s port=%d",
@@ -547,24 +647,10 @@ class AnalyticsService:
             return
 
         try:
-            with self._persistence_lock:
-                latest = self.repositories.analytics.get_latest()
-
-            if latest is None:
-                logger.info(
-                    "analytics_snapshot_replay_skipped reason=no_persisted_snapshot",
-                )
-                return
-
-            self.publisher.publish(latest)
-            logger.info(
-                "analytics_snapshot_replayed event_id=%s symbol=%s",
-                latest.event_id,
-                latest.symbol,
-            )
+            self._reconcile_history()
         except Exception:
             # A replay failure must not tear down the receiver or analytics service.
-            logger.exception("analytics_snapshot_replay_failed")
+            logger.exception("analytics_history_reconciliation_failed")
 
     def _handle_disconnect(self) -> None:
         """Handle Gateway disconnection."""
