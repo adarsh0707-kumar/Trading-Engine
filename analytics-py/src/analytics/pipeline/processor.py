@@ -71,7 +71,9 @@ class StreamingProcessor:
         return trade_id in self._processed_trades
 
     def is_late_trade(self, trade: Trade) -> bool:
-        """Return whether a new trade predates the latest event for its symbol."""
+        """Return whether an unseen trade predates the latest event for its symbol."""
+        if trade.trade_id in self._processed_trades:
+            return False
         latest_key = self._latest_order_key_by_symbol.get(trade.symbol)
         return latest_key is not None and (trade.timestamp, trade.trade_id) < latest_key
 
