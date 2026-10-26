@@ -336,8 +336,8 @@ export function createGatewayServer(
             const buyOrderId = takerSide === "BUY" ? item.taker_order_id : item.maker_order_id;
             const sellOrderId = takerSide === "SELL" ? item.taker_order_id : item.maker_order_id;
             const timestamp = new Date(item.timestamp_ms).toISOString();
-            liveTradingState.onTrade({
-              type: "TRADE",
+            const recoveredEvent = {
+              type: "TRADE" as const,
               eventId: item.trade_id,
               tradeId: item.trade_id,
               requestId: item.trade_id,
@@ -352,7 +352,18 @@ export function createGatewayServer(
                 buyOrderId,
                 sellOrderId,
               },
-            });
+            };
+            liveTradingState.onTrade(recoveredEvent);
+
+            // History reconciliation must backfill analytics as well as the
+            // gateway's in-memory trading state. The analytics processor uses
+            // trade_id to make live/history redelivery idempotent.
+            const sentToAnalytics = analyticsClient.sendTrade(recoveredEvent);
+            if (sentToAnalytics) {
+              metrics.recordAnalyticsTradeSent();
+            } else {
+              metrics.recordAnalyticsTradeSendFailure();
+            }
           }
           operationalLog.info("engine_trade_history_reconciled", {
             recordCount: rows.length,
