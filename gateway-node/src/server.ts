@@ -276,13 +276,20 @@ export function createGatewayServer(
 
   const sendTradeToAnalytics = (
     event: Parameters<AnalyticsClient["sendTrade"]>[0],
-  ): void => {
-    const sentToAnalytics = analyticsClient.sendTrade(event);
-    if (sentToAnalytics) {
+  ): boolean => {
+    const queuedOrWritten = analyticsClient.sendTrade(event);
+    if (queuedOrWritten) {
       metrics.recordAnalyticsTradeSent();
-    } else {
-      metrics.recordAnalyticsTradeSendFailure();
+      return true;
     }
+
+    metrics.recordAnalyticsTradeSendFailure();
+    operationalLog.warn("analytics_trade_submission_failed", {
+      eventId: event.eventId,
+      tradeId: event.tradeId,
+      outcome: "failure",
+    });
+    return false;
   };
 
   async function reconcileEngineTradeHistory(): Promise<void> {
@@ -355,6 +362,8 @@ export function createGatewayServer(
           Date.parse(left.timestamp) - Date.parse(right.timestamp),
       );
 
+      let submittedCount = 0;
+      let rejectedCount = 0;
       for (const event of recoveredEvents) {
         if (
           engineEventClient.getState() !== "connected" ||
@@ -363,12 +372,26 @@ export function createGatewayServer(
           throw new Error("Connection changed during engine trade-history recovery");
         }
         liveTradingState.onTrade(event);
-        sendTradeToAnalytics(event);
+        if (sendTradeToAnalytics(event)) {
+          submittedCount += 1;
+        } else {
+          rejectedCount += 1;
+        }
       }
+
       operationalLog.info("engine_trade_history_reconciled", {
         recordCount: recoveredEvents.length,
-        outcome: "accepted",
+        submittedCount,
+        rejectedCount,
+        // A successful local socket write or queue insertion is not an
+        // application-level acknowledgement that analytics persisted a trade.
+        outcome: rejectedCount === 0 ? "submitted" : "partial_failure",
       });
+      if (rejectedCount > 0) {
+        throw new Error(
+          `Analytics rejected ${rejectedCount} of ${recoveredEvents.length} recovered trades`,
+        );
+      }
     })()
       .catch((error) => {
         operationalLog.warn("engine_trade_history_reconciliation_failed", {
