@@ -345,7 +345,7 @@ class AnalyticsService:
                 )
 
                 if (
-                    result.trade is not event
+                    getattr(result, "trade", event) is not event
                     and event.trade_id in self._completed_trade_ids
                 ):
                     logger.info(
