@@ -1,6 +1,6 @@
 # Risk-Halt Diagnostics and Trade-History Recovery
 
-**Status as of 2026-10-25:** PRs #161, #162, and #165 are merged. PR #165 (merge commit `be26512`) upgrades the risk snapshot format to version 4 and reconstructs missing halt diagnostics as explicitly labelled recovery-time context when startup restores an already-latched halt. The merged `main` source was clean-built locally and all 16 C++ CTest tests passed; GitHub Actions was reported green. This does not establish that the existing live legacy halt has been restarted or that its runtime diagnostics have been observed. Phase 5.14 remains in progress.
+**Status as of 2026-10-26:** PRs #161, #162, #165, and #167 are merged. PR #165 (merge commit `be26512`) upgrades the risk snapshot format to version 4 and reconstructs missing halt diagnostics as explicitly labelled recovery-time context when startup restores an already-latched halt. PR #167 adds a regression test for a halted legacy snapshot whose journal is fully covered by the snapshot sequence. On `main` at merge commit `3ef73b4`, the focused `test_risk_guard` test passed in an isolated local build, and GitHub Actions passed the full C++ CTest suite in both Debug and Release configurations. This does not establish that the existing live halt has been cleared or that its original trigger-time diagnostics can be recovered. Phase 5.14 remains in progress.
 
 > **Scope:** This is an educational trading simulation, not a live-exchange trading system.
 
@@ -60,12 +60,29 @@ The browser test intercepts the WebSocket and mocks the market/trade HTTP endpoi
 
 The local runtime's read-only health checks continued to return HTTP 200 and all five containers were healthy. The live analytics response still reported `riskStatus: "unknown"` with a stale timestamp, while engine logs continued to report unavailable trigger diagnostics for the pre-existing `max_drawdown` halt. Do not infer that either live-state limitation was resolved by these isolated tests.
 
+## Regression test for a fully covered journal and legacy halted snapshot
+
+PR #167 adds `test_halted_legacy_snapshot_with_fully_covered_journal_reconstructs_diagnostics_without_replay()` to `engine-cpp/tests/unit/test_risk_guard.cpp`.
+
+The fixture uses a disposable temporary directory and a legacy version-3 halted snapshot at journal sequence 2, plus two checksum-valid journal records whose sequences are already covered by that snapshot. The test verifies that startup:
+
+- keeps the `max_drawdown` halt latched;
+- reconstructs and persists diagnostics with the recovery-origin marker;
+- leaves `journal_sequence()` at 2 and `replayed_trade_count()` at 0; and
+- survives a second recovery without replaying the covered records or appending duplicate journal entries.
+
+Validation recorded on 2026-10-26:
+
+- Focused local CMake build and CTest on `main` at `3ef73b4`: **PASS**, `test_risk_guard` 1/1.
+- GitHub Actions test workflow on merge commit `3ef73b4`: **PASS** for `engine-cpp (Debug)` and `engine-cpp (Release)`, including their CTest steps.
+- The complete workflow also passed its analytics, gateway, dashboard, runtime-integration, and observability jobs. This is CI evidence from the isolated CI environment, not proof that the user's existing Docker volume or active halt was changed or recovered.
+
 ## Safe validation procedure
 
 Run the risk tests against the repository's test harness and disposable temporary state only. Do not point a test at the live Docker volume or its journal.
 
 1. Confirm the repository is on the expected `main` commit and inspect the C++ test target names.
-2. Run the focused risk-guard test target, including the regression test that journal replay crossing a risk threshold restores the halt without fabricating live diagnostics.
+2. Run the focused risk-guard test target. Coverage includes journal replay crossing a risk threshold without fabricating original trigger diagnostics, and the PR #167 regression for a halted legacy snapshot with a fully covered journal (zero replay and stable reconstructed diagnostics on a second recovery).
 3. The isolated restart-persistence regression described above has passed using a temporary test-source copy and temporary snapshot/journal paths. Keep this distinct from live-state validation.
 4. Verify legacy version 1 and version 2 snapshot compatibility and version 3 malformed-diagnostic rejection where covered by tests.
 5. Record exact commands and pass/fail output for each remaining check. If coverage is missing or fails, report that before making code changes.
