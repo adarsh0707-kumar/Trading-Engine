@@ -332,7 +332,7 @@ export function createGatewayServer(
             ) {
               throw new Error("Engine trade history contains an invalid record");
             }
-            const takerSide = item.taker_side;
+            const takerSide: "BUY" | "SELL" = item.taker_side;
             const buyOrderId = takerSide === "BUY" ? item.taker_order_id : item.maker_order_id;
             const sellOrderId = takerSide === "SELL" ? item.taker_order_id : item.maker_order_id;
             const timestamp = new Date(item.timestamp_ms).toISOString();
