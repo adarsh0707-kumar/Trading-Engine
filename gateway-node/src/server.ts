@@ -250,9 +250,12 @@ export function createGatewayServer(
         status.engine === "connected" && status.analytics === "connected",
       );
       operationalLog.info("analytics_client_state_changed", { state });
-      if (state === "connected" && engineEventClient.getState() === "connected") {
+    },
+    onConnected: () => {
+      if (engineEventClient.getState() === "connected") {
         return reconcileEngineTradeHistory();
       }
+      return Promise.resolve();
     },
     onHealthEvent: ({ type }) => {
       switch (type) {
