@@ -53,6 +53,7 @@ class StreamingProcessor:
         self._initial_equity = initial_equity
         self._risk_limits = risk_limits
         self._symbols: Dict[str, _SymbolState] = {}
+        self._processed_trades: Dict[str, ProcessedTrade] = {}
         self._sequence = 0
 
     def process_trade(self, trade: Trade) -> AnalyticsResult:
@@ -60,7 +61,16 @@ class StreamingProcessor:
         return self.process_trade_with_risk_events(trade).analytics
 
     def process_trade_with_risk_events(self, trade: Trade) -> ProcessedTrade:
-        """Process one trade and return analytics plus generated risk events."""
+        """Process one trade and return analytics plus generated risk events.
+
+        A trade ID is the engine-assigned idempotency key. Return the original
+        result for redelivered live/history events so duplicate delivery cannot
+        mutate indicators, risk state, or the analytics sequence twice.
+        """
+        previous = self._processed_trades.get(trade.trade_id)
+        if previous is not None:
+            return previous
+
         state = self._symbols.setdefault(trade.symbol, _SymbolState())
         if state.risk_manager is None:
             state.risk_manager = RiskManager(initial_equity=self._initial_equity)
@@ -121,12 +131,14 @@ class StreamingProcessor:
                 timestamp=trade.timestamp,
             )
 
-        return ProcessedTrade(
+        result = ProcessedTrade(
             trade=trade,
             analytics=analytics,
             risk_snapshot=risk,
             risk_events=risk_events,
         )
+        self._processed_trades[trade.trade_id] = result
+        return result
 
 
 __all__ = ["StreamingProcessor"]

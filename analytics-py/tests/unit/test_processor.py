@@ -292,3 +292,54 @@ def test_event_ids_are_unique_for_multiple_risk_events() -> None:
 
     assert len(event_ids) == 2
     assert len(set(event_ids)) == 2
+
+
+
+def test_duplicate_trade_id_does_not_mutate_processor_state() -> None:
+    """A recovered/live duplicate must reuse the original processing result."""
+
+    processor = StreamingProcessor()
+    original = _trade(
+        event_id="trade-live",
+        trade_id="engine-trade-1",
+        price=Decimal("100"),
+    )
+    duplicate = _trade(
+        event_id="trade-recovered",
+        trade_id="engine-trade-1",
+        price=Decimal("999"),
+    )
+
+    first_result = processor.process_trade_with_risk_events(original)
+    duplicate_result = processor.process_trade_with_risk_events(duplicate)
+
+    assert duplicate_result is first_result
+    assert processor._sequence == 1
+
+    next_result = processor.process_trade_with_risk_events(
+        _trade(
+            event_id="engine-trade-2",
+            trade_id="engine-trade-2",
+            price=Decimal("110"),
+        ),
+    )
+
+    assert next_result.analytics.vwap == Decimal("105")
+    assert processor._sequence == 2
+
+
+def test_duplicate_trade_id_returns_same_analytics_through_legacy_api() -> None:
+    """The backwards-compatible processor API must also remain idempotent."""
+
+    processor = StreamingProcessor()
+    first = processor.process_trade(_trade(trade_id="engine-trade-legacy"))
+    duplicate = processor.process_trade(
+        _trade(
+            event_id="redelivered",
+            trade_id="engine-trade-legacy",
+            price=Decimal("250"),
+        ),
+    )
+
+    assert duplicate is first
+    assert processor._sequence == 1

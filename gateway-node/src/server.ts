@@ -251,6 +251,12 @@ export function createGatewayServer(
       );
       operationalLog.info("analytics_client_state_changed", { state });
     },
+    onConnected: () => {
+      if (engineEventClient.getState() === "connected") {
+        return reconcileEngineTradeHistory();
+      }
+      return Promise.resolve();
+    },
     onHealthEvent: ({ type }) => {
       switch (type) {
         case "queue_overflow":
@@ -264,6 +270,124 @@ export function createGatewayServer(
   const liveTradingState = createLiveTradingState();
 
   let engineEventClient!: EngineEventClient;
+  let historyRecoveryPromise: Promise<void> | undefined;
+  let historyRecoveryInProgress = false;
+  const bufferedLiveTrades: Parameters<AnalyticsClient["sendTrade"]>[0][] = [];
+
+  const sendTradeToAnalytics = (
+    event: Parameters<AnalyticsClient["sendTrade"]>[0],
+  ): void => {
+    const sentToAnalytics = analyticsClient.sendTrade(event);
+    if (sentToAnalytics) {
+      metrics.recordAnalyticsTradeSent();
+    } else {
+      metrics.recordAnalyticsTradeSendFailure();
+    }
+  };
+
+  async function reconcileEngineTradeHistory(): Promise<void> {
+    if (historyRecoveryPromise !== undefined) {
+      return historyRecoveryPromise;
+    }
+    if (
+      engineEventClient.getState() !== "connected" ||
+      analyticsClient.getState() !== "connected"
+    ) {
+      return;
+    }
+
+    historyRecoveryInProgress = true;
+    historyRecoveryPromise = (async () => {
+      const response = await engineEventClient.requestTradeHistory(100);
+      let rows: unknown;
+      try {
+        rows = JSON.parse(response.payload) as unknown;
+      } catch {
+        throw new Error("Engine trade history response is not valid JSON");
+      }
+      if (!Array.isArray(rows)) {
+        throw new Error("Engine trade history response must be an array");
+      }
+
+      const recoveredEvents: Parameters<AnalyticsClient["sendTrade"]>[0][] = [];
+      for (const row of rows) {
+        if (typeof row !== "object" || row === null || Array.isArray(row)) continue;
+        const item = row as Record<string, unknown>;
+        if (
+          typeof item.trade_id !== "string" || item.trade_id.length === 0 ||
+          typeof item.symbol !== "string" ||
+          (item.taker_side !== "BUY" && item.taker_side !== "SELL") ||
+          typeof item.price !== "number" || !Number.isFinite(item.price) ||
+          typeof item.quantity !== "number" || !Number.isSafeInteger(item.quantity) || item.quantity <= 0 ||
+          typeof item.timestamp_ms !== "number" || !Number.isSafeInteger(item.timestamp_ms) || item.timestamp_ms < 0 ||
+          typeof item.taker_order_id !== "string" || typeof item.maker_order_id !== "string"
+        ) {
+          throw new Error("Engine trade history contains an invalid record");
+        }
+        const takerSide: "BUY" | "SELL" = item.taker_side;
+        const buyOrderId = takerSide === "BUY" ? item.taker_order_id : item.maker_order_id;
+        const sellOrderId = takerSide === "SELL" ? item.taker_order_id : item.maker_order_id;
+        const timestamp = new Date(item.timestamp_ms).toISOString();
+        recoveredEvents.push({
+          type: "TRADE",
+          eventId: item.trade_id,
+          tradeId: item.trade_id,
+          requestId: item.trade_id,
+          timestamp,
+          payload: {
+            symbol: item.symbol,
+            price: item.price,
+            quantity: item.quantity,
+            takerOrderId: item.taker_order_id,
+            makerOrderId: item.maker_order_id,
+            takerSide,
+            buyOrderId,
+            sellOrderId,
+          },
+        });
+      }
+
+      const sequence = (tradeId: string): number =>
+        Number(/^trade-(\d+)-/.exec(tradeId)?.[1] ?? Number.MAX_SAFE_INTEGER);
+      recoveredEvents.sort(
+        (left, right) =>
+          sequence(left.tradeId) - sequence(right.tradeId) ||
+          Date.parse(left.timestamp) - Date.parse(right.timestamp),
+      );
+
+      for (const event of recoveredEvents) {
+        if (
+          engineEventClient.getState() !== "connected" ||
+          analyticsClient.getState() !== "connected"
+        ) {
+          throw new Error("Connection changed during engine trade-history recovery");
+        }
+        liveTradingState.onTrade(event);
+        sendTradeToAnalytics(event);
+      }
+      operationalLog.info("engine_trade_history_reconciled", {
+        recordCount: recoveredEvents.length,
+        outcome: "accepted",
+      });
+    })()
+      .catch((error) => {
+        operationalLog.warn("engine_trade_history_reconciliation_failed", {
+          outcome: "failure",
+          error,
+        });
+      })
+      .finally(() => {
+        historyRecoveryInProgress = false;
+        for (const event of bufferedLiveTrades.splice(0)) {
+          liveTradingState.onTrade(event);
+          sendTradeToAnalytics(event);
+        }
+        historyRecoveryPromise = undefined;
+      });
+
+    return historyRecoveryPromise;
+  }
+
   engineEventClient = createEngineEventClient({
     host: config.engine.host,
     port: config.engine.port,
@@ -274,7 +398,9 @@ export function createGatewayServer(
     reconnectMaxAttempts: config.engine.reconnectMaxAttempts,
     onEvent: (event) => {
       if (event.type === "TRADE") {
-        liveTradingState.onTrade(event);
+        if (!historyRecoveryInProgress) {
+          liveTradingState.onTrade(event);
+        }
         metrics.recordEngineTrade();
         operationalLog.info("engine_trade_event", {
           eventId: event.eventId,
@@ -294,11 +420,10 @@ export function createGatewayServer(
       metrics.recordWebSocketPublishedEvent(event.type);
 
       if (event.type === "TRADE") {
-        const sentToAnalytics = analyticsClient.sendTrade(event);
-        if (sentToAnalytics) {
-          metrics.recordAnalyticsTradeSent();
+        if (historyRecoveryInProgress) {
+          bufferedLiveTrades.push(event);
         } else {
-          metrics.recordAnalyticsTradeSendFailure();
+          sendTradeToAnalytics(event);
         }
       }
     },
@@ -308,62 +433,7 @@ export function createGatewayServer(
     onStateChange: (state) => {
       metrics.recordEngineState(state);
       if (state === "connected") {
-        void engineEventClient.requestTradeHistory(100).then((response) => {
-          let rows: unknown;
-          try {
-            rows = JSON.parse(response.payload) as unknown;
-          } catch {
-            throw new Error("Engine trade history response is not valid JSON");
-          }
-          if (!Array.isArray(rows)) {
-            throw new Error("Engine trade history response must be an array");
-          }
-          for (const row of rows) {
-            if (typeof row !== "object" || row === null || Array.isArray(row)) continue;
-            const item = row as Record<string, unknown>;
-            if (
-              typeof item.trade_id !== "string" || item.trade_id.length === 0 ||
-              typeof item.symbol !== "string" ||
-              (item.taker_side !== "BUY" && item.taker_side !== "SELL") ||
-              typeof item.price !== "number" || !Number.isFinite(item.price) ||
-              typeof item.quantity !== "number" || !Number.isSafeInteger(item.quantity) || item.quantity <= 0 ||
-              typeof item.timestamp_ms !== "number" || !Number.isSafeInteger(item.timestamp_ms) || item.timestamp_ms < 0 ||
-              typeof item.taker_order_id !== "string" || typeof item.maker_order_id !== "string"
-            ) {
-              throw new Error("Engine trade history contains an invalid record");
-            }
-            const takerSide = item.taker_side;
-            const buyOrderId = takerSide === "BUY" ? item.taker_order_id : item.maker_order_id;
-            const sellOrderId = takerSide === "SELL" ? item.taker_order_id : item.maker_order_id;
-            const timestamp = new Date(item.timestamp_ms).toISOString();
-            liveTradingState.onTrade({
-              type: "TRADE",
-              eventId: item.trade_id,
-              tradeId: item.trade_id,
-              requestId: item.trade_id,
-              timestamp,
-              payload: {
-                symbol: item.symbol,
-                price: item.price,
-                quantity: item.quantity,
-                takerOrderId: item.taker_order_id,
-                makerOrderId: item.maker_order_id,
-                takerSide,
-                buyOrderId,
-                sellOrderId,
-              },
-            });
-          }
-          operationalLog.info("engine_trade_history_reconciled", {
-            recordCount: rows.length,
-            outcome: "accepted",
-          });
-        }).catch((error) => {
-          operationalLog.warn("engine_trade_history_reconciliation_failed", {
-            outcome: "failure",
-            error,
-          });
-        });
+        void reconcileEngineTradeHistory();
       }
       const status = statusProvider.getStatus();
       metrics.setGatewayReadiness(

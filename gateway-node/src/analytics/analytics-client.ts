@@ -32,6 +32,7 @@ export interface AnalyticsClientOptions {
   readonly onRiskEvent?: (message: GatewayRiskEventMessage) => void;
   readonly onError?: (error: Error) => void;
   readonly onStateChange?: (state: AnalyticsClientState) => void;
+  readonly onConnected?: () => Promise<void>;
   readonly onHealthEvent?: (event: {
     readonly type: "queue_overflow";
     readonly timestamp: number;
@@ -256,7 +257,20 @@ export function createAnalyticsClient(
 
       reconnectAttempts = 0;
       emitState("connected");
-      flushQueue();
+      Promise.resolve(options.onConnected?.())
+        .then(() => {
+          // Let connection recovery enqueue authoritative history before
+          // flushing older live messages accumulated during the disconnect.
+          if (running && socket === nextSocket && connected) {
+            flushQueue();
+          }
+        })
+        .catch((error: unknown) => {
+          emitError(error);
+          if (running && socket === nextSocket && connected) {
+            flushQueue();
+          }
+        });
     });
 
     nextSocket.on("data", (data) => {

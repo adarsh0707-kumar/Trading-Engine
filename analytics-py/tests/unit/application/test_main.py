@@ -868,3 +868,42 @@ def test_persistence_failure_updates_service_failure_metrics() -> None:
     assert snapshot.published_analytics_count == 0
     assert snapshot.trade_attempt_count == 1
     assert snapshot.total_processing_duration_seconds > 0.0
+
+
+
+def test_completed_duplicate_trade_is_not_persisted_or_published_twice() -> None:
+    """A duplicate delivery must not repeat side effects after persistence."""
+
+    repositories = _transactional_repositories()
+    publish_sink = Mock()
+    service = AnalyticsService(
+        Settings(),
+        repositories=repositories,
+        publish_sink=publish_sink,
+    )
+
+    def message(price: str) -> str:
+        return (
+            '{"type":"TRADE",'
+            '"request_id":"engine-trade-duplicate-001",'
+            '"timestamp":"2026-09-27T10:00:00+00:00",'
+            '"payload":"{'
+            f'\\"symbol\\":\\"AAPL\\",'
+            f'\\"price\\":\\"{price}\\",'
+            '\\"quantity\\":8,'
+            '\\"taker_order_id\\":\\"order-taker-duplicate\\",'
+            '\\"maker_order_id\\":\\"order-maker-duplicate\\",'
+            '\\"taker_side\\":\\"BUY\\"'
+            '}"'
+            '}'
+        )
+
+    service._handle_message(message("100"))
+    service._handle_message(message("999"))
+
+    repositories.trades.save.assert_called_once()
+    repositories.analytics.save.assert_called_once()
+    repositories.positions.save.assert_called_once()
+    repositories.risk.save_risk_state.assert_called_once()
+    publish_sink.assert_called_once()
+    assert service.processor._sequence == 1
