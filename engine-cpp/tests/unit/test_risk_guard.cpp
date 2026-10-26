@@ -571,7 +571,7 @@ void test_halted_legacy_snapshot_with_fully_covered_journal_reconstructs_diagnos
     {
         std::ofstream out(snapshot);
         out << "3 0 0 -1200 40 10000 10000 " << utc_day
-            << " 1 max_drawdown 2 0 - 0 0 0 0\\n";
+            << " 1 max_drawdown 2 0 - 0 0 0 0\n";
     }
 
     {
@@ -580,8 +580,8 @@ void test_halted_legacy_snapshot_with_fully_covered_journal_reconstructs_diagnos
         const std::string sell_body =
             R"(2 "covered-sell" "SIM" SELL 20 40 1791645644277 "taker-sell" "maker-sell")";
         std::ofstream out(journal);
-        out << buy_body << ' ' << journal_checksum(buy_body) << '\\n';
-        out << sell_body << ' ' << journal_checksum(sell_body) << '\\n';
+        out << buy_body << ' ' << journal_checksum(buy_body) << '\n';
+        out << sell_body << ' ' << journal_checksum(sell_body) << '\n';
     }
 
     {
