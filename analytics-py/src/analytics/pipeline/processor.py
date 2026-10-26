@@ -60,7 +60,7 @@ class StreamingProcessor:
         self._symbols: Dict[str, _SymbolState] = {}
         self._processed_trades: Dict[str, ProcessedTrade] = {}
         self._sequence = 0
-        self._latest_timestamp_by_symbol: Dict[str, datetime] = {}
+        self._latest_order_key_by_symbol: Dict[str, tuple[datetime, str]] = {}
 
     def process_trade(self, trade: Trade) -> AnalyticsResult:
         """Return analytics only, preserving the original processor API."""
@@ -72,8 +72,8 @@ class StreamingProcessor:
 
     def is_late_trade(self, trade: Trade) -> bool:
         """Return whether a new trade predates the latest event for its symbol."""
-        latest = self._latest_timestamp_by_symbol.get(trade.symbol)
-        return latest is not None and trade.timestamp < latest
+        latest_key = self._latest_order_key_by_symbol.get(trade.symbol)
+        return latest_key is not None and (trade.timestamp, trade.trade_id) < latest_key
 
     def processed_results(self) -> tuple[ProcessedTrade, ...]:
         """Return current results in deterministic chronological order."""
@@ -106,7 +106,7 @@ class StreamingProcessor:
         self._symbols = {}
         self._processed_trades = {}
         self._sequence = 0
-        self._latest_timestamp_by_symbol = {}
+        self._latest_order_key_by_symbol = {}
         for trade in ordered:
             self._process_one(trade)
         return self.processed_results()
@@ -191,9 +191,10 @@ class StreamingProcessor:
             risk_events=risk_events,
         )
         self._processed_trades[trade.trade_id] = result
-        latest = self._latest_timestamp_by_symbol.get(trade.symbol)
-        if latest is None or trade.timestamp > latest:
-            self._latest_timestamp_by_symbol[trade.symbol] = trade.timestamp
+        order_key = (trade.timestamp, trade.trade_id)
+        latest_key = self._latest_order_key_by_symbol.get(trade.symbol)
+        if latest_key is None or order_key > latest_key:
+            self._latest_order_key_by_symbol[trade.symbol] = order_key
         return result
 
 
