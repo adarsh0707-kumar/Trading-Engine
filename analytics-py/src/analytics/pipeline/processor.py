@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
-from typing import Dict, List
+from typing import Dict, Iterable, List
 
 from analytics.config.risk_limits import RiskLimitConfig
 from analytics.indicators import calculate_ema, calculate_sma, calculate_vwap, calculate_volatility
@@ -26,7 +26,12 @@ class _SymbolState:
 
 
 class StreamingProcessor:
-    """Consume Trade events and emit analytics and optional risk events."""
+    """Consume Trade events and emit analytics and optional risk events.
+
+    Streaming calls remain idempotent by trade_id. Historical recovery uses
+    replay_trades(), which rebuilds every derived result in stable event-time
+    order so arrival order cannot affect the recovered analytics state.
+    """
 
     def __init__(
         self,
@@ -55,10 +60,56 @@ class StreamingProcessor:
         self._symbols: Dict[str, _SymbolState] = {}
         self._processed_trades: Dict[str, ProcessedTrade] = {}
         self._sequence = 0
+        self._latest_timestamp_by_symbol: Dict[str, datetime] = {}
 
     def process_trade(self, trade: Trade) -> AnalyticsResult:
         """Return analytics only, preserving the original processor API."""
         return self.process_trade_with_risk_events(trade).analytics
+
+    def has_processed_trade(self, trade_id: str) -> bool:
+        """Return whether a trade ID has already been consumed."""
+        return trade_id in self._processed_trades
+
+    def is_late_trade(self, trade: Trade) -> bool:
+        """Return whether a new trade predates the latest event for its symbol."""
+        latest = self._latest_timestamp_by_symbol.get(trade.symbol)
+        return latest is not None and trade.timestamp < latest
+
+    def processed_results(self) -> tuple[ProcessedTrade, ...]:
+        """Return current results in deterministic chronological order."""
+        return tuple(sorted(
+            self._processed_trades.values(),
+            key=lambda result: (
+                result.trade.timestamp,
+                result.trade.symbol,
+                result.trade.trade_id,
+            ),
+        ))
+
+    def replay_trades(self, trades: Iterable[Trade]) -> tuple[ProcessedTrade, ...]:
+        """Reset derived state and replay unique authoritative trades chronologically.
+
+        Trade IDs are idempotency keys. If the input contains duplicate IDs,
+        the first occurrence is retained; all unique trades are ordered by
+        timestamp, symbol, and trade_id for deterministic tie-breaking.
+        """
+        unique: dict[str, Trade] = {}
+        for trade in trades:
+            if not isinstance(trade, Trade):
+                raise TypeError("trades must contain only Trade objects")
+            unique.setdefault(trade.trade_id, trade)
+
+        ordered = sorted(
+            unique.values(),
+            key=lambda trade: (trade.timestamp, trade.symbol, trade.trade_id),
+        )
+        self._symbols = {}
+        self._processed_trades = {}
+        self._sequence = 0
+        self._latest_timestamp_by_symbol = {}
+        for trade in ordered:
+            self._process_one(trade)
+        return self.processed_results()
 
     def process_trade_with_risk_events(self, trade: Trade) -> ProcessedTrade:
         """Process one trade and return analytics plus generated risk events.
@@ -70,7 +121,9 @@ class StreamingProcessor:
         previous = self._processed_trades.get(trade.trade_id)
         if previous is not None:
             return previous
+        return self._process_one(trade)
 
+    def _process_one(self, trade: Trade) -> ProcessedTrade:
         state = self._symbols.setdefault(trade.symbol, _SymbolState())
         if state.risk_manager is None:
             state.risk_manager = RiskManager(initial_equity=self._initial_equity)
@@ -138,6 +191,9 @@ class StreamingProcessor:
             risk_events=risk_events,
         )
         self._processed_trades[trade.trade_id] = result
+        latest = self._latest_timestamp_by_symbol.get(trade.symbol)
+        if latest is None or trade.timestamp > latest:
+            self._latest_timestamp_by_symbol[trade.symbol] = trade.timestamp
         return result
 
 
