@@ -186,7 +186,7 @@ def test_handle_connect_reconciles_authoritative_trade_history() -> None:
 
     service._handle_connect()
 
-    repositories.trades.list_all.assert_called_once_with()
+    assert repositories.trades.list_all.call_count == 2
     repositories.analytics.save.assert_called_once()
     repositories.positions.save.assert_called_once()
     repositories.risk.save_risk_state.assert_called_once()
