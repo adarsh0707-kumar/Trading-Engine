@@ -356,7 +356,6 @@ class AnalyticsService:
                     return
 
                 self._persist(result)
-                self._completed_trade_ids.add(event.trade_id)
 
                 try:
                     self.publisher.publish(result.analytics)
@@ -383,6 +382,7 @@ class AnalyticsService:
                             exc,
                         )
                         raise
+                self._completed_trade_ids.add(event.trade_id)
                 self.trade_throughput_metrics.record_trade()
                 self.risk_metrics.record_snapshot(
                     position=result.risk_snapshot.position,
