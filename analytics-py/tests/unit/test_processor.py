@@ -343,3 +343,101 @@ def test_duplicate_trade_id_returns_same_analytics_through_legacy_api() -> None:
 
     assert duplicate is first
     assert processor._sequence == 1
+
+
+def test_replay_trades_is_independent_of_arrival_order() -> None:
+    """Late-arriving history must produce the same results as ordered history."""
+    from dataclasses import replace
+
+    first = replace(
+        _trade(event_id="evt-1", trade_id="trade-1", price=Decimal("100")),
+        timestamp=datetime(2026, 9, 12, 10, 0, tzinfo=timezone.utc),
+    )
+    second = replace(
+        _trade(event_id="evt-2", trade_id="trade-2", price=Decimal("120")),
+        timestamp=datetime(2026, 9, 12, 10, 2, tzinfo=timezone.utc),
+    )
+    late = replace(
+        _trade(event_id="evt-late", trade_id="trade-late", price=Decimal("110")),
+        timestamp=datetime(2026, 9, 12, 10, 1, tzinfo=timezone.utc),
+    )
+
+    ordered_processor = StreamingProcessor()
+    ordered = ordered_processor.replay_trades([first, late, second])
+    shuffled_processor = StreamingProcessor()
+    shuffled = shuffled_processor.replay_trades([second, first, late])
+
+    assert [item.trade.trade_id for item in ordered] == [
+        "trade-1", "trade-late", "trade-2"
+    ]
+    assert {
+        item.trade.trade_id: (
+            item.analytics.vwap,
+            item.analytics.sma,
+            item.analytics.position,
+            item.analytics.equity,
+            item.analytics.drawdown,
+        )
+        for item in ordered
+    } == {
+        item.trade.trade_id: (
+            item.analytics.vwap,
+            item.analytics.sma,
+            item.analytics.position,
+            item.analytics.equity,
+            item.analytics.drawdown,
+        )
+        for item in shuffled
+    }
+
+
+def test_replay_trades_deduplicates_by_trade_id() -> None:
+    """A duplicated historical event must only affect derived state once."""
+    from dataclasses import replace
+
+    original = _trade(event_id="evt-original", trade_id="same-id")
+    conflicting_duplicate = replace(
+        original,
+        event_id="evt-duplicate",
+        price=Decimal("500"),
+    )
+    later = replace(
+        _trade(event_id="evt-later", trade_id="later-id", price=Decimal("120")),
+        timestamp=datetime(2026, 9, 12, 10, 1, tzinfo=timezone.utc),
+    )
+
+    processor = StreamingProcessor()
+    results = processor.replay_trades(
+        [original, conflicting_duplicate, later]
+    )
+
+    assert len(results) == 2
+    assert results[0].trade is original
+    assert results[0].analytics.price == Decimal("100")
+    assert processor._sequence == 2
+
+
+def test_processor_identifies_late_arrival_and_exposes_replayed_results() -> None:
+    """Out-of-order arrivals can be detected and replayed results inspected."""
+    from dataclasses import replace
+
+    later = replace(
+        _trade(event_id="evt-later", trade_id="trade-later"),
+        timestamp=datetime(2026, 9, 12, 10, 2, tzinfo=timezone.utc),
+    )
+    earlier = replace(
+        _trade(event_id="evt-earlier", trade_id="trade-earlier"),
+        timestamp=datetime(2026, 9, 12, 10, 1, tzinfo=timezone.utc),
+    )
+
+    processor = StreamingProcessor()
+    processor.process_trade_with_risk_events(later)
+
+    assert processor.is_late_trade(earlier)
+    assert not processor.is_late_trade(later)
+
+    results = processor.replay_trades([later, earlier])
+    assert [item.trade.trade_id for item in results] == [
+        "trade-earlier", "trade-later"
+    ]
+    assert not processor.is_late_trade(earlier)

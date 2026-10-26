@@ -127,6 +127,32 @@ class PostgresTradeRepository:
 
         return self._row_to_trade(row)
 
+    def list_all(self) -> tuple[Trade, ...]:
+        """Return all authoritative trades in deterministic event-time order."""
+        with self._connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    event_id,
+                    event_type,
+                    trade_id,
+                    symbol,
+                    price,
+                    quantity,
+                    timestamp,
+                    taker_side,
+                    buy_order_id,
+                    sell_order_id,
+                    taker_order_id,
+                    maker_order_id
+                FROM trades
+                ORDER BY timestamp ASC, symbol ASC, trade_id ASC
+                """
+            )
+            rows = cursor.fetchall()
+
+        return tuple(self._row_to_trade(row) for row in rows)
+
     def list_by_symbol(
         self,
         symbol: str,

@@ -174,36 +174,52 @@ def test_injected_repositories_are_not_owned() -> None:
     assert service._owns_repositories is False
 
 
-def test_handle_connect_replays_latest_persisted_analytics() -> None:
-    """A gateway connection restores the latest persisted analytics snapshot."""
+def test_handle_connect_reconciles_authoritative_trade_history() -> None:
+    """Reconnect rebuilds derived records and republishes latest symbol state."""
 
-    repositories = Mock()
-    latest = _processed_trade().analytics
-    repositories.analytics.get_latest.return_value = latest
+    repositories = _transactional_repositories()
+    trade = _processed_trade().trade
+    repositories.trades.list_all.return_value = (trade,)
+    repositories.connection.cursor.return_value = MagicMock()
     service = _service(repositories=repositories)
     service.publisher.publish = Mock()
 
     service._handle_connect()
 
-    repositories.analytics.get_latest.assert_called_once_with()
-    service.publisher.publish.assert_called_once_with(latest)
+    assert repositories.trades.list_all.call_count == 2
+    repositories.analytics.save.assert_called_once()
+    repositories.positions.save.assert_called_once()
+    repositories.risk.save_risk_state.assert_called_once()
+    service.publisher.publish.assert_called_once()
+    assert service.publisher.publish.call_args.args[0].symbol == trade.symbol
 
 
-def test_handle_connect_skips_replay_when_no_snapshot_exists() -> None:
-    """A gateway connection is healthy when no analytics snapshot is persisted."""
+def test_handle_connect_reconciles_empty_history_without_publishing() -> None:
+    """An empty authoritative history clears stale derived rows atomically."""
 
-    repositories = Mock()
-    repositories.analytics.get_latest.return_value = None
+    repositories = _transactional_repositories()
+    repositories.trades.list_all.return_value = ()
+    repositories.connection.cursor.return_value = MagicMock()
     service = _service(repositories=repositories)
     service.publisher.publish = Mock()
 
     service._handle_connect()
 
+    repositories.analytics.save.assert_not_called()
+    repositories.positions.save.assert_not_called()
+    repositories.risk.save_risk_state.assert_not_called()
     service.publisher.publish.assert_not_called()
+    cursor = repositories.connection.cursor.return_value.__enter__.return_value
+    assert [call.args[0] for call in cursor.execute.call_args_list] == [
+        "DELETE FROM risk_events",
+        "DELETE FROM analytics_results",
+        "DELETE FROM positions",
+        "DELETE FROM risk_state",
+    ]
 
 
 def test_handle_connect_does_not_require_persistence() -> None:
-    """Snapshot replay is skipped when persistence is disabled."""
+    """Reconnect does not touch persistence when it is disabled."""
 
     service = _service()
     service.publisher.publish = Mock()
@@ -211,6 +227,31 @@ def test_handle_connect_does_not_require_persistence() -> None:
     service._handle_connect()
 
     service.publisher.publish.assert_not_called()
+
+
+def test_late_arrival_replays_in_memory_history_chronologically() -> None:
+    """Late arrivals rebuild processor state and republish the latest symbol state."""
+    from dataclasses import replace
+
+    service = _service()
+    service.publisher.publish = Mock()
+    later = replace(
+        _trade(event_id="event-later", trade_id="trade-later", price=Decimal("120")),
+        timestamp=datetime(2026, 9, 12, 10, 2, tzinfo=timezone.utc),
+    )
+    earlier = replace(
+        _trade(event_id="event-earlier", trade_id="trade-earlier", price=Decimal("100")),
+        timestamp=datetime(2026, 9, 12, 10, 1, tzinfo=timezone.utc),
+    )
+    service.processor.process_trade_with_risk_events(later)
+
+    results = service._reconcile_history(incoming_trade=earlier)
+
+    assert [result.trade.trade_id for result in results] == [
+        "trade-earlier", "trade-later"
+    ]
+    service.publisher.publish.assert_called_once()
+    assert service.publisher.publish.call_args.args[0].timestamp == later.timestamp
 
 
 def test_persist_saves_complete_processed_trade() -> None:
