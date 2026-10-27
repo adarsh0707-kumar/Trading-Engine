@@ -391,7 +391,7 @@ class AnalyticsService:
                         event.trade_id,
                         event.event_id,
                     )
-                    return
+                    return self.repositories is not None
 
                 self._persist(result)
                 persisted = self.repositories is not None
