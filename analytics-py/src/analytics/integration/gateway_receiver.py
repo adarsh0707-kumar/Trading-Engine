@@ -9,6 +9,7 @@ pipeline.
 
 from __future__ import annotations
 
+import json
 import logging
 import socket
 import struct
@@ -35,7 +36,7 @@ class GatewayAnalyticsReceiver:
         port: int,
         *,
         max_payload_size: int = MAX_PAYLOAD_SIZE,
-        on_message: Callable[[str], None] | None = None,
+        on_message: Callable[[str], bool | None] | None = None,
         on_connect: Callable[[], None] | None = None,
         on_disconnect: Callable[[], None] | None = None,
     ) -> None:
@@ -255,9 +256,55 @@ class GatewayAnalyticsReceiver:
             return
 
         try:
-            self.on_message(payload)
+            accepted = self.on_message(payload)
+            self._send_trade_ack(payload, accepted)
         except Exception:
             logger.exception("gateway_receiver_message_callback_failed")
+            self._send_trade_ack(payload, False)
+
+    def _send_trade_ack(self, payload: str, accepted: bool | None) -> None:
+        """Acknowledge a TRADE only when the callback reports its final outcome.
+
+        A None result intentionally produces no acknowledgement: queue admission
+        is not proof that the trade was processed or committed.
+        """
+        if accepted is None:
+            return
+
+        try:
+            envelope = json.loads(payload)
+        except (TypeError, json.JSONDecodeError):
+            return
+
+        if not isinstance(envelope, dict) or envelope.get("type") != "TRADE":
+            return
+
+        event_id = envelope.get("event_id")
+        request_id = envelope.get("request_id")
+        if not isinstance(event_id, str) or not event_id:
+            return
+        if not isinstance(request_id, str) or not request_id:
+            return
+
+        acknowledgement = json.dumps(
+            {
+                "version": 1,
+                "type": "TRADE_ACK",
+                "event_id": event_id,
+                "request_id": request_id,
+                "status": "persisted" if accepted else "rejected",
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        try:
+            self.send(acknowledgement)
+        except (ConnectionError, GatewayReceiverProtocolError):
+            logger.warning(
+                "gateway_receiver_trade_ack_failed event_id=%s",
+                event_id,
+                exc_info=True,
+            )
 
     def _notify_connect(self) -> None:
         if self.on_connect is None:
