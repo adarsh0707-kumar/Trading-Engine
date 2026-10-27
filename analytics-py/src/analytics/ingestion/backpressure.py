@@ -9,7 +9,9 @@ from threading import Event, Lock, Thread, current_thread
 from typing import Callable, Generic, TypeVar
 
 
-logger = logging.getLogger(__name__)\n\nT = TypeVar("T")
+logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 @dataclass(frozen=True, slots=True)
