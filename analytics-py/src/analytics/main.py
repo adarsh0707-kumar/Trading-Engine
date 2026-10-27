@@ -395,6 +395,10 @@ class AnalyticsService:
 
                 self._persist(result)
                 persisted = self.repositories is not None
+                # Persistence is the durable boundary. Mark the trade complete
+                # before publishing so a retry after a publish/socket failure
+                # cannot re-apply its risk and position effects in memory.
+                self._completed_trade_ids.add(event.trade_id)
 
                 try:
                     self.publisher.publish(result.analytics)
@@ -421,7 +425,6 @@ class AnalyticsService:
                             exc,
                         )
                         raise
-                self._completed_trade_ids.add(event.trade_id)
                 self.trade_throughput_metrics.record_trade()
                 self.risk_metrics.record_snapshot(
                     position=result.risk_snapshot.position,
