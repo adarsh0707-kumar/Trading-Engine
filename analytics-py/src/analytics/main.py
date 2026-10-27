@@ -297,7 +297,7 @@ class AnalyticsService:
             logger.info("persistence_connection_recovered")
             return True
 
-    def _handle_message(self, message: str) -> None:
+    def _handle_message(self, message: str) -> bool | None:
         """Handle one inbound message with lifecycle-aware backpressure."""
         self.health_metrics.record_message(perf_counter())
 
@@ -306,11 +306,12 @@ class AnalyticsService:
         # callback only after service.start(), so live traffic uses the bounded
         # queue and dedicated worker below.
         if not self._started:
-            self._process_message(message)
-            return
+            return self._process_message(message)
 
+        completion: Future[bool | None] = Future()
+        work_item = _QueuedAnalyticsMessage(message, completion)
         accepted = self._message_queue.put(
-            message,
+            work_item,
             timeout=self.settings.backpressure_enqueue_timeout,
         )
         self.backpressure_metrics.set_queue_depth(
@@ -318,7 +319,9 @@ class AnalyticsService:
         )
         if accepted:
             self.backpressure_metrics.record_enqueued()
-            return
+            # Wait for the worker's final result; queue admission alone is not
+            # a persistence acknowledgement.
+            return completion.result()
 
         self.backpressure_metrics.record_rejected()
         logger.warning(
@@ -326,16 +329,22 @@ class AnalyticsService:
             self._message_queue.snapshot().queue_depth,
             self.settings.backpressure_queue_capacity,
         )
+        return False
 
-    def _process_queued_message(self, message: str) -> None:
+    def _process_queued_message(self, work_item: _QueuedAnalyticsMessage) -> None:
         try:
-            self._process_message(message)
+            outcome = self._process_message(work_item.payload)
+            work_item.completion.set_result(outcome)
+        except Exception as exc:
+            if not work_item.completion.done():
+                work_item.completion.set_exception(exc)
+            raise
         finally:
             self.backpressure_metrics.set_queue_depth(
                 self._message_queue.snapshot().queue_depth,
             )
 
-    def _process_message(self, message: str) -> None:
+    def _process_message(self, message: str) -> bool | None:
         """Parse, process, persist, and publish one queued message."""
 
         try:
@@ -344,7 +353,7 @@ class AnalyticsService:
             self.service_metrics.record_parse_error()
             self.error_metrics.record_parse_error()
             logger.warning("message_parse_failed error=%s", exc)
-            return
+            return False
 
         if isinstance(event, Trade):
             started_at = perf_counter()
@@ -367,7 +376,7 @@ class AnalyticsService:
                         event.trade_id,
                         len(results),
                     )
-                    return
+                    return self.repositories is not None
 
                 result = self.processor.process_trade_with_risk_events(
                     event,
@@ -385,6 +394,7 @@ class AnalyticsService:
                     return
 
                 self._persist(result)
+                persisted = self.repositories is not None
 
                 try:
                     self.publisher.publish(result.analytics)
