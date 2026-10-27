@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import signal
+from concurrent.futures import Future
+from dataclasses import dataclass
 from threading import Event, Lock
 from time import perf_counter, sleep
 from typing import Callable
@@ -35,6 +37,14 @@ from analytics.pipeline import AnalyticsPublisher, StreamingProcessor
 
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class _QueuedAnalyticsMessage:
+    """A message plus the completion signal used by the gateway ACK path."""
+
+    payload: str
+    completion: Future[bool | None]
 
 
 class AnalyticsService:
@@ -88,7 +98,7 @@ class AnalyticsService:
         self.processor = StreamingProcessor(risk_limits=settings.risk_limit_config)
         self._completed_trade_ids: set[str] = set()
 
-        self._message_queue = BackpressureQueue(
+        self._message_queue: BackpressureQueue[_QueuedAnalyticsMessage] = BackpressureQueue(
             capacity=settings.backpressure_queue_capacity,
         )
         self._message_worker = BackpressureWorker(
@@ -451,8 +461,9 @@ class AnalyticsService:
                     duration_seconds,
                 )
                 self.processing_latency_metrics.record(duration_seconds)
+                return persisted
 
-            return
+            return False
 
         self.service_metrics.record_ignored_event()
         logger.debug(
