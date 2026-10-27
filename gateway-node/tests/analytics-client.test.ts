@@ -374,3 +374,84 @@ test("parses persistence acknowledgements from analytics", async () => {
     client.stop();
   }
 });
+
+
+test("retries a rejected trade and clears it only after persisted acknowledgement", async () => {
+  let receivedTrades = 0;
+  let receivedAck: Record<string, unknown> | undefined;
+  const server = createServer((socket) => {
+    let buffer = Buffer.alloc(0);
+    socket.on("data", (chunk) => {
+      buffer = Buffer.concat([buffer, Buffer.from(chunk)]);
+      while (buffer.length >= 4) {
+        const size = buffer.readUInt32BE(0);
+        if (buffer.length < size + 4) return;
+        const message = JSON.parse(
+          buffer.subarray(4, size + 4).toString("utf8"),
+        ) as Record<string, unknown>;
+        buffer = buffer.subarray(size + 4);
+        if (message.type !== "TRADE") continue;
+
+        receivedTrades += 1;
+        const ackPayload = Buffer.from(
+          JSON.stringify({
+            version: 1,
+            type: "TRADE_ACK",
+            event_id: "trade-00000001-buy-1-sell-1",
+            request_id: "trade-00000001-buy-1-sell-1",
+            status: receivedTrades === 1 ? "rejected" : "persisted",
+          }),
+          "utf8",
+        );
+        const response = Buffer.alloc(4 + ackPayload.length);
+        response.writeUInt32BE(ackPayload.length, 0);
+        ackPayload.copy(response, 4);
+        socket.write(response);
+      }
+    });
+  });
+
+  servers.push(server);
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    throw new Error("Test server did not expose an address");
+  }
+
+  const client = createAnalyticsClient({
+    host: "127.0.0.1",
+    port: address.port,
+    connectTimeoutMs: 1000,
+    reconnectInitialDelayMs: 10,
+    reconnectMaxDelayMs: 20,
+    reconnectMaxAttempts: 1,
+    maxQueueSize: 10,
+    onTradeAck: (message) => {
+      receivedAck = message as unknown as Record<string, unknown>;
+    },
+  });
+
+  client.start();
+  try {
+    const connectedDeadline = Date.now() + 1000;
+    while (!client.isConnected() && Date.now() < connectedDeadline) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    expect(client.sendTrade(tradeEvent())).toBe(true);
+    const ackDeadline = Date.now() + 4000;
+    while (
+      (receivedAck?.status !== "persisted" || receivedTrades < 2) &&
+      Date.now() < ackDeadline
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(receivedTrades).toBe(2);
+    expect(receivedAck?.status).toBe("persisted");
+  } finally {
+    client.stop();
+  }
+});
