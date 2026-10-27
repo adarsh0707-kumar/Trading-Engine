@@ -251,16 +251,17 @@ describe("analytics client", () => {
         requestId: "trade-2",
       };
       expect(client.sendTrade(queuedTrade)).toBe(true);
-      expect(client.getQueueSize()).toBe(1);
+      expect(client.getQueueSize()).toBe(2);
 
       await waitFor(() => client.isConnected() && connections >= 2);
       await new Promise((resolve) => setTimeout(resolve, 30));
       expect(receivedTradeIds).toHaveLength(1);
 
       releaseReconnect();
-      await waitFor(() => receivedTradeIds.length === 2);
+      await waitFor(() => receivedTradeIds.length === 3);
 
       expect(receivedTradeIds).toEqual([
+        "trade-00000001-buy-1-sell-1",
         "trade-00000001-buy-1-sell-1",
         "trade-2",
       ]);
@@ -294,7 +295,12 @@ describe("analytics client", () => {
     });
 
     expect(client.sendTrade(tradeEvent())).toBe(true);
-    expect(client.sendTrade(tradeEvent())).toBe(false);
+    expect(client.sendTrade({
+      ...tradeEvent(),
+      eventId: "trade-2",
+      tradeId: "trade-2",
+      requestId: "trade-2",
+    })).toBe(false);
     expect(client.getQueueSize()).toBe(1);
     expect(errors[0]?.name).toBe("GatewayFailure");
     expect((errors[0] as { category?: string }).category).toBe("queue_overflow");
