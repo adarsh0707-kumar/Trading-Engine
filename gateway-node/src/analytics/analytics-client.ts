@@ -8,6 +8,7 @@ import {
 import type {
   GatewayAnalyticsUpdateMessage,
   GatewayRiskEventMessage,
+  GatewayTradeAckMessage,
   GatewayTradeMessage,
 } from "./analytics-message.types.ts";
 import type {
@@ -30,6 +31,7 @@ export interface AnalyticsClientOptions {
   readonly maxQueueSize: number;
   readonly onAnalyticsUpdate?: (message: GatewayAnalyticsUpdateMessage) => void;
   readonly onRiskEvent?: (message: GatewayRiskEventMessage) => void;
+  readonly onTradeAck?: (message: GatewayTradeAckMessage) => void;
   readonly onError?: (error: Error) => void;
   readonly onStateChange?: (state: AnalyticsClientState) => void;
   readonly onConnected?: () => Promise<void>;
@@ -176,6 +178,28 @@ export function createAnalyticsClient(
         throw new AnalyticsMessageValidationError(
           "Analytics inbound payload must be valid JSON",
         );
+      }
+
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        "type" in value &&
+        value.type === "TRADE_ACK"
+      ) {
+        const acknowledgement = value as Partial<GatewayTradeAckMessage>;
+        if (
+          acknowledgement.version !== 1 ||
+          typeof acknowledgement.event_id !== "string" ||
+          typeof acknowledgement.request_id !== "string" ||
+          (acknowledgement.status !== "persisted" &&
+            acknowledgement.status !== "rejected")
+        ) {
+          throw new AnalyticsMessageValidationError(
+            "Analytics TRADE_ACK payload is invalid",
+          );
+        }
+        options.onTradeAck?.(acknowledgement as GatewayTradeAckMessage);
+        continue;
       }
 
       const message = normalizeAnalyticsOutputMessage(value);
