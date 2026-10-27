@@ -171,6 +171,9 @@ jobs:
         working-directory: gateway-node
         run: RUN_RUNTIME_INTEGRATION=true bun test tests/runtime-stack.integration.test.ts
 
+      - name: Durable outbox gateway-restart recovery and PostgreSQL uniqueness
+        run: bash scripts/validate-trade-outbox-restart.sh
+
       - name: Verify PostgreSQL persistence
         run: |
           for attempt in $(seq 1 30); do
