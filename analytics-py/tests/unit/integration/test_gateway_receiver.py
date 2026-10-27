@@ -251,3 +251,64 @@ def test_receiver_accepts_a_new_gateway_connection_after_disconnect() -> None:
         assert disconnected_count == 2
     finally:
         receiver.stop()
+
+
+
+def test_sends_trade_ack_only_after_callback_reports_outcome() -> None:
+    """A TRADE ACK carries the callback's final outcome, not queue admission."""
+    port = _free_port()
+    receiver = GatewayAnalyticsReceiver(
+        "127.0.0.1",
+        port,
+        on_message=lambda _message: True,
+    )
+    receiver.start()
+
+    try:
+        with _connect_when_ready("127.0.0.1", port) as client:
+            client.settimeout(2.0)
+            receiver_ready = lambda: receiver.is_connected()
+            _wait_until(receiver_ready)
+            client.sendall(_frame(VALID_MESSAGE))
+
+            header = client.recv(4)
+            assert len(header) == 4
+            size = struct.unpack(">I", header)[0]
+            body = bytearray()
+            while len(body) < size:
+                chunk = client.recv(size - len(body))
+                assert chunk
+                body.extend(chunk)
+
+            acknowledgement = json.loads(body.decode("utf-8"))
+
+        assert acknowledgement == {
+            "version": 1,
+            "type": "TRADE_ACK",
+            "event_id": "trade-00000001-buy-1-sell-1",
+            "request_id": "trade-00000001-buy-1-sell-1",
+            "status": "persisted",
+        }
+    finally:
+        receiver.stop()
+
+
+def test_does_not_ack_trade_when_callback_has_no_final_outcome() -> None:
+    """A callback returning None must not be mistaken for persistence success."""
+    port = _free_port()
+    receiver = GatewayAnalyticsReceiver(
+        "127.0.0.1",
+        port,
+        on_message=lambda _message: None,
+    )
+    receiver.start()
+
+    try:
+        with _connect_when_ready("127.0.0.1", port) as client:
+            client.settimeout(0.2)
+            _wait_until(lambda: receiver.is_connected())
+            client.sendall(_frame(VALID_MESSAGE))
+            with pytest.raises(socket.timeout):
+                client.recv(4)
+    finally:
+        receiver.stop()
