@@ -1,3 +1,16 @@
+# 2026-10-27 — Durable Gateway Analytics Trade Delivery (PR #170)
+
+**Status:** Merged to `main` as `428220ec1c9c845eeac6c9e05b23eb7f25a1664d`; the PR test, build, Docker, lint, security, and Microsoft C++ Code Analysis workflows passed.
+
+- Added a persistent SQLite outbox for Gateway-to-analytics trade delivery, including restart replay of pending entries.
+- Remove pending outbox entries only after the analytics service acknowledges persistence.
+- Added duplicate trade-ID payload conflict detection to prevent conflicting payloads from being silently treated as the same trade.
+- Added `GATEWAY_TRADE_OUTBOX_PATH` configuration and persistent Docker Compose storage for the outbox.
+- Added `scripts/validate-trade-outbox-restart.sh` to runtime-integration CI. The test seeds pending work, restarts the Gateway, and verifies one persisted PostgreSQL trade and an empty acknowledged outbox.
+- This improves forward delivery durability; it does not backfill or prove the cause of historical missing analytics rows. Phase 5.14 live-runtime acceptance remains separate.
+
+---
+
 # 2026-10-25 — Risk-Halt Diagnostics Recovery Context (PR #165)
 
 **Status:** Merged to `main` as `be2651233efa9b3d13b4ca355751361aca26e8da`; GitHub Actions reported green; clean local C++ rebuild and full CTest suite passed **16/16**.
