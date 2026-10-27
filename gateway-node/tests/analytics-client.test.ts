@@ -1,8 +1,12 @@
 import { createServer, type Server } from "node:net";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { afterEach, describe, expect, test } from "bun:test";
 
 import { createAnalyticsClient } from "../src/analytics/analytics-client.ts";
+import { SqliteTradeOutbox } from "../src/analytics/trade-outbox.ts";
 
 function decodeFrame(data: Buffer): Record<string, unknown> {
   const payloadSize = data.readUInt32BE(0);
@@ -31,8 +35,12 @@ function tradeEvent() {
 }
 
 const servers: Server[] = [];
+const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
+  for (const directory of temporaryDirectories.splice(0)) {
+    rmSync(directory, { recursive: true, force: true });
+  }
   await Promise.all(
     servers.map(
       (server) =>
@@ -459,5 +467,97 @@ test("retries a rejected trade and clears it only after persisted acknowledgemen
     expect(receivedAck?.status).toBe("persisted");
   } finally {
     client.stop();
+  }
+});
+
+
+test("replays durable pending trades after a gateway client restart", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "gateway-outbox-restart-"));
+  temporaryDirectories.push(directory);
+  const outboxPath = join(directory, "trade-outbox.sqlite");
+
+  const firstOutbox = new SqliteTradeOutbox(outboxPath);
+  const firstClient = createAnalyticsClient({
+    host: "127.0.0.1",
+    port: 1,
+    connectTimeoutMs: 100,
+    reconnectInitialDelayMs: 10,
+    reconnectMaxDelayMs: 20,
+    reconnectMaxAttempts: 0,
+    maxQueueSize: 10,
+    tradeOutbox: firstOutbox,
+  });
+
+  expect(firstClient.sendTrade(tradeEvent())).toBe(true);
+  expect(firstOutbox.listPending()).toHaveLength(1);
+  firstClient.stop();
+  firstOutbox.close();
+
+  const receivedTradeIds: string[] = [];
+  const server = createServer((socket) => {
+    let buffer = Buffer.alloc(0);
+    socket.on("data", (chunk) => {
+      buffer = Buffer.concat([buffer, Buffer.from(chunk)]);
+      while (buffer.length >= 4) {
+        const payloadSize = buffer.readUInt32BE(0);
+        const frameSize = payloadSize + 4;
+        if (buffer.length < frameSize) return;
+        const message = decodeFrame(buffer.subarray(0, frameSize));
+        buffer = buffer.subarray(frameSize);
+        const eventId = String(message.event_id);
+        const requestId = String(message.request_id);
+        receivedTradeIds.push(eventId);
+
+        const payload = Buffer.from(JSON.stringify({
+          version: 1,
+          type: "TRADE_ACK",
+          event_id: eventId,
+          request_id: requestId,
+          status: "persisted",
+        }));
+        const response = Buffer.alloc(4 + payload.length);
+        response.writeUInt32BE(payload.length, 0);
+        payload.copy(response, 4);
+        socket.write(response);
+      }
+    });
+  });
+  servers.push(server);
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    throw new Error("Test server did not expose an address");
+  }
+
+  const recoveredOutbox = new SqliteTradeOutbox(outboxPath);
+  const recoveredClient = createAnalyticsClient({
+    host: "127.0.0.1",
+    port: address.port,
+    connectTimeoutMs: 1000,
+    reconnectInitialDelayMs: 10,
+    reconnectMaxDelayMs: 20,
+    reconnectMaxAttempts: 2,
+    maxQueueSize: 10,
+    tradeOutbox: recoveredOutbox,
+  });
+
+  try {
+    recoveredClient.start();
+    const deadline = Date.now() + 1500;
+    while (
+      (receivedTradeIds.length === 0 || recoveredOutbox.listPending().length !== 0) &&
+      Date.now() < deadline
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    expect(receivedTradeIds).toEqual(["trade-00000001-buy-1-sell-1"]);
+    expect(recoveredOutbox.listPending()).toEqual([]);
+  } finally {
+    recoveredClient.stop();
+    recoveredOutbox.close();
   }
 });
