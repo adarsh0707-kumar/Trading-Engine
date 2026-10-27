@@ -13,6 +13,7 @@ import {
   createAnalyticsClient,
   type AnalyticsClient,
 } from "./analytics/analytics-client.ts";
+import { SqliteTradeOutbox, type TradeOutbox } from "./analytics/trade-outbox.ts";
 import {
   createAnalyticsProvider,
   type MutableAnalyticsProvider,
@@ -55,6 +56,7 @@ export interface GatewayServerOptions {
   readonly tradesProvider?: TradesProvider;
   readonly analyticsProvider?: AnalyticsProvider;
   readonly engineProvider?: EngineProvider;
+  readonly tradeOutbox?: TradeOutbox;
 }
 
 export function createGatewayServer(
@@ -193,6 +195,12 @@ export function createGatewayServer(
       ? (analyticsProvider as MutableAnalyticsProvider)
       : undefined;
 
+  const ownedTradeOutbox =
+    options.tradeOutbox === undefined && environment.GATEWAY_TRADE_OUTBOX_PATH
+      ? new SqliteTradeOutbox(environment.GATEWAY_TRADE_OUTBOX_PATH)
+      : undefined;
+  const tradeOutbox = options.tradeOutbox ?? ownedTradeOutbox;
+
   const analyticsClient = createAnalyticsClient({
     host: config.analytics.host,
     port: config.analytics.port,
@@ -201,6 +209,7 @@ export function createGatewayServer(
     reconnectMaxDelayMs: config.analytics.reconnectMaxDelayMs,
     reconnectMaxAttempts: config.analytics.reconnectMaxAttempts,
     maxQueueSize: config.analytics.maxQueueSize,
+    tradeOutbox,
     onAnalyticsUpdate: (message) => {
       metrics.recordAnalyticsUpdate();
       metrics.recordWebSocketPublishedEvent("ANALYTICS_UPDATE");
@@ -580,10 +589,12 @@ export function createGatewayServer(
 
   const stop = async (): Promise<void> => {
     if (!started) {
+      ownedTradeOutbox?.close();
       return;
     }
 
     analyticsClient.stop();
+    ownedTradeOutbox?.close();
     engineEventClient.stop();
     websocketHub.stopHeartbeat();
     websocketHub.closeAll();
