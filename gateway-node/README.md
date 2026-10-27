@@ -151,6 +151,7 @@ Phase 4.1 currently supports the following environment variables:
 |---|---|---|
 | `GATEWAY_HOST` | `127.0.0.1` | HTTP server bind address |
 | `GATEWAY_PORT` | `8080` | HTTP server port |
+| `GATEWAY_TRADE_OUTBOX_PATH` | Unset (disabled) | Optional SQLite file path for durable pending analytics trade deliveries; Docker Compose enables it on a named volume |
 
 Example:
 
@@ -376,7 +377,7 @@ POST /api/engine/reset
 - latest analytics REST access
 - WebSocket analytics updates
 - analytics availability state
-- event identity preservation
+- event identity preservation\n- persistence acknowledgements from analytics\n- optional SQLite durable outbox with restart recovery\n- pending outbox rows are removed only after a persisted acknowledgement
 
 ### 4.8 — Error Handling, Resilience & Backpressure
 

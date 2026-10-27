@@ -8,12 +8,14 @@ import {
 import type {
   GatewayAnalyticsUpdateMessage,
   GatewayRiskEventMessage,
+  GatewayTradeAckMessage,
   GatewayTradeMessage,
 } from "./analytics-message.types.ts";
 import type {
   NormalizedTradeEvent,
 } from "../engine-protocol/engine-trade.types.ts";
 import { QueueOverflow } from "../resilience/error-model.ts";
+import type { TradeOutbox } from "./trade-outbox.ts";
 
 export type AnalyticsClientState =
   | "connecting"
@@ -30,6 +32,7 @@ export interface AnalyticsClientOptions {
   readonly maxQueueSize: number;
   readonly onAnalyticsUpdate?: (message: GatewayAnalyticsUpdateMessage) => void;
   readonly onRiskEvent?: (message: GatewayRiskEventMessage) => void;
+  readonly onTradeAck?: (message: GatewayTradeAckMessage) => void;
   readonly onError?: (error: Error) => void;
   readonly onStateChange?: (state: AnalyticsClientState) => void;
   readonly onConnected?: () => Promise<void>;
@@ -38,6 +41,7 @@ export interface AnalyticsClientOptions {
     readonly timestamp: number;
   }) => void;
   readonly socketFactory?: () => NetSocket;
+  readonly tradeOutbox?: TradeOutbox;
 }
 
 export interface AnalyticsClient {
@@ -97,7 +101,18 @@ export function createAnalyticsClient(
   let state: AnalyticsClientState = "disconnected";
   let reconnectAttempts = 0;
   let inboundBuffer = Buffer.alloc(0);
-  const queue: Buffer[] = [];
+  const queue: string[] = [];
+  const pendingTrades = new Map<
+    string,
+    { readonly message: Buffer; attempts: number; timer?: ReturnType<typeof setTimeout> }
+  >();
+  const ACK_TIMEOUT_MS = 1500;
+  const MAX_ACK_RETRIES = 3;
+
+  for (const record of options.tradeOutbox?.listPending() ?? []) {
+    pendingTrades.set(record.eventId, { message: record.message, attempts: 0 });
+    queue.push(record.eventId);
+  }
 
   const emitState = (nextState: AnalyticsClientState): void => {
     state = nextState;
@@ -132,17 +147,62 @@ export function createAnalyticsClient(
     }
   };
 
+  const scheduleAckTimeout = (eventId: string): void => {
+    const pending = pendingTrades.get(eventId);
+    if (!pending) {
+      return;
+    }
+    if (pending.timer !== undefined) {
+      clearTimeout(pending.timer);
+    }
+    pending.timer = setTimeout(() => {
+      pending.timer = undefined;
+      retryPendingTrade(eventId);
+    }, ACK_TIMEOUT_MS);
+  };
+
+  const retryPendingTrade = (eventId: string): void => {
+    const pending = pendingTrades.get(eventId);
+    if (!pending || !running) {
+      return;
+    }
+    if (pending.attempts >= MAX_ACK_RETRIES) {
+      emitError(
+        new Error(
+          `Analytics did not acknowledge trade ${eventId} after ${MAX_ACK_RETRIES} retries`,
+        ),
+      );
+      return;
+    }
+
+    pending.attempts += 1;
+    if (!socket || !connected) {
+      if (!queue.includes(eventId)) {
+        queue.push(eventId);
+      }
+      return;
+    }
+
+    socket.write(pending.message);
+    scheduleAckTimeout(eventId);
+  };
+
   const flushQueue = (): void => {
     if (!socket || !connected) {
       return;
     }
 
     while (queue.length > 0 && socket !== undefined && connected) {
-      const message = queue.shift();
-      if (message === undefined) {
+      const eventId = queue.shift();
+      if (eventId === undefined) {
         return;
       }
-      socket.write(message);
+      const pending = pendingTrades.get(eventId);
+      if (!pending) {
+        continue;
+      }
+      socket.write(pending.message);
+      scheduleAckTimeout(eventId);
     }
   };
 
@@ -176,6 +236,49 @@ export function createAnalyticsClient(
         throw new AnalyticsMessageValidationError(
           "Analytics inbound payload must be valid JSON",
         );
+      }
+
+      if (
+        typeof value === "object" &&
+        value !== null &&
+        "type" in value &&
+        value.type === "TRADE_ACK"
+      ) {
+        const acknowledgement = value as Partial<GatewayTradeAckMessage>;
+        if (
+          acknowledgement.version !== 1 ||
+          typeof acknowledgement.event_id !== "string" ||
+          typeof acknowledgement.request_id !== "string" ||
+          (acknowledgement.status !== "persisted" &&
+            acknowledgement.status !== "rejected")
+        ) {
+          throw new AnalyticsMessageValidationError(
+            "Analytics TRADE_ACK payload is invalid",
+          );
+        }
+        const ack = acknowledgement as GatewayTradeAckMessage;
+        options.onTradeAck?.(ack);
+        const pending = pendingTrades.get(ack.event_id);
+        if (ack.status === "persisted") {
+          try {
+            options.tradeOutbox?.acknowledge(ack.event_id);
+          } catch (error) {
+            emitError(error);
+            scheduleAckTimeout(ack.event_id);
+            continue;
+          }
+          if (pending?.timer !== undefined) {
+            clearTimeout(pending.timer);
+          }
+          pendingTrades.delete(ack.event_id);
+          const queuedIndex = queue.indexOf(ack.event_id);
+          if (queuedIndex >= 0) {
+            queue.splice(queuedIndex, 1);
+          }
+        } else {
+          retryPendingTrade(ack.event_id);
+        }
+        continue;
       }
 
       const message = normalizeAnalyticsOutputMessage(value);
@@ -222,6 +325,16 @@ export function createAnalyticsClient(
     socket = undefined;
     inboundBuffer = Buffer.alloc(0);
     emitState("disconnected");
+
+    for (const [eventId, pending] of pendingTrades) {
+      if (pending.timer !== undefined) {
+        clearTimeout(pending.timer);
+        pending.timer = undefined;
+      }
+      if (!queue.includes(eventId)) {
+        queue.push(eventId);
+      }
+    }
 
     if (running) {
       scheduleReconnect();
@@ -327,6 +440,13 @@ export function createAnalyticsClient(
     clearTimers();
     reconnectAttempts = 0;
     disconnect();
+    for (const pending of pendingTrades.values()) {
+      if (pending.timer !== undefined) {
+        clearTimeout(pending.timer);
+      }
+    }
+    pendingTrades.clear();
+    queue.length = 0;
   };
 
   const sendTrade = (
@@ -337,23 +457,14 @@ export function createAnalyticsClient(
     );
     const message = frame(payload);
 
-    if (connected && socket !== undefined) {
-      socket.write(message);
+    const eventId = event.eventId;
+    if (pendingTrades.has(eventId)) {
       return true;
     }
 
-    if (options.maxQueueSize === 0) {
-      emitError(
-        new Error(
-          "Analytics client is disconnected and its outbound queue is disabled",
-        ),
-      );
-      return false;
-    }
-
-    if (queue.length >= options.maxQueueSize) {
+    if (options.maxQueueSize === 0 || pendingTrades.size >= options.maxQueueSize) {
       const error = new QueueOverflow(
-        `Analytics outbound queue is full at ${options.maxQueueSize} messages`,
+        `Analytics pending trade limit reached at ${options.maxQueueSize} messages`,
       );
       emitError(error);
       options.onHealthEvent?.({
@@ -363,7 +474,21 @@ export function createAnalyticsClient(
       return false;
     }
 
-    queue.push(message);
+    try {
+      options.tradeOutbox?.enqueue(eventId, message);
+    } catch (error) {
+      emitError(error);
+      return false;
+    }
+
+    pendingTrades.set(eventId, { message, attempts: 0 });
+    if (connected && socket !== undefined) {
+      socket.write(message);
+      scheduleAckTimeout(eventId);
+      return true;
+    }
+
+    queue.push(eventId);
     return true;
   };
 

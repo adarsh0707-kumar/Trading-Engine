@@ -4,6 +4,7 @@ export const ANALYTICS_MESSAGE_TYPES = [
   "TRADE",
   "ANALYTICS_UPDATE",
   "RISK_EVENT",
+  "TRADE_ACK",
 ] as const;
 
 export type AnalyticsMessageType =
@@ -80,3 +81,12 @@ export interface GatewayRiskEventMessage {
 export type GatewayAnalyticsOutputMessage =
   | GatewayAnalyticsUpdateMessage
   | GatewayRiskEventMessage;
+
+
+export interface GatewayTradeAckMessage {
+  readonly version: typeof ANALYTICS_PROTOCOL_VERSION;
+  readonly type: "TRADE_ACK";
+  readonly event_id: string;
+  readonly request_id: string;
+  readonly status: "persisted" | "rejected";
+}

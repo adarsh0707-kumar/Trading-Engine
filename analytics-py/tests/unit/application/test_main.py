@@ -408,8 +408,9 @@ def test_handle_message_does_not_publish_after_persistence_failure(
     )
 
     with caplog.at_level(logging.ERROR):
-        service._handle_message(message)
+        outcome = service._handle_message(message)
 
+    assert outcome is False
     assert "persistence_failed attempts=3" in caplog.text
     assert "event_id=event-persistence-failure-001" in caplog.text
     assert "symbol=AAPL" in caplog.text
@@ -484,7 +485,7 @@ def test_handle_message_persists_and_publishes_trade() -> None:
         publish_sink=publish_sink,
     )
 
-    service._handle_message(
+    outcome = service._handle_message(
         '{"type":"TRADE",'
         '"request_id":"event-001",'
         '"timestamp":"2026-09-12T10:00:00+00:00",'
@@ -499,6 +500,7 @@ def test_handle_message_persists_and_publishes_trade() -> None:
         '}',
     )
 
+    assert outcome is True
     repositories.trades.save.assert_called_once()
     repositories.analytics.save.assert_called_once()
     repositories.positions.save.assert_called_once()

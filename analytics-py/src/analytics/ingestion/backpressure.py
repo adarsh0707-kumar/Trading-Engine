@@ -6,10 +6,12 @@ from dataclasses import dataclass
 import logging
 from queue import Empty, Full, Queue
 from threading import Event, Lock, Thread, current_thread
-from typing import Callable
+from typing import Callable, Generic, TypeVar
 
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,7 +24,7 @@ class BackpressureSnapshot:
     rejected_count: int
 
 
-class BackpressureQueue:
+class BackpressureQueue(Generic[T]):
     """Bounded FIFO queue with explicit rejection metrics."""
 
     def __init__(self, *, capacity: int) -> None:
@@ -32,12 +34,12 @@ class BackpressureQueue:
             raise ValueError("capacity must be greater than 0")
 
         self.capacity = capacity
-        self._queue: Queue[str] = Queue(maxsize=capacity)
+        self._queue: Queue[T] = Queue(maxsize=capacity)
         self._lock = Lock()
         self._enqueued_count = 0
         self._rejected_count = 0
 
-    def put(self, message: str, *, timeout: float) -> bool:
+    def put(self, message: T, *, timeout: float) -> bool:
         """Enqueue a message, rejecting it when the bounded queue is full."""
         if timeout < 0:
             raise ValueError("timeout must not be negative")
@@ -53,7 +55,7 @@ class BackpressureQueue:
             self._enqueued_count += 1
         return True
 
-    def get(self, *, timeout: float) -> str | None:
+    def get(self, *, timeout: float) -> T | None:
         """Return the next message, or None when the queue is empty."""
         try:
             return self._queue.get(timeout=timeout)
@@ -79,13 +81,13 @@ class BackpressureQueue:
             )
 
 
-class BackpressureWorker:
+class BackpressureWorker(Generic[T]):
     """Process queued messages on a dedicated worker thread."""
 
     def __init__(
         self,
-        queue: BackpressureQueue,
-        handler: Callable[[str], None],
+        queue: BackpressureQueue[T],
+        handler: Callable[[T], None],
     ) -> None:
         self.queue = queue
         self.handler = handler

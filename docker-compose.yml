@@ -79,12 +79,15 @@ services:
       ENGINE_PORT: 9000
       ANALYTICS_HOST: analytics
       ANALYTICS_PORT: 8000
+      GATEWAY_TRADE_OUTBOX_PATH: /var/lib/trading-engine-gateway/trade-outbox.sqlite
       CORS_ORIGINS: ${GATEWAY_CORS_ORIGINS:-http://localhost:5173}
       RATE_LIMIT_ENABLED: "true"
       AUTH_ENABLED: "false"
       AUTH_ENFORCEMENT_ENABLED: "false"
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
+    volumes:
+      - trading-engine-gateway-outbox:/var/lib/trading-engine-gateway
     depends_on:
       engine:
         condition: service_healthy
@@ -116,3 +119,4 @@ services:
 volumes:
   trading-engine-postgres:
   trading-engine-risk-state:
+  trading-engine-gateway-outbox:
