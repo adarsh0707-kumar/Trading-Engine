@@ -302,3 +302,75 @@ describe("analytics client", () => {
     expect(healthEvents).toEqual(["queue_overflow"]);
   });
 });
+
+
+test("parses persistence acknowledgements from analytics", async () => {
+  let receivedAck: Record<string, unknown> | undefined;
+
+  const server = createServer((socket) => {
+    socket.once("data", () => {
+      const payload = Buffer.from(
+        JSON.stringify({
+          version: 1,
+          type: "TRADE_ACK",
+          event_id: "trade-00000001-buy-1-sell-1",
+          request_id: "trade-00000001-buy-1-sell-1",
+          status: "persisted",
+        }),
+        "utf8",
+      );
+      const response = Buffer.alloc(4 + payload.length);
+      response.writeUInt32BE(payload.length, 0);
+      payload.copy(response, 4);
+      socket.write(response);
+    });
+  });
+
+  servers.push(server);
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  const address = server.address();
+  if (address === null || typeof address === "string") {
+    throw new Error("Test server did not expose an address");
+  }
+
+  const client = createAnalyticsClient({
+    host: "127.0.0.1",
+    port: address.port,
+    connectTimeoutMs: 1000,
+    reconnectInitialDelayMs: 10,
+    reconnectMaxDelayMs: 20,
+    reconnectMaxAttempts: 1,
+    maxQueueSize: 10,
+    onTradeAck: (message) => {
+      receivedAck = message as unknown as Record<string, unknown>;
+    },
+  });
+
+  client.start();
+  try {
+    const deadline = Date.now() + 1000;
+    while (!client.isConnected() && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    expect(client.sendTrade(tradeEvent())).toBe(true);
+
+    const ackDeadline = Date.now() + 1000;
+    while (receivedAck === undefined && Date.now() < ackDeadline) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    expect(receivedAck).toEqual({
+      version: 1,
+      type: "TRADE_ACK",
+      event_id: "trade-00000001-buy-1-sell-1",
+      request_id: "trade-00000001-buy-1-sell-1",
+      status: "persisted",
+    });
+  } finally {
+    client.stop();
+  }
+});
