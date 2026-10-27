@@ -29,6 +29,12 @@ The matching engine does not render UI. The React application does not calculate
 
 A market event enters the pipeline once and is transformed as it moves through services.
 
+### 2.3 Durable gateway-to-analytics trade delivery
+
+The Gateway persists accepted trade-delivery work in a SQLite outbox before relying on the analytics service to complete the handoff. Pending outbox entries survive Gateway process restarts and are replayed on startup. An entry is removed only after the analytics service acknowledges persistence, so a restart or transient downstream failure does not silently discard pending delivery work. The outbox uses a persistent Docker volume in the Compose runtime and can be configured with `GATEWAY_TRADE_OUTBOX_PATH`.
+
+Delivery is at-least-once across retry/restart boundaries; consumers and persistence paths must tolerate retries. Duplicate trade IDs with conflicting payloads are treated as a data-integrity error rather than silently accepted. The restart integration test verifies a seeded pending trade is persisted once and the acknowledged outbox entry is cleared. This forward-looking guarantee does not reconstruct historical trades that were already missing before the outbox fix.
+
 ### 2.3 Loose coupling
 
 Services communicate through explicit message contracts rather than importing one another's implementation details.
