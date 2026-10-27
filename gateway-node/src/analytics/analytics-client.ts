@@ -15,6 +15,7 @@ import type {
   NormalizedTradeEvent,
 } from "../engine-protocol/engine-trade.types.ts";
 import { QueueOverflow } from "../resilience/error-model.ts";
+import type { TradeOutbox } from "./trade-outbox.ts";
 
 export type AnalyticsClientState =
   | "connecting"
@@ -40,6 +41,7 @@ export interface AnalyticsClientOptions {
     readonly timestamp: number;
   }) => void;
   readonly socketFactory?: () => NetSocket;
+  readonly tradeOutbox?: TradeOutbox;
 }
 
 export interface AnalyticsClient {
@@ -106,6 +108,11 @@ export function createAnalyticsClient(
   >();
   const ACK_TIMEOUT_MS = 1500;
   const MAX_ACK_RETRIES = 3;
+
+  for (const record of options.tradeOutbox?.listPending() ?? []) {
+    pendingTrades.set(record.eventId, { message: record.message, attempts: 0 });
+    queue.push(record.eventId);
+  }
 
   const emitState = (nextState: AnalyticsClientState): void => {
     state = nextState;
@@ -253,6 +260,13 @@ export function createAnalyticsClient(
         options.onTradeAck?.(ack);
         const pending = pendingTrades.get(ack.event_id);
         if (ack.status === "persisted") {
+          try {
+            options.tradeOutbox?.acknowledge(ack.event_id);
+          } catch (error) {
+            emitError(error);
+            scheduleAckTimeout(ack.event_id);
+            continue;
+          }
           if (pending?.timer !== undefined) {
             clearTimeout(pending.timer);
           }
@@ -457,6 +471,13 @@ export function createAnalyticsClient(
         type: "queue_overflow",
         timestamp: Date.now(),
       });
+      return false;
+    }
+
+    try {
+      options.tradeOutbox?.enqueue(eventId, message);
+    } catch (error) {
+      emitError(error);
       return false;
     }
 
