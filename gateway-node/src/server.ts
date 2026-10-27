@@ -203,7 +203,7 @@ export function createGatewayServer(
   let ownedTradeOutboxClosed = false;
   const closeOwnedTradeOutbox = (): void => {
     if (!ownedTradeOutboxClosed) {
-      closeOwnedTradeOutbox();
+      ownedTradeOutbox?.close();
       ownedTradeOutboxClosed = true;
     }
   };
@@ -601,7 +601,7 @@ export function createGatewayServer(
     }
 
     analyticsClient.stop();
-    ownedTradeOutbox?.close();
+    closeOwnedTradeOutbox();
     engineEventClient.stop();
     websocketHub.stopHeartbeat();
     websocketHub.closeAll();
