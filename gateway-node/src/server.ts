@@ -200,6 +200,13 @@ export function createGatewayServer(
       ? new SqliteTradeOutbox(environment.GATEWAY_TRADE_OUTBOX_PATH)
       : undefined;
   const tradeOutbox = options.tradeOutbox ?? ownedTradeOutbox;
+  let ownedTradeOutboxClosed = false;
+  const closeOwnedTradeOutbox = (): void => {
+    if (!ownedTradeOutboxClosed) {
+      closeOwnedTradeOutbox();
+      ownedTradeOutboxClosed = true;
+    }
+  };
 
   const analyticsClient = createAnalyticsClient({
     host: config.analytics.host,
@@ -589,7 +596,7 @@ export function createGatewayServer(
 
   const stop = async (): Promise<void> => {
     if (!started) {
-      ownedTradeOutbox?.close();
+      closeOwnedTradeOutbox();
       return;
     }
 
