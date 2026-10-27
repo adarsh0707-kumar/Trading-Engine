@@ -133,6 +133,8 @@ The Gateway is implemented with **Bun + TypeScript + Fastify**.
 - Bounded WebSocket outbound queues
 - Slow-consumer protection
 - Engine and analytics dependency handling
+- Durable SQLite trade-delivery outbox with startup replay and persisted-acknowledgement removal
+- Duplicate trade-ID payload conflict detection
 
 ### React dashboard
 
@@ -470,7 +472,7 @@ cd gateway-node
 bun test tests/runtime-stack.integration.test.ts
 ```
 
-The runtime integration test validates the real service path rather than a mocked dashboard-only flow.
+The runtime integration test validates the real service path rather than a mocked dashboard-only flow. CI also runs `bash scripts/validate-trade-outbox-restart.sh`, which seeds a pending trade in the persistent gateway outbox, restarts the gateway, and verifies the trade is persisted once in PostgreSQL before the acknowledged outbox entry is removed. This is deterministic restart-recovery coverage; it does not repair historical rows missing before the outbox was introduced.
 
 ## Risk limits and enforcement boundary
 
